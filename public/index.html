@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>刷题计时器 | 双模式 + 历史记录</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%232563eb'/%3E%3Cpath d='M12 6v6l4 2' stroke='white' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="layout">
+
+        <!-- ===== 左侧菜单 ===== -->
+        <aside class="sidebar">
+            <div class="brand">
+                <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="4" fill="#2563eb"/>
+                    <path d="M12 7v5l3.5 1.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                </svg>
+                <div class="brand-text">
+                    <div class="brand-name">刷题计时器</div>
+                    <div class="brand-sub">计时 · 统计 · 留痕</div>
+                </div>
+            </div>
+
+            <nav class="menu">
+                <div class="menu-group-label">计时模式</div>
+                <a class="menu-item active" data-view="timer" data-mode="single" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 13l3-3M9 2h6M12 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+                    <span>单题模式</span>
+                </a>
+                <a class="menu-item" data-view="timer" data-mode="batch" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    <span>整组模式</span>
+                </a>
+
+                <div class="menu-group-label">数据</div>
+                <a class="menu-item" data-view="history" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>历史记录</span>
+                    <span class="menu-badge" id="historyBadge" hidden>0</span>
+                </a>
+                <a class="menu-item" data-view="favorites" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                    <span>错题收藏</span>
+                    <span class="menu-badge" id="favBadge" hidden>0</span>
+                </a>
+                <a class="menu-item" data-view="stats" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    <span>学习统计</span>
+                </a>
+                <a class="menu-item" data-view="categories" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 12h7v7h-7zM4 15h7v4H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                    <span>分类管理</span>
+                </a>
+
+                <div class="menu-group-label">备忘</div>
+                <a class="menu-item" data-view="calendar" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                    <span>日历备忘</span>
+                </a>
+
+                <div class="menu-group-label">系统</div>
+                <a class="menu-item" data-view="settings" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                    <span>设置</span>
+                </a>
+            </nav>
+
+            <!-- 数据存储状态 -->
+            <div class="data-file-card">
+                <div class="data-file-status" id="dataFileStatus">数据存储：MySQL 数据库</div>
+                <div class="data-file-tip">备份/迁移 → 设置·本地化保存</div>
+            </div>
+        </aside>
+
+        <!-- ===== 右侧内容 ===== -->
+        <main class="content">
+
+            <!-- 计时视图 -->
+            <section class="view" id="viewTimer">
+                <div class="view-header">
+                    <div>
+                        <h2 id="modeTitle">单题模式</h2>
+                        <p class="mode-desc" id="modeDesc">每题独立计时 · 空格开始 / 结束一题 · Y=对 N=错</p>
+                    </div>
+                    <div class="batch-setting">
+                        <span>本轮题量：</span>
+                        <select id="batchCountSelect">
+                            <option value="10">10题</option>
+                            <option value="15">15题</option>
+                            <option value="20" selected>20题</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                        <input type="number" id="customBatchInput" placeholder="输入题数" min="1" style="display:none;">
+                    </div>
+                </div>
+
+                <div class="cat-selector">
+                    <label for="catSelect">刷题类型：</label>
+                    <select id="catSelect" title="选择大类"></select>
+                    <select id="subSelect" title="选择小类"></select>
+                    <span class="cat-selector-hint">选择本轮刷题类型，便于按分类查找；可在「分类管理」中自定义</span>
+                </div>
+
+                <div class="round-meta">
+                    <input type="text" id="roundTitleInput" maxlength="60" placeholder="本轮标题，如：言语理解·标题判断训练（回车确认后空格开始计时）">
+                    <input type="text" id="roundDescInput" maxlength="120" placeholder="描述（可选）：练习册 / 题号范围 / 训练内容">
+                </div>
+
+                <div class="time-display" id="timeText">00:00.00</div>
+
+                <div class="info-bar">
+                    本轮：<span id="countText">0</span>/<span id="maxText">20</span> 题 &nbsp;&nbsp;
+                    总用时：<span id="sumText">00:00.00</span> <br>
+                    答对：<span id="correctText">0</span> 题 &nbsp;&nbsp;
+                    正确率：<span id="rateText">0%</span>
+                </div>
+
+                <div class="btn-group">
+                    <button id="stopBtn">停止</button>
+                    <button id="clearBtn">清空本轮</button>
+                    <button id="newRoundBtn">开启新一轮</button>
+                </div>
+
+                <div class="record-wrap" id="recordWrap"></div>
+            </section>
+
+            <!-- 历史记录视图 -->
+            <section class="view" id="viewHistory" hidden>
+                <div class="view-header">
+                    <div>
+                        <h2>历史记录</h2>
+                        <p class="mode-desc" id="historyDesc">每完成一整轮自动归档，清空本轮也会先存档再清空</p>
+                    </div>
+                    <button id="clearHistoryBtn" class="btn-ghost">清空全部</button>
+                </div>
+
+                <div class="filter-bar">
+                    <select id="historyModeFilter" title="按模式筛选"></select>
+                    <select id="historyCatFilter" title="按大类筛选"></select>
+                    <select id="historySubFilter" title="按小类筛选"></select>
+                    <span class="filter-count" id="historyFilterCount"></span>
+                </div>
+
+                <div class="history-summary" id="historySummary"></div>
+                <div class="history-list" id="historyList"></div>
+                <div class="history-empty" id="historyEmpty">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <p>还没有历史记录</p>
+                    <span>完成一整轮后会自动归档到这里，留下做题痕迹</span>
+                </div>
+            </section>
+
+            <!-- 错题收藏视图 -->
+            <section class="view" id="viewFavorites" hidden>
+                <div class="view-header">
+                    <div>
+                        <h2>错题收藏</h2>
+                        <p class="mode-desc">从历史记录中收藏错题，集中复习</p>
+                    </div>
+                    <button id="clearFavBtn" class="btn-ghost">清空收藏</button>
+                </div>
+
+                <div class="filter-bar">
+                    <select id="favModeFilter" title="按模式筛选"></select>
+                    <select id="favCatFilter" title="按大类筛选"></select>
+                    <select id="favSubFilter" title="按小类筛选"></select>
+                    <span class="filter-count" id="favFilterCount"></span>
+                </div>
+
+                <div class="fav-summary" id="favSummary"></div>
+                <div class="history-list" id="favList"></div>
+                <div class="history-empty" id="favEmpty">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                    <p>还没有收藏的错题</p>
+                    <span>在历史记录的题目明细中，可为做错的题点击「收藏」</span>
+                </div>
+            </section>
+
+            <!-- 学习统计视图 -->
+            <section class="view" id="viewStats" hidden>
+                <div class="view-header">
+                    <div>
+                        <h2>学习统计</h2>
+                        <p class="mode-desc">今日情况 + 日 / 周 / 月汇总 · 学习时长由右下角悬浮窗手动计时（开始 / 暂停），做题时长为各轮用时合计</p>
+                    </div>
+                </div>
+
+                <div class="stats-today">
+                    <div class="stats-today-title">今日</div>
+                    <div class="stats-today-cards" id="statsToday"></div>
+                </div>
+
+                <div>
+                    <div class="stats-today-title">总计：</div>
+                    <div class="stats-summary" id="statsSummary"></div>
+                </div>
+
+                <div class="stats-tabs">
+                    <button class="stats-tab active" data-gran="day">按日</button>
+                    <button class="stats-tab" data-gran="week">按周</button>
+                    <button class="stats-tab" data-gran="month">按月</button>
+                </div>
+
+                <div class="stats-table-wrap">
+                    <table class="stats-table" id="statsTable">
+                        <thead>
+                            <tr><th>周期</th><th>轮次</th><th>做题数</th><th>答对</th><th>正确率</th><th>做题时长</th><th>学习时长</th></tr>
+                        </thead>
+                        <tbody id="statsBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="stats-empty" id="statsEmpty" hidden>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    <p>暂无统计数据</p>
+                    <span>完成一轮刷题后自动汇总；也可以点侧边栏「导入 JSON」导入历史数据</span>
+                </div>
+            </section>
+
+            <!-- 日历备忘视图 -->
+            <section class="view view-calendar" id="viewCalendar" hidden>
+                <div class="view-header">
+                    <div>
+                        <h2>日历备忘</h2>
+                        <p class="mode-desc">点击日期记录任务 / 备忘，如考试、计划；有备忘的日期会显示类型标签与标题</p>
+                    </div>
+                </div>
+
+                <div class="calendar-wrap">
+                    <div class="calendar-toolbar">
+                        <button class="cal-nav" id="calPrev" title="上个月">‹</button>
+                        <div class="cal-title" id="calTitle">—</div>
+                        <button class="cal-nav" id="calNext" title="下个月">›</button>
+                        <button class="cal-today-btn" id="calToday">回到今天</button>
+                    </div>
+                    <div class="calendar-grid" id="calGrid"></div>
+                    <div class="cal-editor">
+                        <div class="cal-editor-title" id="calEditorTitle">—</div>
+                        <div class="cal-type-picker" id="calTypePicker">
+                            <button class="cal-type-btn" data-type="exam">考试</button>
+                            <button class="cal-type-btn" data-type="meeting">会议</button>
+                            <button class="cal-type-btn" data-type="study">学习</button>
+                            <button class="cal-type-btn" data-type="sport">运动</button>
+                            <button class="cal-type-btn" data-type="birthday">生日</button>
+                            <button class="cal-type-btn" data-type="travel">旅行</button>
+                            <button class="cal-type-btn" data-type="other">其他</button>
+                        </div>
+                        <input id="calMemoTitle" placeholder="标题（限 4 字，如：期末冲刺）" autocomplete="off">
+                        <textarea id="calMemoInput" placeholder="填写当天的任务 / 备忘，例如：上午 9:00 参加 XX 考试"></textarea>
+                        <div class="cal-editor-actions">
+                            <button class="cal-clear" id="calMemoClear">清空</button>
+                            <button class="cal-save" id="calMemoSave">保存备忘</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 分类管理视图 -->
+            <section class="view" id="viewCategories" hidden>
+                <div class="view-header">
+                    <div>
+                        <h2>分类管理</h2>
+                        <p class="mode-desc">管理刷题分类（大类 → 小类）。重命名 / 删除不影响已有历史记录与收藏的显示</p>
+                    </div>
+                    <div class="view-header-btns">
+                        <button id="restoreCatBtn" class="btn-ghost" title="把被删掉的内置分类补回来">恢复内置分类</button>
+                        <button id="addCatBtn" class="btn-ghost">+ 添加大类</button>
+                    </div>
+                </div>
+                <div class="cat-manager" id="catManager"></div>
+            </section>
+
+            <!-- 设置视图 -->
+            <section class="view" id="viewSettings" hidden>
+                <div class="view-header">
+                    <div>
+                        <h2>设置</h2>
+                        <p class="mode-desc">本地化保存 · 数据库信息 · 关于</p>
+                    </div>
+                </div>
+
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-settings-tab="backup">本地化保存</button>
+                    <button class="settings-tab" data-settings-tab="db">数据库信息</button>
+                    <button class="settings-tab" data-settings-tab="about">关于</button>
+                </div>
+
+                <!-- 本地化保存 -->
+                <div class="settings-panel" id="settingsPanelBackup">
+                    <div class="settings-card">
+                        <h3>本地化保存（JSON 备份 / 迁移）</h3>
+                        <p class="settings-card-desc">把数据库中的全部数据导出为 JSON 文件保存到本地，或从 JSON 文件导入数据。适合定期备份、换电脑迁移数据。</p>
+                        <div class="settings-actions">
+                            <button id="exportDataBtn" class="df-btn big">保存 JSON（导出全部数据）</button>
+                            <button id="importDataBtn" class="df-btn big">导入 JSON（合并数据）</button>
+                            <input type="file" id="importFileInput" accept=".json,application/json" hidden>
+                        </div>
+                        <div class="settings-tip">
+                            <strong>说明：</strong>导出会下载一个 <code>data-日期.json</code> 文件；导入会自动合并数据（按轮次去重），不会重复、不会丢失。建议每周导出一次作为备份。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据库信息 -->
+                <div class="settings-panel" id="settingsPanelDb" hidden>
+                    <div class="settings-card">
+                        <h3>数据库信息</h3>
+                        <p class="settings-card-desc">当前数据存储位置与数据规模</p>
+                        <div class="db-info-grid" id="dbInfoGrid"></div>
+                    </div>
+                </div>
+
+                <!-- 关于 -->
+                <div class="settings-panel" id="settingsPanelAbout" hidden>
+                    <div class="settings-card">
+                        <h3>关于刷题计时器</h3>
+                        <div class="about-content">
+                            <p><strong>版本：</strong>v2.0（MySQL 前后端分离版）</p>
+                            <p><strong>快捷键：</strong>空格 = 开始 / 结束计时；单题模式下 Y = 对、N = 错；整组完成面板 N = 标错、Y = 取消、方向键移动、回车完成</p>
+                            <p><strong>技术架构：</strong>Node.js + Express + MySQL 后端，原生 HTML / JS 前端；数据全部存储于本地 MySQL 数据库，历史与收藏分页加载，数据再多也不卡。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- 对错弹窗（单题模式） -->
+    <div class="modal-mask" id="modalMask">
+        <div class="modal-box">
+            <p>本题是否答对？</p>
+            <div class="modal-hint">键盘快捷键：Y = 对，N = 错</div>
+            <div class="modal-buttons">
+                <button id="btnY">✓ 做对 (Y)</button>
+                <button id="btnN">✗ 做错 (N)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 整组完成对错录入面板 -->
+    <div class="modal-mask" id="batchModalMask">
+        <div class="modal-box batch-modal">
+            <p>整组计时结束，标记做错的题</p>
+            <div class="modal-hint">默认全部正确，只标记错题：点击题号标错 · N=标错 Y=取消 · 方向键移动 · 回车完成</div>
+            <div class="result-grid" id="resultGrid"></div>
+            <div class="result-progress" id="resultProgress">已标记 0 题</div>
+            <div class="modal-buttons">
+                <button id="batchCancelBtn">取消本轮</button>
+                <button id="batchDoneBtn">完成录入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分类编辑弹窗（收藏 / 历史改分类用） -->
+    <div class="modal-mask" id="catModalMask">
+        <div class="modal-box cat-modal">
+            <p>修改分类</p>
+            <div class="modal-hint">选择大类与小类；不选则为「未分类」</div>
+            <div class="cat-modal-picker">
+                <select id="catModalCatSelect" title="选择大类"></select>
+                <select id="catModalSubSelect" title="选择小类"></select>
+            </div>
+            <div class="modal-buttons">
+                <button id="catModalCancel">取消</button>
+                <button id="catModalSave">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 学习时长悬浮窗（右下角，点击开始 / 暂停学习计时） -->
+    <div class="study-float" id="studyFloat" title="学习时长计时：点击开始 / 暂停">
+        <svg class="sf-icon" id="sfIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+        <div class="sf-time" id="sfTime">0 分</div>
+    </div>
+
+    <!-- 轻提示 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 模块化脚本加载顺序：core（基础）→ modules（功能）→ app（入口） -->
+    <script src="./js/core/utils.js"></script>
+        <script src="./js/core/api.js"></script>
+    <script src="./js/core/storage.js"></script>
+    <script src="./js/core/dataModel.js"></script>
+    <script src="./js/modules/categories.js"></script>
+    <script src="./js/modules/timer.js"></script>
+    <script src="./js/modules/history.js"></script>
+    <script src="./js/modules/favorites.js"></script>
+    <script src="./js/modules/stats.js"></script>
+    <script src="./js/modules/calendar.js"></script>
+    <script src="./js/modules/settings.js"></script>
+    <script src="./js/modules/studyFloat.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+</html>
