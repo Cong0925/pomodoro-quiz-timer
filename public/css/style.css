@@ -1983,3 +1983,52 @@ button:hover {
     white-space: nowrap;
     letter-spacing: .3px;
 }
+
+/* ===== 宽屏弹性布局（≥1280px） ===== */
+@media (min-width: 1280px) {
+    /* 内容区放宽，减少大屏两侧留白 */
+    .view {
+        max-width: 1280px;
+    }
+
+    /* 计时视图：左侧配置 + 右侧计时 双栏布局（hidden 时保持隐藏） */
+    #viewTimer:not([hidden]) {
+        display: grid;
+        grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+        gap: 16px 48px;
+        align-items: center;
+    }
+    #viewTimer .view-header { grid-column: 1; grid-row: 1; }
+    #viewTimer .cat-selector { grid-column: 1; grid-row: 2; }
+    #viewTimer .round-meta { grid-column: 1; grid-row: 3; }
+    /* 计时整体（数字 + 统计 + 按钮）在右栏垂直居中 */
+    #viewTimer .timer-stage {
+        grid-column: 2;
+        grid-row: 1 / 4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-width: 0;
+        align-self: stretch;
+    }
+    #viewTimer .time-display {
+        font-size: 7.25rem;
+        margin: 0 0 4px;
+    }
+    #viewTimer .info-bar {
+        margin-bottom: 14px;
+    }
+    #viewTimer .record-wrap { grid-column: 1 / -1; grid-row: 4; }
+}
+
+/* ===== 超宽屏（≥1600px） ===== */
+@media (min-width: 1600px) {
+    .view { max-width: 1500px; }
+
+    #viewTimer:not([hidden]) {
+        grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
+    }
+    #viewTimer .time-display { font-size: 8rem; }
+}

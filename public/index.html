@@ -108,19 +108,21 @@
                     <input type="text" id="roundDescInput" maxlength="120" placeholder="描述（可选）：练习册 / 题号范围 / 训练内容">
                 </div>
 
-                <div class="time-display" id="timeText">00:00.00</div>
+                <div class="timer-stage">
+                    <div class="time-display" id="timeText">00:00.00</div>
 
-                <div class="info-bar">
-                    本轮：<span id="countText">0</span>/<span id="maxText">20</span> 题 &nbsp;&nbsp;
-                    总用时：<span id="sumText">00:00.00</span> <br>
-                    答对：<span id="correctText">0</span> 题 &nbsp;&nbsp;
-                    正确率：<span id="rateText">0%</span>
-                </div>
+                    <div class="info-bar">
+                        本轮：<span id="countText">0</span>/<span id="maxText">20</span> 题 &nbsp;&nbsp;
+                        总用时：<span id="sumText">00:00.00</span> <br>
+                        答对：<span id="correctText">0</span> 题 &nbsp;&nbsp;
+                        正确率：<span id="rateText">0%</span>
+                    </div>
 
-                <div class="btn-group">
-                    <button id="stopBtn">停止</button>
-                    <button id="clearBtn">清空本轮</button>
-                    <button id="newRoundBtn">开启新一轮</button>
+                    <div class="btn-group">
+                        <button id="stopBtn">停止</button>
+                        <button id="clearBtn">清空本轮</button>
+                        <button id="newRoundBtn">开启新一轮</button>
+                    </div>
                 </div>
 
                 <div class="record-wrap" id="recordWrap"></div>
