@@ -32,7 +32,8 @@ const rowToHistory = (r, withRecords) => {
             ms: rec.ms,
             cumMs: rec.cum_ms,
             timeStr: rec.time_str,
-            result: rec.result
+            result: rec.result,
+            note: rec.note
         }));
     }
     return item;
@@ -72,7 +73,7 @@ router.get('/', async (req, res) => {
         if (ids.length) {
             const [recs] = await pool.query(
                 `SELECT round_id, JSON_ARRAYAGG(JSON_OBJECT(
-                    'no', no, 'ms', ms, 'cumMs', cum_ms, 'timeStr', time_str, 'result', result)) AS records
+                    'no', no, 'ms', ms, 'cumMs', cum_ms, 'timeStr', time_str, 'result', result, 'note', note)) AS records
                  FROM records WHERE round_id IN (?) GROUP BY round_id`,
                 [ids]
             );
@@ -107,7 +108,7 @@ router.get('/:id', async (req, res) => {
             `SELECT h.*, COALESCE(
                 (SELECT JSON_ARRAYAGG(JSON_OBJECT(
                     'no', r.no, 'ms', r.ms, 'cum_ms', r.cum_ms,
-                    'time_str', r.time_str, 'result', r.result))
+                    'time_str', r.time_str, 'result', r.result, 'note', r.note))
                  FROM records r WHERE r.round_id = h.id), JSON_ARRAY()) AS records
              FROM rounds h WHERE h.id=?`,
             [req.params.id]
@@ -157,18 +158,19 @@ router.post('/', async (req, res) => {
             const vals = [];
             const params = [];
             recs.forEach((r, i) => {
-                vals.push('(?,?,?,?,?,?)');
+                vals.push('(?,?,?,?,?,?,?)');
                 params.push(
                     id,
                     num(r.no) || i + 1,
                     num(r.ms),
                     num(r.cumMs),
                     str(r.timeStr, 12),
-                    r.result === 'ng' ? 'ng' : 'ok'
+                    r.result === 'ok' || r.result === 'ng' || r.result === 'skip' ? r.result : 'ok',
+                    str(r.note, 255)
                 );
             });
             await conn.query(
-                `INSERT INTO records (round_id, no, ms, cum_ms, time_str, result) VALUES ${vals.join(',')}`,
+                `INSERT INTO records (round_id, no, ms, cum_ms, time_str, result, note) VALUES ${vals.join(',')}`,
                 params
             );
         }
@@ -226,6 +228,21 @@ router.put('/:id', async (req, res) => {
         res.status(500).json({ error: e.message });
     } finally {
         conn.release();
+    }
+});
+
+/* PUT /api/history/:id/record/:no 更新单题知识点描述
+   body: { note } */
+router.put('/:id/record/:no', async (req, res) => {
+    try {
+        const [r] = await pool.query(
+            'UPDATE records SET note=? WHERE round_id=? AND no=?',
+            [str(req.body.note, 255), req.params.id, num(req.params.no)]
+        );
+        if (r.affectedRows === 0) return res.status(404).json({ error: '题目记录不存在' });
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 

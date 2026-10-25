@@ -13,7 +13,7 @@ async function exportAll(conn) {
     );
     const [recs] = await conn.query(
         `SELECT round_id, JSON_ARRAYAGG(JSON_OBJECT(
-            'no', no, 'ms', ms, 'cumMs', cum_ms, 'timeStr', time_str, 'result', result)) AS records
+            'no', no, 'ms', ms, 'cumMs', cum_ms, 'timeStr', time_str, 'result', result, 'note', note)) AS records
          FROM records GROUP BY round_id`
     );
     const recMap = {};

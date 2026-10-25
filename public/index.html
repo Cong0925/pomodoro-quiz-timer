@@ -208,7 +208,7 @@
                 <div class="stats-table-wrap">
                     <table class="stats-table" id="statsTable">
                         <thead>
-                            <tr><th>周期</th><th>轮次</th><th>做题数</th><th>答对</th><th>正确率</th><th>做题时长</th><th>学习时长</th></tr>
+                            <tr><th>周期</th><th>轮次</th><th>做题数</th><th>答对</th><th>跳过</th><th>正确率</th><th>做题时长</th><th>学习时长</th></tr>
                         </thead>
                         <tbody id="statsBody"></tbody>
                     </table>
@@ -334,10 +334,11 @@
     <div class="modal-mask" id="modalMask">
         <div class="modal-box">
             <p>本题是否答对？</p>
-            <div class="modal-hint">键盘快捷键：Y = 对，N = 错</div>
+            <div class="modal-hint">键盘快捷键：Y = 对，N = 错，P = 没做跳过</div>
             <div class="modal-buttons">
                 <button id="btnY">✓ 做对 (Y)</button>
                 <button id="btnN">✗ 做错 (N)</button>
+                <button id="btnP">— 没做 (P)</button>
             </div>
         </div>
     </div>
@@ -346,7 +347,7 @@
     <div class="modal-mask" id="batchModalMask">
         <div class="modal-box batch-modal">
             <p>整组计时结束，标记做错的题</p>
-            <div class="modal-hint">默认全部正确，只标记错题：点击题号标错 · N=标错 Y=取消 · 方向键移动 · 回车完成</div>
+            <div class="modal-hint">默认全部正确：点击题号 标错 → 标没做 → 恢复 · N=标错 Y=恢复 P=标没做 · 方向键移动 · 回车完成</div>
             <div class="result-grid" id="resultGrid"></div>
             <div class="result-progress" id="resultProgress">已标记 0 题</div>
             <div class="modal-buttons">

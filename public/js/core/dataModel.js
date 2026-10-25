@@ -75,6 +75,11 @@
         await A.put('/api/history/' + id, patch);
     }
 
+    /* 更新单题知识点描述 */
+    async function updateRecordNote(roundId, no, note) {
+        await A.put('/api/history/' + roundId + '/record/' + no, { note });
+    }
+
     async function deleteHistory(id) {
         await A.del('/api/history/' + id);
         let page = historyPage.page;
@@ -344,6 +349,7 @@
         loadHistoryPage,
         addHistory,
         updateHistory,
+        updateRecordNote,
         deleteHistory,
         clearHistory,
 

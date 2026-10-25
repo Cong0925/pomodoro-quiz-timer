@@ -366,6 +366,7 @@ button:hover {
 
 .record-item .mark-ok { color: #16a34a; font-weight: 700; }
 .record-item .mark-ng { color: #dc2626; font-weight: 700; }
+.record-item .mark-skip { color: #f59e0b; font-weight: 700; }
 
 /* 单题模式：对错标记可点击修正 */
 .record-item .mark-toggle {
@@ -791,6 +792,13 @@ button:hover {
     color: #dc2626;
 }
 
+.history-meta .meta-skip {
+    color: #b45309;
+    background: #fef3c7;
+    padding: 1px 6px;
+    border-radius: 10px;
+}
+
 .history-actions {
     display: flex;
     align-items: center;
@@ -917,8 +925,8 @@ button:hover {
 
 .history-card-body .detail-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 6px 12px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
 }
 
 .detail-item {
@@ -930,6 +938,7 @@ button:hover {
 
 .detail-item .mark-ok { color: #16a34a; font-weight: 700; }
 .detail-item .mark-ng { color: #dc2626; font-weight: 700; }
+.detail-item .mark-skip { color: #f59e0b; font-weight: 700; }
 
 .history-empty {
     text-align: center;
@@ -1292,6 +1301,11 @@ button:hover {
     color: white;
 }
 
+#btnP {
+    background: #f59e0b;
+    color: white;
+}
+
 /* ===== 整组完成对错录入面板 ===== */
 .batch-modal {
     width: min(600px, 94vw);
@@ -1351,6 +1365,12 @@ button:hover {
     background: #fee2e2;
     border-color: #dc2626;
     color: #991b1b;
+}
+
+.result-cell.skip {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #b45309;
 }
 
 .result-cell.selected {
@@ -1775,15 +1795,16 @@ button:hover {
 /* ===== 历史明细：题目+时间竖排 / 对错+收藏 固定布局 ===== */
 .history-card-body .detail-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 8px 14px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
 }
 .detail-item {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 8px 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px;
+    min-height: 96px;
     background: #f8fafc;
     border: 1px solid #eef1f5;
     border-radius: 8px;
@@ -1791,6 +1812,66 @@ button:hover {
     color: #4b5563;
     font-variant-numeric: tabular-nums;
 }
+/* 上半段：左右结构（题号/时间 左，收藏/对错 右） */
+.di-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+/* 下半段：知识点描述（分割线 + 纯文本，无边框） */
+.di-note {
+    margin-top: auto;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 5px;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #374151;
+}
+.di-note .hint { color: #9ca3af; }
+.di-note-text {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.note-edit {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 1px 6px;
+    border: none;
+    background: none;
+    color: #6b7280;
+    cursor: pointer;
+}
+.note-edit:hover { color: #2563eb; }
+.di-note.editing input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: #f1f5fb;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 12px;
+    color: #111827;
+    font-family: inherit;
+}
+.note-save, .note-cancel {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.note-save { border: 1px solid #2563eb; background: #2563eb; color: #fff; }
+.note-save:hover { opacity: .85; }
+.note-cancel { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+.note-cancel:hover { color: #1f2937; border-color: #c7cbd1; }
 .di-info {
     display: flex;
     flex-direction: column;

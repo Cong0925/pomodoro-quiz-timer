@@ -76,7 +76,8 @@
         }
         roundRecords.forEach(item => { if (item.result === 'ok') correctCnt++; });
         const total = roundRecords.length;
-        const rate = total === 0 ? '0%' : (correctCnt / total * 100).toFixed(1) + '%';
+        const answered = roundRecords.filter(item => item.result !== 'skip').length;
+        const rate = answered === 0 ? '0%' : (correctCnt / answered * 100).toFixed(1) + '%';
         sumText.textContent = U.formatTime(totalMs);
         countText.textContent = total;
         maxText.textContent = MAX_ROUND;
@@ -99,14 +100,14 @@
             slice.forEach(rec => {
                 const item = document.createElement('div');
                 item.className = 'record-item';
-                const mark = rec.result === 'ok' ? '✓' : '✗';
-                const markCls = rec.result === 'ok' ? 'mark-ok' : 'mark-ng';
+                const mark = rec.result === 'ok' ? '✓' : rec.result === 'skip' ? '○' : '✗';
+                const markCls = rec.result === 'ok' ? 'mark-ok' : rec.result === 'skip' ? 'mark-skip' : 'mark-ng';
                 if (workMode === 'single') {
                     item.innerHTML = `第${rec.no}题：${rec.timeStr} <span class="${markCls}">${mark}</span>`;
-                    const markEl = item.querySelector('.mark-ok, .mark-ng');
+                    const markEl = item.querySelector('.mark-ok, .mark-ng, .mark-skip');
                     if (markEl) {
                         markEl.classList.add('mark-toggle');
-                        markEl.title = '点击修正本题对错（计时中请先暂停）';
+                        markEl.title = '点击修正本题状态（计时中请先暂停）';
                         markEl.addEventListener('click', (e) => {
                             e.stopPropagation();
                             toggleRecordResult(rec.no);
@@ -121,7 +122,7 @@
         }
     }
 
-    /* 单题模式：修正已记录题目的对错（仅未归档、暂停时可修改） */
+    /* 单题模式：修正已记录题目的状态（仅未归档、暂停时可修改） */
     function toggleRecordResult(no) {
         if (workMode !== 'single') return;
         if (roundArchived) return;
@@ -131,7 +132,7 @@
         }
         const rec = roundRecords.find(r => r.no === no);
         if (!rec) return;
-        rec.result = rec.result === 'ok' ? 'ng' : 'ok';
+        rec.result = rec.result === 'ok' ? 'ng' : rec.result === 'ng' ? 'skip' : 'ok';
         renderRecords();
         updateStat();
     }
@@ -163,6 +164,7 @@
         let correctCnt = 0;
         roundRecords.forEach(item => { if (item.result === 'ok') correctCnt++; });
         const total = roundRecords.length;
+        const answered = roundRecords.filter(item => item.result !== 'skip').length;
         const cat = PQ.categories ? PQ.categories.getRoundCat() : { catId: '', catName: '', subId: '', subName: '' };
         const roundObj = {
             mode: workMode,
@@ -174,7 +176,7 @@
             records: roundRecords.map(r => ({ no: r.no, ms: r.ms, cumMs: r.cumMs, timeStr: r.timeStr, result: r.result })),
             totalMs: totalMs,
             correct: correctCnt,
-            rate: total === 0 ? 0 : +(correctCnt / total * 100).toFixed(1),
+            rate: answered === 0 ? 0 : +(correctCnt / answered * 100).toFixed(1),
             catId: cat.catId,
             catName: cat.catName,
             subId: cat.subId,
@@ -217,6 +219,10 @@
         saveRecord('ng');
         modalMask.style.display = 'none';
     };
+    btnP.onclick = () => {
+        saveRecord('skip');
+        modalMask.style.display = 'none';
+    };
 
     /* ---- 整组完成：错题标记面板 ---- */
     function openBatchModal() {
@@ -245,7 +251,9 @@
     }
 
     function cycleCell(i) {
-        batchResults[i] = batchResults[i] === 'ng' ? null : 'ng';
+        if (batchResults[i] === 'ng') batchResults[i] = 'skip';
+        else if (batchResults[i] === 'skip') batchResults[i] = null;
+        else batchResults[i] = 'ng';
         batchCurIdx = i;
         updateResultCells();
         updateResultProgress();
@@ -269,14 +277,16 @@
             const c = cells[i];
             const v = batchResults[i];
             c.classList.toggle('ng', v === 'ng');
+            c.classList.toggle('skip', v === 'skip');
             c.classList.toggle('selected', i === batchCurIdx);
-            c.querySelector('.mark').textContent = v === 'ng' ? '✗' : '';
+            c.querySelector('.mark').textContent = v === 'ng' ? '✗' : v === 'skip' ? '○' : '';
         }
     }
 
     function updateResultProgress() {
-        const marked = batchResults.filter(x => x === 'ng').length;
-        resultProgress.textContent = `已标错 ${marked} 题（其余默认正确）`;
+        const wrong = batchResults.filter(x => x === 'ng').length;
+        const skipped = batchResults.filter(x => x === 'skip').length;
+        resultProgress.textContent = `已标错 ${wrong} 题 · 没做 ${skipped} 题（其余默认正确）`;
     }
 
     function finishBatchRound() {
@@ -286,7 +296,7 @@
             ms: 0,
             cumMs: 0,
             timeStr: '--:--.--',
-            result: r === 'ng' ? 'ng' : 'ok'
+            result: r === 'ng' ? 'ng' : r === 'skip' ? 'skip' : 'ok'
         }));
         roundTotalMs = totalMs;
         closeBatchModal();
@@ -295,7 +305,8 @@
         archiveCurrentRound();
         newRoundBtn.style.display = 'inline-block';
         const wrongCnt = roundRecords.filter(x => x.result === 'ng').length;
-        U.showToast(`整组完成：共 ${MAX_ROUND} 题，错 ${wrongCnt} 题`);
+        const skipCnt = roundRecords.filter(x => x.result === 'skip').length;
+        U.showToast(`整组完成：共 ${MAX_ROUND} 题，错 ${wrongCnt} 题，没做 ${skipCnt} 题`);
     }
 
     batchCancelBtn.onclick = () => {
@@ -360,7 +371,7 @@
         workMode = mode;
         if (mode === 'single') {
             modeTitle.textContent = '单题模式';
-            modeDesc.textContent = '每题独立计时 · 空格开始 / 结束一题 · Y=对 N=错';
+            modeDesc.textContent = '每题独立计时 · 空格开始 / 结束一题 · Y=对 N=错 P=没做跳过';
         } else {
             modeTitle.textContent = '整组模式';
             modeDesc.textContent = '空格开始整组计时，做完后再次按空格停止并标记错题';
@@ -374,6 +385,7 @@
             const key = e.key.toLowerCase();
             if (key === 'n') { e.preventDefault(); setResult(batchCurIdx, 'ng'); moveSel(1); return; }
             if (key === 'y') { e.preventDefault(); setResult(batchCurIdx, null); moveSel(1); return; }
+            if (key === 'p') { e.preventDefault(); setResult(batchCurIdx, 'skip'); moveSel(1); return; }
             if (e.key === 'ArrowLeft') { e.preventDefault(); moveSel(-1); return; }
             if (e.key === 'ArrowRight') { e.preventDefault(); moveSel(1); return; }
             if (e.key === 'ArrowUp') { e.preventDefault(); moveSel(-10); return; }
@@ -395,6 +407,12 @@
             if (key === 'n') {
                 e.preventDefault();
                 saveRecord('ng');
+                modalMask.style.display = 'none';
+                return;
+            }
+            if (key === 'p') {
+                e.preventDefault();
+                saveRecord('skip');
                 modalMask.style.display = 'none';
                 return;
             }

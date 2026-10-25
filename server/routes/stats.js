@@ -27,6 +27,37 @@ function labelOf(key, gran) {
     return key;
 }
 
+function fmtDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/* 生成从 start 到 end 的连续粒度 key 序列（含首尾），粒度周/月与 SQL 聚合口径一致 */
+function buildKeys(gran, start, end) {
+    const keys = [];
+    const e = new Date(end + 'T00:00:00');
+    if (gran === 'month') {
+        const cur = new Date(start.slice(0, 4) + '-' + start.slice(5, 7) + '-01T00:00:00');
+        while (cur <= e) {
+            keys.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+            cur.setMonth(cur.getMonth() + 1);
+        }
+    } else if (gran === 'week') {
+        const cur = new Date(start + 'T00:00:00');
+        cur.setDate(cur.getDate() - ((cur.getDay() + 6) % 7)); // 回退到本周一
+        while (cur <= e) {
+            keys.push(fmtDate(cur));
+            cur.setDate(cur.getDate() + 7);
+        }
+    } else {
+        const cur = new Date(start + 'T00:00:00');
+        while (cur <= e) {
+            keys.push(fmtDate(cur));
+            cur.setDate(cur.getDate() + 1);
+        }
+    }
+    return keys;
+}
+
 /* GET /api/stats?gran=day|week|month
    返回 { today: {...}, list: [{key,label,rounds,questions,correct,rate,workMs,studyMs}] } */
 router.get('/', async (req, res) => {
@@ -41,17 +72,19 @@ router.get('/', async (req, res) => {
              FROM rounds WHERE DATE(finished_at) = CURDATE()`
         );
         const [tq] = await pool.query(
-            `SELECT COUNT(*) AS questions
+            `SELECT COUNT(*) AS questions, COALESCE(SUM(result='skip'),0) AS skipped
              FROM records rc JOIN rounds r ON r.id = rc.round_id
              WHERE DATE(r.finished_at) = CURDATE()`
         );
         const [sd] = await pool.query('SELECT ms FROM study_daily WHERE study_date = CURDATE()');
         const todayQuestions = tq[0].questions;
+        const todaySkipped = tq[0].skipped;
         const today = {
             rounds: t[0].rounds,
             questions: todayQuestions,
             correct: t[0].correct,
-            rate: todayQuestions > 0 ? +(t[0].correct / todayQuestions * 100).toFixed(1) : 0,
+            skipped: todaySkipped,
+            rate: todayQuestions - todaySkipped > 0 ? +(t[0].correct / (todayQuestions - todaySkipped) * 100).toFixed(1) : 0,
             workMs: t[0].workMs,
             studyMs: sd.length ? sd[0].ms : 0
         };
@@ -65,9 +98,10 @@ router.get('/', async (req, res) => {
              FROM rounds GROUP BY gkey`
         );
 
-        /* 按粒度聚合：records 计数（做题数），join rounds 取时间归属 */
+        /* 按粒度聚合：records 计数（做题数）与跳过数，join rounds 取时间归属 */
         const [qRows] = await pool.query(
-            `SELECT ${granExpr('r.finished_at', gran)} AS gkey, COUNT(*) AS questions
+            `SELECT ${granExpr('r.finished_at', gran)} AS gkey, COUNT(*) AS questions,
+                    COALESCE(SUM(result='skip'),0) AS skipped
              FROM records rc JOIN rounds r ON r.id = rc.round_id
              GROUP BY gkey`
         );
@@ -80,27 +114,37 @@ router.get('/', async (req, res) => {
         const roundMap = {};
         rRows.forEach(x => { roundMap[x.gkey] = x; });
         const qMap = {};
-        qRows.forEach(x => { qMap[x.gkey] = x.questions; });
+        qRows.forEach(x => { qMap[x.gkey] = { q: x.questions, s: x.skipped }; });
         const studyMap = {};
         sRows.forEach(s => { studyMap[s.gkey] = s.studyMs; });
 
-        const allKeys = new Set([...Object.keys(roundMap), ...Object.keys(qMap), ...Object.keys(studyMap)]);
-        const list = [];
-        allKeys.forEach(key => {
+        /* 日期连续性：起点 = 最早有数据日期（rounds 或 study_daily），终点 = 今天；
+           缺失粒度（未登录的日子/周/月）补 0，保证日期不断档 */
+        const [bnd] = await pool.query(
+            `SELECT MIN(d) AS m FROM (
+                SELECT MIN(DATE(finished_at)) AS d FROM rounds
+                UNION ALL
+                SELECT MIN(study_date) FROM study_daily
+             ) t`
+        );
+        const startKey = bnd[0].m || fmtDate(new Date());
+        const endKey = fmtDate(new Date());
+        const keys = buildKeys(gran, startKey, endKey).reverse(); // 新 → 旧
+        const list = keys.map(key => {
             const r = roundMap[key] || { rounds: 0, correct: 0, workMs: 0 };
-            const questions = qMap[key] || 0;
-            list.push({
+            const q = qMap[key] || { q: 0, s: 0 };
+            return {
                 key,
                 label: labelOf(key, gran),
                 rounds: r.rounds,
-                questions,
+                questions: q.q,
                 correct: r.correct,
-                rate: questions > 0 ? +(r.correct / questions * 100).toFixed(1) : 0,
+                skipped: q.s,
+                rate: (q.q - q.s) > 0 ? +(r.correct / (q.q - q.s) * 100).toFixed(1) : 0,
                 workMs: r.workMs,
                 studyMs: studyMap[key] || 0
-            });
+            };
         });
-        list.sort((a, b) => a.key < b.key ? 1 : -1);
 
         res.json({ today, list });
     } catch (e) {

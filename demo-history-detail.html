@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>历史明细 5 列布局 Demo</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%232563eb'/><path d='M7 12.5l3 3 7-7' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+  :root {
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --line: #e5e7eb;
+    --text: #1f2937;
+    --sub: #6b7280;
+    --ok: #16a34a;
+    --ng: #dc2626;
+    --skip: #f59e0b;
+    --accent: #2563eb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 28px 20px 48px;
+  }
+  .demo-bar {
+    max-width: 1280px;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--sub);
+  }
+  .demo-bar .tag {
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 999px;
+  }
+  .width-ctl { display: flex; gap: 6px; margin-left: auto; }
+  .width-ctl button {
+    font-size: 12px;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--sub);
+    cursor: pointer;
+  }
+  .width-ctl button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ===== 历史卡片 ===== */
+  .history-card {
+    max-width: 1280px;
+    margin: 0 auto;
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--line);
+  }
+  .history-card-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .history-no { font-size: 13px; color: var(--sub); }
+  .history-mode {
+    font-size: 12px;
+    color: var(--accent);
+    background: #eff6ff;
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .history-title { font-weight: 600; font-size: 15px; }
+  .history-meta { display: flex; gap: 14px; font-size: 13px; color: var(--sub); }
+  .history-meta .rate { font-weight: 700; color: var(--ok); }
+  .history-actions { margin-left: auto; display: flex; gap: 6px; }
+  .history-actions button {
+    font-size: 12px;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .history-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .history-desc { padding: 8px 18px 0; font-size: 12px; color: var(--sub); }
+
+  /* ===== 明细网格：一行固定 5 个 ===== */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    padding: 16px 18px 18px;
+  }
+  /* ===== 格子：上下两段，高度翻倍 ===== */
+  .detail-item {
+    background: #fafafa;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 10px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 96px;
+    transition: border-color .15s;
+  }
+  .detail-item:hover { border-color: #c7cbd1; }
+
+  /* 上半段：左右结构（题号/时间 在左，收藏/对错 在右） */
+  .di-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .di-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .di-title { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .di-time { font-size: 11px; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .di-side { display: flex; align-items: center; gap: 5px; }
+  .star-icon { width: 15px; height: 15px; fill: #f59e0b; }
+  .star-slot { width: 15px; height: 15px; } /* 无收藏时占位，保持对错右对齐 */
+  .di-mark { font-size: 16px; line-height: 1; font-weight: 700; }
+  .mark-ok { color: var(--ok); }
+  .mark-ng { color: var(--ng); }
+  .mark-skip { color: var(--skip); }
+
+  /* 下半段：知识点描述文本区（分割线 + 纯文本，无边框） */
+  .di-note {
+    margin-top: auto;
+    border-top: 1px solid var(--line);
+    padding-top: 5px;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #374151;
+  }
+  .di-note > span {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .di-note .hint { color: #9aa1ab; }
+  .note-edit {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 1px 6px;
+    border: none;
+    background: none;
+    color: var(--sub);
+    cursor: pointer;
+  }
+  .note-edit:hover { color: var(--accent); }
+  .di-note.editing input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: #f1f5fb;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 12px;
+    color: #111827;
+    font-family: inherit;
+  }
+  .note-save, .note-cancel {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  .note-save { border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+  .note-save:hover { opacity: .85; }
+  .note-cancel { border: 1px solid var(--line); background: #fff; color: var(--sub); }
+  .note-cancel:hover { color: var(--text); border-color: #c7cbd1; }
+
+  /* 对错说明条 */
+  .legend {
+    max-width: 1280px;
+    margin: 14px auto 0;
+    display: flex;
+    gap: 18px;
+    font-size: 12px;
+    color: var(--sub);
+    flex-wrap: wrap;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+
+<div class="demo-bar">
+  <span class="tag">演示 Demo</span>
+  <span>历史记录明细 · 一行固定 5 题 · 格子高度翻倍，下半区为知识点描述（按钮修改）</span>
+  <div class="width-ctl" id="widthCtl">
+    <button data-w="1280" class="active">宽屏 1280</button>
+    <button data-w="1024">中屏 1024</button>
+    <button data-w="720">窄屏 720</button>
+  </div>
+</div>
+
+<div class="history-card">
+  <div class="history-card-head">
+    <span class="history-no">#12</span>
+    <span class="history-mode">整组模式</span>
+    <span class="history-title">2026.10.04 B类 笔试</span>
+    <div class="history-meta">
+      <span>2026-10-04 12:41:46</span>
+      <span>100 题</span>
+      <span>用时 86:44.62</span>
+      <span>答对 56/100</span>
+      <span class="rate">56.0%</span>
+    </div>
+    <div class="history-actions">
+      <button data-act="edit">编辑</button>
+      <button data-act="toggle">收起</button>
+      <button data-act="del">删除</button>
+    </div>
+  </div>
+  <div class="history-desc">描述：2024.11.2 B类 笔试 · 示例数据仅 20 题用于演示布局</div>
+  <div class="detail-grid" id="grid"></div>
+</div>
+
+<div class="legend">
+  <span><b class="mark-ok">✓</b> 答对</span>
+  <span><b class="mark-ng">✗</b> 答错</span>
+  <span><svg class="star-icon" width="14" height="14" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z"/></svg> 已收藏错题</span>
+  <span><b class="mark-skip">○</b> 没做跳过</span>
+  <span>点击描述右侧「修改 / 添加」按钮编辑知识点描述（回车保存，Esc 取消）</span>
+</div>
+
+<script>
+  /* 示例数据：20 题（4 行 × 5 列），含三态与描述示例 */
+  const seed = [
+    { no: 1,  time: '00:52.31', result: 'ok',   note: '资料分析-比重变化' },
+    { no: 2,  time: '01:03.87', result: 'ok',   note: '' },
+    { no: 3,  time: '00:48.02', result: 'ng',   note: '逻辑判断-削弱质疑类 高阶' },
+    { no: 4,  time: '01:11.45', result: 'ok',   note: '' },
+    { no: 5,  time: '00:39.76', result: 'ok',   note: '言语理解-中心理解' },
+    { no: 6,  time: '00:57.12', result: 'ok',   note: '' },
+    { no: 7,  time: '01:05.90', result: 'ng',   note: '判断推理-图形推理 空间想象' },
+    { no: 8,  time: '00:44.53', result: 'ok',   note: '' },
+    { no: 9,  time: '00:51.28', result: 'ok',   note: '常识判断-时政热点' },
+    { no: 10, time: '01:09.74', result: 'ok',   note: '' },
+    { no: 11, time: '00:36.19', result: 'ok',   note: '' },
+    { no: 12, time: '00:00.00', result: 'skip', note: '数量关系-行程问题（未做）' },
+    { no: 13, time: '01:14.66', result: 'ok',   note: '资料分析-增长率速算' },
+    { no: 14, time: '00:42.30', result: 'ok',   note: '' },
+    { no: 15, time: '01:02.55', result: 'ng',   note: '数量关系-工程问题' },
+    { no: 16, time: '00:58.84', result: 'ok',   note: '' },
+    { no: 17, time: '00:00.00', result: 'skip', note: '' },
+    { no: 18, time: '00:47.91', result: 'ok',   note: '判断推理-逻辑论证' },
+    { no: 19, time: '01:16.40', result: 'ng',   note: '言语理解-语句排序' },
+    { no: 20, time: '00:55.07', result: 'ok',   note: '' }
+  ];
+  const star = '<svg class="star-icon" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z"/></svg>';
+
+  function markHtml(r) {
+    if (r.result === 'ok') return '<span class="di-mark mark-ok">✓</span>';
+    if (r.result === 'skip') return '<span class="di-mark mark-skip">○</span>';
+    return '<span class="di-mark mark-ng">✗</span>';
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    seed.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'detail-item';
+      item.dataset.no = r.no;
+      item.innerHTML = `
+        <div class="di-top">
+          <div class="di-info">
+            <span class="di-title">第${r.no}题</span>
+            <span class="di-time">${r.time}</span>
+          </div>
+          <div class="di-side">
+            ${r.result === 'ng' ? star : '<span class="star-slot"></span>'}
+            ${markHtml(r)}
+          </div>
+        </div>
+        <div class="di-note${r.note ? ' has-text' : ''}">
+          ${r.note ? '<span title="' + r.note.replace(/</g, '&lt;') + '">' + r.note.replace(/</g, '&lt;') + '</span>' : '<span class="hint">暂无知识点描述</span>'}
+          <button class="note-edit">${r.note ? '修改' : '添加'}</button>
+        </div>
+      `;
+      grid.appendChild(item);
+    });
+  }
+
+  /* 知识点描述编辑：点击"修改/添加"按钮 → 输入框 + 保存/取消 */
+  function bindEdit() {
+    const grid = document.getElementById('grid');
+    grid.addEventListener('click', e => {
+      const btn = e.target.closest('.note-edit');
+      if (!btn) return;
+      const note = btn.closest('.di-note');
+      if (note.querySelector('input')) return;
+      const item = note.closest('.detail-item');
+      const rec = seed.find(x => x.no === Number(item.dataset.no));
+      const old = rec.note;
+
+      note.classList.add('editing');
+      note.innerHTML = '<input maxlength="80" placeholder="如：逻辑判断-削弱质疑类 高阶"><button class="note-save">保存</button><button class="note-cancel">取消</button>';
+      const input = note.querySelector('input');
+      input.value = old;
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+
+      const done = save => {
+        const val = input.value.trim();
+        if (save && val !== old) {
+          rec.note = val;
+          renderGrid();
+          bindEdit();
+          showToast('已保存知识点描述（Demo 演示）');
+        } else {
+          renderGrid();
+          bindEdit();
+          if (save) showToast('未修改');
+        }
+      };
+      note.querySelector('.note-save').addEventListener('click', e => { e.stopPropagation(); done(true); });
+      note.querySelector('.note-cancel').addEventListener('click', e => { e.stopPropagation(); done(false); });
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); done(true); }
+        if (e.key === 'Escape') { done(false); }
+      });
+    });
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.style.cssText = 'position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#111827;color:#fff;font-size:13px;padding:8px 18px;border-radius:8px;opacity:0;transition:opacity .2s;z-index:99;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 1400);
+  }
+
+  /* 容器宽度切换：演示 5 列自适应 */
+  document.getElementById('widthCtl').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    document.querySelectorAll('#widthCtl button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const card = document.querySelector('.history-card');
+    card.style.maxWidth = btn.dataset.w + 'px';
+  });
+
+  /* 卡片头按钮反馈（Demo）：收起可真实切换，编辑/删除提示演示 */
+  document.querySelector('.history-actions').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === 'toggle') {
+      const body = document.querySelector('.detail-grid');
+      const hidden = body.style.display === 'none';
+      body.style.display = hidden ? 'grid' : 'none';
+      btn.textContent = hidden ? '收起' : '展开';
+      showToast(hidden ? '已展开明细（Demo）' : '已收起明细（Demo）');
+    } else {
+      showToast(act === 'edit' ? '编辑功能为 Demo 演示，未接入' : '删除功能为 Demo 演示，未接入');
+    }
+  });
+
+  renderGrid();
+  bindEdit();
+</script>
+</body>
+</html>

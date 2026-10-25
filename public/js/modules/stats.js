@@ -31,13 +31,15 @@
             /* 今日情况（两行：做题数/正确率 → 做题时长/笔记时长/学习时长）
                笔记时长 = 学习时长 - 做题时长（无独立笔记数据，差值即为笔记时间） */
             const t = data.today;
-            const tRate = t.questions === 0 ? '—' : (t.correct / t.questions * 100).toFixed(1) + '%';
+            const tAnswered = t.questions - (t.skipped || 0);
+            const tRate = tAnswered === 0 ? '—' : (t.correct / tAnswered * 100).toFixed(1) + '%';
             const todayLearn = D.todayStudyTotal();
             const todayWork = Number(t.workMs);
             const todayNote = Math.max(0, todayLearn - todayWork);
             statsToday.innerHTML = `
-                <div class="stats-row cols-2">
+                <div class="stats-row cols-3">
                     <div class="stats-summary-card today"><div class="num">${t.questions}</div><div class="label">今日做题数</div></div>
+                    <div class="stats-summary-card today"><div class="num">${t.skipped || 0}</div><div class="label">今日跳过</div></div>
                     <div class="stats-summary-card today"><div class="num">${tRate}</div><div class="label">今日正确率</div></div>
                 </div>
                 <div class="stats-row cols-3">
@@ -47,14 +49,16 @@
                 </div>
             `;
 
-            /* 当前周期范围合计（两行：做题数/正确率 → 做题时长/笔记时长/学习时长） */
-            let questions = 0, correct = 0, workMs = 0, studyMs = 0;
-            rows.forEach(r => { questions += Number(r.questions); correct += Number(r.correct); workMs += Number(r.workMs); studyMs += Number(r.studyMs); });
-            const sumRate = questions === 0 ? '—' : (correct / questions * 100).toFixed(1) + '%';
+            /* 当前周期范围合计（两行：做题数/跳过/正确率 → 做题时长/笔记时长/学习时长） */
+            let questions = 0, skipped = 0, correct = 0, workMs = 0, studyMs = 0;
+            rows.forEach(r => { questions += Number(r.questions); skipped += Number(r.skipped || 0); correct += Number(r.correct); workMs += Number(r.workMs); studyMs += Number(r.studyMs); });
+            const sumAnswered = questions - skipped;
+            const sumRate = sumAnswered === 0 ? '—' : (correct / sumAnswered * 100).toFixed(1) + '%';
             const sumNote = Math.max(0, studyMs - workMs);
             statsSummary.innerHTML = `
-                <div class="stats-row cols-2">
+                <div class="stats-row cols-3">
                     <div class="stats-summary-card"><div class="num">${questions}</div><div class="label">总做题数</div></div>
+                    <div class="stats-summary-card"><div class="num">${skipped}</div><div class="label">总跳过</div></div>
                     <div class="stats-summary-card"><div class="num">${sumRate}</div><div class="label">总正确率</div></div>
                 </div>
                 <div class="stats-row cols-3">
@@ -67,13 +71,15 @@
             /* 明细行 */
             statsBody.innerHTML = '';
             rows.forEach(r => {
-                const rateStr = r.questions === 0 ? '—' : (r.correct / r.questions * 100).toFixed(1) + '%';
+                const answered = r.questions - (r.skipped || 0);
+                const rateStr = answered === 0 ? '—' : (r.correct / answered * 100).toFixed(1) + '%';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${r.label}</td>
                     <td>${r.rounds}</td>
                     <td>${r.questions}</td>
                     <td>${r.correct}</td>
+                    <td>${r.skipped || 0}</td>
                     <td>${rateStr}</td>
                     <td>${U.formatDuration(r.workMs)}</td>
                     <td>${U.formatDuration(r.studyMs)}</td>

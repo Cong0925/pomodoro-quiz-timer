@@ -98,22 +98,26 @@
         const filtering = filterMode || filterCat || filterSub;
         historyFilterCount.textContent = filtering ? `筛选结果：${list.length} / ${page.total} 条` : `共 ${page.total} 条`;
 
-        /* 概要（基于当前已加载页） */
+        /* 概要（基于当前已加载页）：正确率分母为已做题数（排除跳过） */
         let totalRounds = list.length;
         let totalQuestions = 0;
+        let totalSkipped = 0;
         let totalMs = 0;
         let totalCorrect = 0;
         list.forEach(h => {
-            totalQuestions += (h.records || []).length;
+            const recs = h.records || [];
+            totalQuestions += recs.length;
+            totalSkipped += recs.filter(x => x.result === 'skip').length;
             totalMs += h.totalMs;
             totalCorrect += h.correct;
         });
-        const avgRate = totalQuestions === 0 ? '0%' : (totalCorrect / totalQuestions * 100).toFixed(1) + '%';
+        const answeredTotal = totalQuestions - totalSkipped;
+        const avgRate = answeredTotal === 0 ? '0%' : (totalCorrect / answeredTotal * 100).toFixed(1) + '%';
         historySummary.innerHTML = `
             <div class="history-summary-card"><div class="num">${totalRounds}</div><div class="label">本页轮次</div></div>
             <div class="history-summary-card"><div class="num">${totalQuestions}</div><div class="label">本页题数</div></div>
             <div class="history-summary-card"><div class="num">${U.formatTime(totalMs)}</div><div class="label">本页用时</div></div>
-            <div class="history-summary-card"><div class="num">${avgRate}</div><div class="label">本页正确率</div></div>
+            <div class="history-summary-card"><div class="num">${avgRate}</div><div class="label">本页正确率（不含跳过）</div></div>
         `;
 
         historyListEl.innerHTML = '';
@@ -131,6 +135,8 @@
             const descLine = h.desc
                 ? `<div class="history-desc-line" title="${U.escapeHtml(h.desc)}">描述：${U.escapeHtml(h.desc)}</div>`
                 : '';
+            const recs0 = h.records || [];
+            const skipped0 = recs0.filter(x => x.result === 'skip').length;
             head.innerHTML = `
                 <div class="history-no">${idx + 1}</div>
                 <span class="history-mode ${h.mode}">${h.modeName}</span>
@@ -138,9 +144,10 @@
                 ${titleHtml}
                 <div class="history-meta">
                     <span>${h.date}</span>
-                    <span>${(h.records || []).length} 题</span>
+                    <span>${recs0.length} 题</span>
                     <span>用时 ${U.formatTime(h.totalMs)}</span>
-                    <span>答对 ${h.correct}/${(h.records || []).length}</span>
+                    <span>答对 ${h.correct}/${recs0.length}</span>
+                    ${skipped0 ? `<span class="meta-skip">跳过 ${skipped0}</span>` : ''}
                     <span class="rate${rateCls}">${h.rate}%</span>
                 </div>
                 <div class="history-actions">
@@ -164,18 +171,27 @@
             (h.records || []).forEach(r => {
                 const it = document.createElement('div');
                 it.className = 'detail-item';
-                const mark = r.result === 'ok' ? '✓' : '✗';
-                const markCls = r.result === 'ok' ? 'mark-ok' : 'mark-ng';
+                const mark = r.result === 'ok' ? '✓' : r.result === 'skip' ? '○' : '✗';
+                const markCls = r.result === 'ok' ? 'mark-ok' : r.result === 'skip' ? 'mark-skip' : 'mark-ng';
                 const timeHtml = h.mode === 'single' ? `<span class="di-time">${r.timeStr || ''}</span>` : '';
                 const starSvg = () => '<svg viewBox="0 0 24 24" class="star-icon"><path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z"/></svg>';
+                const noteText = r.note
+                    ? `<span class="di-note-text" title="${U.escapeHtml(r.note)}">${U.escapeHtml(r.note)}</span>`
+                    : '<span class="di-note-text"><span class="hint">暂无知识点描述</span></span>';
                 it.innerHTML = `
-                    <div class="di-info">
-                        <span class="di-title">第${r.no}题</span>
-                        ${timeHtml}
+                    <div class="di-top">
+                        <div class="di-info">
+                            <span class="di-title">第${r.no}题</span>
+                            ${timeHtml}
+                        </div>
+                        <div class="di-side">
+                            <span class="fav-slot"></span>
+                            <span class="di-mark ${markCls}">${mark}</span>
+                        </div>
                     </div>
-                    <div class="di-side">
-                        <span class="fav-slot"></span>
-                        <span class="di-mark ${markCls}">${mark}</span>
+                    <div class="di-note">
+                        ${noteText}
+                        <button class="note-edit">${r.note ? '修改' : '添加'}</button>
                     </div>
                 `;
                 if (r.result === 'ng') {
@@ -189,6 +205,36 @@
                     });
                     it.querySelector('.fav-slot').appendChild(favBtn);
                 }
+                /* 知识点描述编辑：点击修改/添加 → 输入框 + 保存/取消 */
+                it.querySelector('.note-edit').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const noteEl = it.querySelector('.di-note');
+                    if (noteEl.querySelector('input')) return;
+                    const old = r.note || '';
+                    noteEl.classList.add('editing');
+                    noteEl.innerHTML = '<input maxlength="255" placeholder="如：逻辑判断-削弱质疑类 高阶"><button class="note-save">保存</button><button class="note-cancel">取消</button>';
+                    const input = noteEl.querySelector('input');
+                    input.value = old;
+                    input.focus();
+                    input.setSelectionRange(input.value.length, input.value.length);
+                    const done = async save => {
+                        const val = input.value.trim();
+                        if (save && val !== old) {
+                            try {
+                                await D.updateRecordNote(h.id, r.no, val);
+                                r.note = val;
+                                U.showToast(`已保存 第${r.no}题 知识点`);
+                            } catch (err) { U.showToast(err.message); }
+                        }
+                        renderPage();
+                    };
+                    noteEl.querySelector('.note-save').addEventListener('click', e2 => { e2.stopPropagation(); done(true); });
+                    noteEl.querySelector('.note-cancel').addEventListener('click', e2 => { e2.stopPropagation(); done(false); });
+                    input.addEventListener('keydown', e2 => {
+                        if (e2.key === 'Enter') { e2.preventDefault(); done(true); }
+                        if (e2.key === 'Escape') { done(false); }
+                    });
+                });
                 grid.appendChild(it);
             });
             body.appendChild(grid);
@@ -267,6 +313,14 @@
                 const btn = head.querySelector('.history-toggle');
                 btn.textContent = card.classList.contains('open') ? '收起' : '展开';
             });
+
+            /* 点击卡片头部（记录信息区域）：收起 ↔ 展开；题目明细区点击不触发折叠 */
+            head.addEventListener('click', () => {
+                card.classList.toggle('open');
+                const btn = head.querySelector('.history-toggle');
+                btn.textContent = card.classList.contains('open') ? '收起' : '展开';
+            });
+            editForm.addEventListener('click', e => e.stopPropagation());
 
             head.querySelector('.history-del').addEventListener('click', async e => {
                 e.stopPropagation();

@@ -78,12 +78,13 @@ async function importData(conn, data) {
             const chunk = recs.slice(j, j + BATCH);
             const vals = [], params = [];
             chunk.forEach(r => {
-                vals.push('(?,?,?,?,?,?)');
+                vals.push('(?,?,?,?,?,?,?)');
                 params.push(rid, num(r.no) || 0, num(r.ms), num(r.cumMs),
-                    str(r.timeStr, 12), r.result === 'ng' ? 'ng' : 'ok');
+                    str(r.timeStr, 12), r.result === 'ok' || r.result === 'ng' || r.result === 'skip' ? r.result : 'ok',
+                    str(r.note, 255));
             });
             await conn.query(
-                'INSERT INTO records (round_id, no, ms, cum_ms, time_str, result) VALUES ' + vals.join(','),
+                'INSERT INTO records (round_id, no, ms, cum_ms, time_str, result, note) VALUES ' + vals.join(','),
                 params
             );
         }
