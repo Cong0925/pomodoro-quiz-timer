@@ -157,7 +157,7 @@
 
     async function saveMemo(date, obj) {
         await A.put('/api/memos/' + date, obj);
-        if (obj && obj.text) calMemos[date] = { type: obj.type, title: obj.title, text: obj.text };
+        if (obj && obj.content) calMemos[date] = { type: obj.type, title: obj.title, text: obj.content };
         else delete calMemos[date];
     }
 

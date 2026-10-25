@@ -2,6 +2,7 @@
  * PQ Timer - modules/calendar.js
  * 日历备忘（MySQL 版）：大日历渲染、类型选择、备忘保存/清空。
  * 备忘按月从后端加载（内存按月缓存），保存/删除调 API。
+ * 顶部标题可点击：进入「选月 → 选年」两级视图（参考 Windows 日历筛选操作）。
  * ============================================================ */
 (function () {
     'use strict';
@@ -25,10 +26,13 @@
 
     const CAL_WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
     const CAL_WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
+    const YEAR_PAGE = 12;          // 年份选择视图每页年数
 
-    let calYear = 0, calMonth = 0;        // 当前显示的年 / 月（month: 0-11）
-    let calSelected = null;               // 选中日期 'YYYY-MM-DD'
-    let calSelectedType = 'other';        // 编辑区当前选中的类型
+    let calYear = 0, calMonth = 0; // 当前显示的年 / 月（month: 0-11）
+    let calSelected = null;        // 选中日期 'YYYY-MM-DD'
+    let calSelectedType = 'other'; // 编辑区当前选中的类型
+    let viewMode = 'day';          // 'day' 日历视图 | 'month' 选月视图 | 'year' 选年视图
+    let decadeStart = 0;           // 年份视图当前页首年
 
     /* 输入框实时限制为 4 个字（字符计数） */
     calMemoTitle.addEventListener('input', () => {
@@ -49,12 +53,6 @@
         calTypeBtns.forEach(b => b.classList.toggle('active', b.dataset.type === calSelectedType));
     }
 
-    function calShowMonth(y, m) {
-        calYear = y;
-        calMonth = m;
-        renderCalendar();
-    }
-
     function keyOfDate(y, m, d) {
         const dt = new Date(y, m, d);
         return U.todayKey(dt);
@@ -71,7 +69,63 @@
         } catch (e) { U.showToast(e.message); }
     }
 
+    /* ---- 视图切换 ---- */
+    function calShowMonth(y, m) {
+        calYear = y;
+        calMonth = m;
+        viewMode = 'day';
+        renderCalendar();
+    }
+
+    function showMonthPicker() {
+        viewMode = 'month';
+        renderCalendar();
+    }
+
+    function showYearPicker() {
+        decadeStart = calYear - (calYear % YEAR_PAGE);
+        viewMode = 'year';
+        renderCalendar();
+    }
+
+    /* 顶部导航按视图模式分流：日→切月，选月→切年，选年→切 12 年 */
+    function navBy(delta) {
+        if (viewMode === 'year') {
+            decadeStart += delta * YEAR_PAGE;
+        } else if (viewMode === 'month') {
+            calYear += delta;
+        } else {
+            const m = calMonth + delta;
+            calYear += Math.floor(m / 12);
+            calMonth = ((m % 12) + 12) % 12;
+        }
+        renderCalendar();
+    }
+
+    function updateToolbar() {
+        calTitle.classList.toggle('cal-title-picker', viewMode === 'day');
+        if (viewMode === 'year') {
+            calTitle.textContent = `${decadeStart} - ${decadeStart + YEAR_PAGE - 1}`;
+            calPrev.title = '上 12 年';
+            calNext.title = '下 12 年';
+        } else if (viewMode === 'month') {
+            calTitle.textContent = `${calYear} 年`;
+            calPrev.title = '上一年';
+            calNext.title = '下一年';
+        } else {
+            calTitle.textContent = `${calYear} 年 ${calMonth + 1} 月`;
+            calPrev.title = '上个月';
+            calNext.title = '下个月';
+        }
+    }
+
+    /* ---- 渲染入口 ---- */
     async function renderCalendar() {
+        updateToolbar();
+        if (viewMode === 'month') { renderMonthPicker(); return; }
+        if (viewMode === 'year') { renderYearPicker(); return; }
+
+        calGrid.className = 'calendar-grid';
         calTitle.textContent = `${calYear} 年 ${calMonth + 1} 月`;
 
         const first = new Date(calYear, calMonth, 1);
@@ -144,6 +198,50 @@
         renderCalEditor();
     }
 
+    /* ---- 选月视图：3×4 月份网格，顶部可切年 ---- */
+    function renderMonthPicker() {
+        calGrid.className = 'calendar-grid cal-picker-grid';
+        calGrid.innerHTML = '';
+        const now = new Date();
+        for (let m = 0; m < 12; m++) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'cal-picker-cell' +
+                (m === calMonth ? ' active' : '') +
+                (now.getFullYear() === calYear && now.getMonth() === m ? ' today' : '');
+            btn.textContent = `${m + 1}月`;
+            btn.addEventListener('click', () => {
+                calMonth = m;
+                viewMode = 'day';
+                renderCalendar();
+            });
+            calGrid.appendChild(btn);
+        }
+        renderCalEditor();
+    }
+
+    /* ---- 选年视图：3×4 年份网格，顶部可切 12 年 ---- */
+    function renderYearPicker() {
+        calGrid.className = 'calendar-grid cal-picker-grid';
+        calGrid.innerHTML = '';
+        const now = new Date();
+        for (let y = decadeStart; y < decadeStart + YEAR_PAGE; y++) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'cal-picker-cell' +
+                (y === calYear ? ' active' : '') +
+                (y === now.getFullYear() ? ' today' : '');
+            btn.textContent = `${y}年`;
+            btn.addEventListener('click', () => {
+                calYear = y;
+                viewMode = 'month';
+                renderCalendar();
+            });
+            calGrid.appendChild(btn);
+        }
+        renderCalEditor();
+    }
+
     function renderCalEditor() {
         if (!calSelected) {
             calEditorTitle.textContent = '请选择日期';
@@ -185,13 +283,21 @@
         } catch (e) { U.showToast(e.message); }
     });
 
-    calPrev.addEventListener('click', () => calShowMonth(calMonth === 0 ? calYear - 1 : calYear, calMonth === 0 ? 11 : calMonth - 1));
-    calNext.addEventListener('click', () => calShowMonth(calMonth === 11 ? calYear + 1 : calYear, calMonth === 11 ? 0 : calMonth + 1));
+    /* 标题点击：日历 → 选月 → 选年 */
+    calTitle.addEventListener('click', () => {
+        if (viewMode === 'day') showMonthPicker();
+        else if (viewMode === 'month') showYearPicker();
+        // 选年视图点击标题不动作
+    });
+
+    calPrev.addEventListener('click', () => navBy(-1));
+    calNext.addEventListener('click', () => navBy(1));
     calToday.addEventListener('click', () => {
         const now = new Date();
         calYear = now.getFullYear();
         calMonth = now.getMonth();
         calSelected = U.todayKey(now);
+        viewMode = 'day';
         renderCalendar();
     });
 
