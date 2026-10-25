@@ -31,8 +31,7 @@
             /* 今日情况（两行：做题数/正确率 → 做题时长/笔记时长/学习时长）
                笔记时长 = 学习时长 - 做题时长（无独立笔记数据，差值即为笔记时间） */
             const t = data.today;
-            const tAnswered = t.questions - (t.skipped || 0);
-            const tRate = tAnswered === 0 ? '—' : (t.correct / tAnswered * 100).toFixed(1) + '%';
+            const tRate = t.questions === 0 ? '—' : (t.correct / t.questions * 100).toFixed(1) + '%';
             const todayLearn = D.todayStudyTotal();
             const todayWork = Number(t.workMs);
             const todayNote = Math.max(0, todayLearn - todayWork);
@@ -52,8 +51,7 @@
             /* 当前周期范围合计（两行：做题数/跳过/正确率 → 做题时长/笔记时长/学习时长） */
             let questions = 0, skipped = 0, correct = 0, workMs = 0, studyMs = 0;
             rows.forEach(r => { questions += Number(r.questions); skipped += Number(r.skipped || 0); correct += Number(r.correct); workMs += Number(r.workMs); studyMs += Number(r.studyMs); });
-            const sumAnswered = questions - skipped;
-            const sumRate = sumAnswered === 0 ? '—' : (correct / sumAnswered * 100).toFixed(1) + '%';
+            const sumRate = questions === 0 ? '—' : (correct / questions * 100).toFixed(1) + '%';
             const sumNote = Math.max(0, studyMs - workMs);
             statsSummary.innerHTML = `
                 <div class="stats-row cols-3">
@@ -71,8 +69,7 @@
             /* 明细行 */
             statsBody.innerHTML = '';
             rows.forEach(r => {
-                const answered = r.questions - (r.skipped || 0);
-                const rateStr = answered === 0 ? '—' : (r.correct / answered * 100).toFixed(1) + '%';
+                const rateStr = r.questions === 0 ? '—' : (r.correct / r.questions * 100).toFixed(1) + '%';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${r.label}</td>

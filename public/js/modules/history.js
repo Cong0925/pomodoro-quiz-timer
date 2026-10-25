@@ -98,26 +98,23 @@
         const filtering = filterMode || filterCat || filterSub;
         historyFilterCount.textContent = filtering ? `筛选结果：${list.length} / ${page.total} 条` : `共 ${page.total} 条`;
 
-        /* 概要（基于当前已加载页）：正确率分母为已做题数（排除跳过） */
+        /* 概要（基于当前已加载页）：正确率分母为全部题数，跳过按错误计 */
         let totalRounds = list.length;
         let totalQuestions = 0;
-        let totalSkipped = 0;
         let totalMs = 0;
         let totalCorrect = 0;
         list.forEach(h => {
             const recs = h.records || [];
             totalQuestions += recs.length;
-            totalSkipped += recs.filter(x => x.result === 'skip').length;
             totalMs += h.totalMs;
             totalCorrect += h.correct;
         });
-        const answeredTotal = totalQuestions - totalSkipped;
-        const avgRate = answeredTotal === 0 ? '0%' : (totalCorrect / answeredTotal * 100).toFixed(1) + '%';
+        const avgRate = totalQuestions === 0 ? '0%' : (totalCorrect / totalQuestions * 100).toFixed(1) + '%';
         historySummary.innerHTML = `
             <div class="history-summary-card"><div class="num">${totalRounds}</div><div class="label">本页轮次</div></div>
             <div class="history-summary-card"><div class="num">${totalQuestions}</div><div class="label">本页题数</div></div>
             <div class="history-summary-card"><div class="num">${U.formatTime(totalMs)}</div><div class="label">本页用时</div></div>
-            <div class="history-summary-card"><div class="num">${avgRate}</div><div class="label">本页正确率（不含跳过）</div></div>
+            <div class="history-summary-card"><div class="num">${avgRate}</div><div class="label">本页正确率（跳过计错）</div></div>
         `;
 
         historyListEl.innerHTML = '';

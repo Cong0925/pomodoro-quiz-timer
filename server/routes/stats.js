@@ -84,7 +84,7 @@ router.get('/', async (req, res) => {
             questions: todayQuestions,
             correct: t[0].correct,
             skipped: todaySkipped,
-            rate: todayQuestions - todaySkipped > 0 ? +(t[0].correct / (todayQuestions - todaySkipped) * 100).toFixed(1) : 0,
+            rate: todayQuestions > 0 ? +(t[0].correct / todayQuestions * 100).toFixed(1) : 0,
             workMs: t[0].workMs,
             studyMs: sd.length ? sd[0].ms : 0
         };
@@ -140,7 +140,7 @@ router.get('/', async (req, res) => {
                 questions: q.q,
                 correct: r.correct,
                 skipped: q.s,
-                rate: (q.q - q.s) > 0 ? +(r.correct / (q.q - q.s) * 100).toFixed(1) : 0,
+                rate: q.q > 0 ? +(r.correct / q.q * 100).toFixed(1) : 0,
                 workMs: r.workMs,
                 studyMs: studyMap[key] || 0
             };

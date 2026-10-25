@@ -76,8 +76,7 @@
         }
         roundRecords.forEach(item => { if (item.result === 'ok') correctCnt++; });
         const total = roundRecords.length;
-        const answered = roundRecords.filter(item => item.result !== 'skip').length;
-        const rate = answered === 0 ? '0%' : (correctCnt / answered * 100).toFixed(1) + '%';
+        const rate = total === 0 ? '0%' : (correctCnt / total * 100).toFixed(1) + '%';
         sumText.textContent = U.formatTime(totalMs);
         countText.textContent = total;
         maxText.textContent = MAX_ROUND;
@@ -164,7 +163,6 @@
         let correctCnt = 0;
         roundRecords.forEach(item => { if (item.result === 'ok') correctCnt++; });
         const total = roundRecords.length;
-        const answered = roundRecords.filter(item => item.result !== 'skip').length;
         const cat = PQ.categories ? PQ.categories.getRoundCat() : { catId: '', catName: '', subId: '', subName: '' };
         const roundObj = {
             mode: workMode,
@@ -176,7 +174,7 @@
             records: roundRecords.map(r => ({ no: r.no, ms: r.ms, cumMs: r.cumMs, timeStr: r.timeStr, result: r.result })),
             totalMs: totalMs,
             correct: correctCnt,
-            rate: answered === 0 ? 0 : +(correctCnt / answered * 100).toFixed(1),
+            rate: total === 0 ? 0 : +(correctCnt / total * 100).toFixed(1),
             catId: cat.catId,
             catName: cat.catName,
             subId: cat.subId,
