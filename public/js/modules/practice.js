@@ -45,7 +45,7 @@
             }
         }
         if (!state.banks.length) {
-            try { state.banks = await api.get('/api/practice/banks'); } catch (e) { U.showToast('题库加载失败：' + e.message); }
+            try { state.banks = await api.get('/api/practice/banks'); } catch (e) { U.showToast('题库加载失败：' + e.message, 'error'); }
         }
         // 默认选择：第一个大类 → 第一个二级分类 → 该分类下第一个题库
         if (!state.selCat && state.cats.length) {
@@ -179,9 +179,9 @@
 
     async function startPractice() {
         // 未完成选择时给出明确提示，按钮不静默无反应
-        if (!state.selCat) { U.showToast('请先选择考试大类'); return; }
-        if (!state.selSub) { U.showToast('请先选择二级分类'); return; }
-        if (!state.selBank) { U.showToast('请先选择题库'); return; }
+        if (!state.selCat) { U.showToast('请先选择考试大类', 'warning'); return; }
+        if (!state.selSub) { U.showToast('请先选择二级分类', 'warning'); return; }
+        if (!state.selBank) { U.showToast('请先选择题库', 'warning'); return; }
         try {
             const r = await api.post('/api/practice/start', {
                 bankId: state.selBank, mode: state.mode, count: state.count
@@ -200,7 +200,7 @@
             startClock();
             renderQ();
         } catch (e) {
-            U.showToast(e.message);
+            U.showToast(e.message, 'error');
         }
     }
 
@@ -250,7 +250,7 @@
             updateCounts();
             renderResult(k, r.correctAnswer, r.analysis, r.result);
         } catch (e) {
-            U.showToast(e.message);
+            U.showToast(e.message, 'error');
             if (String(e.message).includes('已作答')) state.run.answers.push({ my: k, correctAnswer: '', analysis: '', result: 'ng', q });
         }
     }
@@ -265,7 +265,7 @@
             updateCounts();
             renderResult(null, r.correctAnswer, r.analysis, 'skip');
         } catch (e) {
-            U.showToast(e.message);
+            U.showToast(e.message, 'error');
         }
     }
 
@@ -322,7 +322,7 @@
             el('pResSkip').textContent = r.skipped;
             el('pResTime').textContent = fmtMs(r.totalMs);
         } catch (e) {
-            U.showToast('结束练习失败：' + e.message);
+            U.showToast('结束练习失败：' + e.message, 'error');
         }
     }
 
@@ -334,7 +334,7 @@
     }
 
     function enterReview() {
-        if (!state.run || !state.run.answers.length) { U.showToast('没有可回看的题目'); return; }
+        if (!state.run || !state.run.answers.length) { U.showToast('没有可回看的题目', 'warning'); return; }
         state.run.review = true;
         state.run.idx = 0;
         el('pPaneResult').hidden = true;
@@ -461,7 +461,7 @@
     async function loadQuestions(bankId) {
         try {
             return await api.get(`/api/practice/banks/${bankId}/questions`);
-        } catch (e) { U.showToast('题目加载失败：' + e.message); return []; }
+        } catch (e) { U.showToast('题目加载失败：' + e.message, 'error'); return []; }
     }
 
     async function delQ(qid) {
@@ -470,8 +470,8 @@
             await api.del('/api/practice/questions/' + qid);
             state.banks = await api.get('/api/practice/banks');
             renderManage();
-            U.showToast('题目已删除');
-        } catch (e) { U.showToast(e.message); }
+            U.showToast('题目已删除', 'success');
+        } catch (e) { U.showToast(e.message, 'error'); }
     }
 
     async function openQModal(qid) {
@@ -501,9 +501,9 @@
 
     async function saveQ() {
         const stem = el('pFStem').value.trim();
-        if (!stem) { U.showToast('请填写题干'); return; }
+        if (!stem) { U.showToast('请填写题干', 'warning'); return; }
         const opts = [...el('pFOpts').querySelectorAll('input')].map(x => x.value.trim());
-        if (opts.some(o => !o)) { U.showToast('请填写所有选项'); return; }
+        if (opts.some(o => !o)) { U.showToast('请填写所有选项', 'warning'); return; }
         const body = {
             bankId: state.curBank, type: 'single', stem,
             options: opts, answer: el('pFAnswer').value,
@@ -515,8 +515,8 @@
             el('pQModalMask').classList.remove('show');
             state.banks = await api.get('/api/practice/banks');
             renderManage();
-            U.showToast('题目已保存');
-        } catch (e) { U.showToast(e.message); }
+            U.showToast('题目已保存', 'success');
+        } catch (e) { U.showToast(e.message, 'error'); }
     }
 
     /* ---------- 题库管理：新增/编辑/删除 ---------- */
@@ -560,9 +560,9 @@
 
     async function saveBank() {
         const name = el('pFBankName').value.trim();
-        if (!name) { U.showToast('请填写题库名称'); return; }
+        if (!name) { U.showToast('请填写题库名称', 'warning'); return; }
         const catId = el('pFBankCat').value;
-        if (!catId) { U.showToast('请选择所属大类'); return; }
+        if (!catId) { U.showToast('请选择所属大类', 'warning'); return; }
         const body = {
             name,
             catId,
@@ -576,8 +576,8 @@
             state.banks = await api.get('/api/practice/banks');
             if (!state.selBank && state.banks.length) state.selBank = state.banks[0].id;
             renderManage();
-            U.showToast(state.editBank ? '题库已更新' : '题库已创建');
-        } catch (e) { U.showToast(e.message); }
+            U.showToast(state.editBank ? '题库已更新' : '题库已创建', 'success');
+        } catch (e) { U.showToast(e.message, 'error'); }
     }
 
     async function delBank(id) {
@@ -590,8 +590,8 @@
             if (state.selBank === id) state.selBank = state.banks.length ? state.banks[0].id : null;
             if (!state.banks.find(b => b.id === state.curBank)) state.curBank = state.banks.length ? state.banks[0].id : 0;
             renderManage();
-            U.showToast('题库已删除');
-        } catch (e) { U.showToast(e.message); }
+            U.showToast('题库已删除', 'success');
+        } catch (e) { U.showToast(e.message, 'error'); }
     }
 
     /* ---------- 练习记录 ---------- */
@@ -624,7 +624,7 @@
         let data;
         try {
             data = await api.get('/api/practice/history?page=' + page + '&limit=20');
-        } catch (e) { U.showToast('记录加载失败：' + e.message); return; }
+        } catch (e) { U.showToast('记录加载失败：' + e.message, 'error'); return; }
         state.recTotal = data.total;
         const inner = el('pRecListInner');
         if (!inner) return;
