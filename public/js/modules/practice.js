@@ -13,7 +13,7 @@
         ptab: 'start',            // start / manage / records
         cats: [],                 // 分类树（来自 PQ.data）
         banks: [],                // 题库列表
-        selCat: null, selBank: null, mode: 'order', count: 5,
+        selCat: null, selSub: null, selBank: null, mode: 'order', count: 5,
         run: null,                // 运行中会话 { sessionId, questions, idx, ok, ng, skip, answers, startTs, review }
         curBank: 1, editIdx: -1,  // 题库管理
         recPage: 1, recTotal: 0,  // 练习记录分页
@@ -65,7 +65,7 @@
             el('pPaneRun').hidden = ph !== 'run';
             el('pPaneResult').hidden = ph !== 'result';
         }
-        if (ptab === 'start') { renderCats(); renderBanks(); renderModes(); renderCounts(); updateStartBtn(); }
+        if (ptab === 'start') { renderCats(); renderSubs(); renderBanks(); renderModes(); renderCounts(); updateStartBtn(); }
         if (ptab === 'manage') renderManage();
         if (ptab === 'records') { renderStatsBar(); renderRecords(true); }
     }
@@ -80,22 +80,44 @@
                 <div class="p-cc-count">${c.subs.length} 个小类</div>
             </div>`).join('');
         grid.querySelectorAll('.p-cat-card').forEach(x => x.addEventListener('click', () => {
-            state.selCat = x.dataset.id; state.selBank = null;
-            renderCats(); renderBanks(); renderCounts(); updateStartBtn();
+            state.selCat = x.dataset.id; state.selSub = null; state.selBank = null;
+            renderCats(); renderSubs(); renderBanks(); renderCounts(); updateStartBtn();
+        }));
+    }
+
+    function renderSubs() {
+        const grid = el('pSubGrid');
+        const label = el('pSubLabel');
+        const cat = state.cats.find(c => c.id === state.selCat);
+        if (!cat) { grid.innerHTML = ''; label.textContent = ''; return; }
+        const subs = (cat.subs || []).map(s => ({ id: s.id, name: s.name }));
+        if (state.banks.some(b => b.catId === state.selCat && !b.subId)) subs.push({ id: '', name: '未分类' });
+        label.textContent = cat.name + ' · 共 ' + subs.length + ' 个二级分类';
+        grid.innerHTML = subs.map(s => `
+            <div class="p-cat-card ${state.selSub === s.id ? 'selected' : ''}" data-id="${s.id}">
+                <div class="p-cc-name">${U.escapeHtml(s.name)}</div>
+                <div class="p-cc-count">${state.banks.filter(b => b.catId === state.selCat && (b.subId || '') === s.id).length} 个题库</div>
+            </div>`).join('');
+        grid.querySelectorAll('.p-cat-card').forEach(x => x.addEventListener('click', () => {
+            state.selSub = x.dataset.id; state.selBank = null;
+            renderSubs(); renderBanks(); renderCounts(); updateStartBtn();
         }));
     }
 
     function renderBanks() {
         const grid = el('pBankGrid');
         const label = el('pBankLabel');
-        const banks = state.selCat ? state.banks.filter(b => b.catId === state.selCat) : [];
+        const banks = (state.selCat && state.selSub !== null)
+            ? state.banks.filter(b => b.catId === state.selCat && (b.subId || '') === state.selSub) : [];
         const cat = state.cats.find(c => c.id === state.selCat);
-        label.textContent = state.selCat
-            ? (cat ? cat.name : '') + ' · 共 ' + banks.length + ' 个题库'
-            : '请先选择大类';
+        let sub = null;
+        if (cat) sub = state.selSub === '' ? { name: '未分类' } : (cat.subs || []).find(s => s.id === state.selSub);
+        label.textContent = (state.selCat && state.selSub !== null)
+            ? ((cat ? cat.name : '') + ' / ' + (sub ? sub.name : '') + ' · 共 ' + banks.length + ' 个题库')
+            : (state.selCat ? '请先选择二级分类' : '请先选择大类');
         grid.innerHTML = banks.map(b => `
             <div class="p-bank-card ${state.selBank === b.id ? 'selected' : ''}" data-id="${b.id}">
-                <div class="p-bc-name">${U.escapeHtml(b.name)}${b.subName ? '<span class="p-bc-sub">' + U.escapeHtml(b.subName) + '</span>' : ''}</div>
+                <div class="p-bc-name">${U.escapeHtml(b.name)}</div>
                 <div class="p-bc-desc">${U.escapeHtml(b.description || '')}</div>
                 <div class="p-bc-count">${b.count} 道题</div>
             </div>`).join('');
@@ -124,11 +146,8 @@
 
     function renderCounts() {
         const row = el('pCountRow');
-        const bank = state.banks.find(b => b.id === state.selBank);
-        const max = bank ? Math.max(bank.count, 1) : 10;
-        const counts = [5, 10, 15, 20].filter(c => c <= max);
-        if (counts.length === 0) counts.push(Math.max(1, max));
-        if (!counts.includes(state.count)) state.count = counts[0];
+        const counts = [5, 10, 15, 20, 25, 30];
+        if (!counts.includes(state.count)) state.count = 5;
         row.innerHTML = counts.map(c => `<button class="p-count-btn ${state.count === c ? 'selected' : ''}" data-c="${c}">${c}</button>`).join('');
         row.querySelectorAll('.p-count-btn').forEach(x => x.addEventListener('click', () => {
             state.count = Number(x.dataset.c); renderCounts(); updateStartBtn();
@@ -139,6 +158,7 @@
         const btn = el('pStartBtn');
         const tip = el('pStartTip');
         if (!state.selCat) { btn.disabled = true; tip.textContent = '请先选择考试大类'; return; }
+        if (!state.selSub) { btn.disabled = true; tip.textContent = '请先选择二级分类'; return; }
         if (!state.selBank) { btn.disabled = true; tip.textContent = '请选择题库'; return; }
         btn.disabled = false;
         tip.textContent = state.mode === 'review' ? '将从练习历史中抽取错题，不足部分补随机题' : `将抽取 ${state.count} 道题`;
