@@ -2336,18 +2336,23 @@ button:hover {
 .p-rec-loading { font-size: 12.5px; color: #9ca3af; padding: 10px 0; text-align: center; }
 .p-rec-more { text-align: center; padding: 8px 0 2px; }
 
-/* 题目编辑弹窗（左对齐表单） */
-.p-q-modal { width: 560px; max-width: calc(100vw - 40px); max-height: 84vh; overflow-y: auto; text-align: left; padding: 26px 30px; }
-.p-q-modal p { font-size: 17px; margin-bottom: 14px; }
-.p-form-label { display: block; font-size: 12.5px; font-weight: 600; color: #374151; margin: 12px 0 5px; }
+/* 题目/题库编辑弹窗（左对齐表单，高级极简） */
+.p-q-modal { width: 580px; max-width: calc(100vw - 40px); max-height: 84vh; overflow-y: auto; text-align: left; padding: 28px 32px; }
+.p-q-modal p { font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 16px; padding-bottom: 14px; border-bottom: 1px solid #f0f2f5; }
+.p-form-label { display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin: 14px 0 6px; }
 .p-form-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .p-form-opt-label { width: 23px; height: 23px; flex-shrink: 0; border-radius: 50%; background: #f3f4f6; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-.p-form-row input { flex: 1; padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: inherit; }
-.p-q-modal textarea, .p-q-modal select { width: 100%; padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; }
-.p-q-modal textarea { resize: vertical; min-height: 52px; line-height: 1.6; }
-.p-q-modal input:focus, .p-q-modal textarea:focus, .p-q-modal select:focus { outline: none; border-color: #2563eb; }
-.p-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.p-q-modal .modal-buttons { margin-top: 18px; }
+.p-form-row input { flex: 1; padding: 8px 11px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13.5px; font-family: inherit; background: #fff; color: #374151; transition: border-color .15s, box-shadow .15s; }
+.p-q-modal > input[type="text"], .p-q-modal textarea, .p-q-modal select { width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13.5px; font-family: inherit; background: #fff; color: #374151; transition: border-color .15s, box-shadow .15s; }
+.p-q-modal textarea { resize: vertical; min-height: 58px; line-height: 1.6; }
+.p-q-modal > input[type="text"]:focus, .p-q-modal textarea:focus, .p-q-modal select:focus, .p-form-row input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+.p-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.p-q-modal .modal-buttons { margin-top: 22px; gap: 12px; }
+.p-q-modal .modal-buttons button { height: 38px; padding: 0 24px; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; }
+.p-q-modal .modal-buttons button:first-child { background: #f3f4f6; color: #374151; }
+.p-q-modal .modal-buttons button:first-child:hover { background: #e5e9f0; }
+.p-q-modal .modal-buttons button:last-child { background: #2563eb; color: #fff; }
+.p-q-modal .modal-buttons button:last-child:hover { background: #1d4ed8; }
 
 @media (max-width: 900px) {
     .p-manage-layout { grid-template-columns: 1fr; }
