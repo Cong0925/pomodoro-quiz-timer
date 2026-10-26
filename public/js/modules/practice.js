@@ -316,8 +316,7 @@
         const list = el('pBankList');
         list.innerHTML = state.cats.map(c => {
             const banks = state.banks.filter(b => b.catId === c.id);
-            return '<div class="p-mg-cat-title">' + U.escapeHtml(c.name) + '</div>' +
-                banks.map(b => `
+            const bankRow = b => `
                 <div class="p-bank-row ${state.curBank === b.id ? 'active' : ''}" data-id="${b.id}">
                     <div class="p-br-name">${U.escapeHtml(b.name)}<span class="p-br-count">${b.count}题</span></div>
                     <div class="p-br-meta">${U.escapeHtml(b.description || '')}</div>
@@ -325,7 +324,15 @@
                         <span data-op="edit" data-id="${b.id}">编辑</span>
                         <span data-op="del" data-id="${b.id}">删除</span>
                     </div>
-                </div>`).join('');
+                </div>`;
+            let html = '';
+            state.cats.forEach(c => {
+                const banks = state.banks.filter(b => b.catId === c.id);
+                if (banks.length) html += '<div class="p-mg-cat-title">' + U.escapeHtml(c.name) + '</div>' + banks.map(bankRow).join('');
+            });
+            const uncat = state.banks.filter(b => !b.catId);
+            if (uncat.length) html += '<div class="p-mg-cat-title">未分类</div>' + uncat.map(bankRow).join('');
+            return html;
         }).join('');
         list.querySelectorAll('.p-bank-row').forEach(x => {
             x.addEventListener('click', e => {
@@ -442,10 +449,11 @@
 
     function renderBankCatSub(cur) {
         const catSel = el('pFBankCat');
+        const def = cur || (state.cats.length ? state.cats[0].id : '');
         catSel.innerHTML = '<option value="">（不指定）</option>' + state.cats.map(c =>
-            `<option value="${c.id}" ${c.id === cur ? 'selected' : ''}>${U.escapeHtml(c.name)}</option>`).join('');
-        catSel.value = cur || '';
-        renderBankSubs(cur || '', null);
+            `<option value="${c.id}" ${c.id === def ? 'selected' : ''}>${U.escapeHtml(c.name)}</option>`).join('');
+        catSel.value = def || '';
+        renderBankSubs(def || '', null);
     }
 
     function renderBankSubs(catId, cur) {
@@ -459,9 +467,11 @@
     async function saveBank() {
         const name = el('pFBankName').value.trim();
         if (!name) { U.showToast('请填写题库名称'); return; }
+        const catId = el('pFBankCat').value;
+        if (!catId) { U.showToast('请选择所属大类'); return; }
         const body = {
             name,
-            catId: el('pFBankCat').value,
+            catId,
             subId: el('pFBankSub').value,
             description: el('pFBankDesc').value.trim()
         };

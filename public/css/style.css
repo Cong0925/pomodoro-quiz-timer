@@ -1265,6 +1265,10 @@ button:hover {
     z-index: 999;
 }
 
+.modal-mask.show {
+    display: flex;
+}
+
 .modal-box {
     background: #fff;
     padding: 32px 44px;
