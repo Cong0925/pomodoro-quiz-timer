@@ -88,6 +88,51 @@
         return f ? f.id : null;
     }
 
+    /* ---- 知识点描述编辑：进入编辑态 ---- */
+    function enterNoteEdit(h, r, it) {
+        const noteEl = it.querySelector('.di-note');
+        if (!noteEl || noteEl.querySelector('input')) return;
+        const old = r.note || '';
+        noteEl.classList.add('editing');
+        noteEl.innerHTML = '<input maxlength="255" placeholder="如：逻辑判断-削弱质疑类 高阶"><button class="note-save">保存</button><button class="note-cancel">取消</button>';
+        const input = noteEl.querySelector('input');
+        input.value = old;
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+        const done = async save => {
+            const val = input.value.trim();
+            if (save && val !== old) {
+                try {
+                    await D.updateRecordNote(h.id, r.no, val);
+                    r.note = val;
+                    U.showToast(`已保存 第${r.no}题 知识点`);
+                } catch (err) { U.showToast(err.message); }
+            }
+            renderNoteView(h, r, it);
+        };
+        noteEl.querySelector('.note-save').addEventListener('click', e2 => { e2.stopPropagation(); done(true); });
+        noteEl.querySelector('.note-cancel').addEventListener('click', e2 => { e2.stopPropagation(); done(false); });
+        input.addEventListener('keydown', e2 => {
+            if (e2.key === 'Enter') { e2.preventDefault(); done(true); }
+            if (e2.key === 'Escape') { done(false); }
+        });
+    }
+
+    /* ---- 知识点描述：局部恢复视图（不重渲染整个列表，保持卡片展开状态） ---- */
+    function renderNoteView(h, r, it) {
+        const noteEl = it.querySelector('.di-note');
+        if (!noteEl) return;
+        noteEl.classList.remove('editing');
+        const noteText = r.note
+            ? `<span class="di-note-text note-${r.result}" title="${U.escapeHtml(r.note)}">${U.escapeHtml(r.note)}</span>`
+            : '<span class="di-note-text"><span class="hint">暂无知识点描述</span></span>';
+        noteEl.innerHTML = noteText + `<button class="note-edit">${r.note ? '修改' : '添加'}</button>`;
+        noteEl.querySelector('.note-edit').addEventListener('click', (e) => {
+            e.stopPropagation();
+            enterNoteEdit(h, r, it);
+        });
+    }
+
     /* ---- 渲染当前页 ---- */
     function renderPage() {
         const page = D.historyPage;
@@ -173,7 +218,7 @@
                 const timeHtml = h.mode === 'single' ? `<span class="di-time">${r.timeStr || ''}</span>` : '';
                 const starSvg = () => '<svg viewBox="0 0 24 24" class="star-icon"><path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z"/></svg>';
                 const noteText = r.note
-                    ? `<span class="di-note-text" title="${U.escapeHtml(r.note)}">${U.escapeHtml(r.note)}</span>`
+                    ? `<span class="di-note-text note-${r.result}" title="${U.escapeHtml(r.note)}">${U.escapeHtml(r.note)}</span>`
                     : '<span class="di-note-text"><span class="hint">暂无知识点描述</span></span>';
                 it.innerHTML = `
                     <div class="di-top">
@@ -202,35 +247,10 @@
                     });
                     it.querySelector('.fav-slot').appendChild(favBtn);
                 }
-                /* 知识点描述编辑：点击修改/添加 → 输入框 + 保存/取消 */
+                /* 知识点描述编辑：点击修改/添加 → 输入框 + 保存/取消（保存后仅局部刷新，不重渲染列表） */
                 it.querySelector('.note-edit').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const noteEl = it.querySelector('.di-note');
-                    if (noteEl.querySelector('input')) return;
-                    const old = r.note || '';
-                    noteEl.classList.add('editing');
-                    noteEl.innerHTML = '<input maxlength="255" placeholder="如：逻辑判断-削弱质疑类 高阶"><button class="note-save">保存</button><button class="note-cancel">取消</button>';
-                    const input = noteEl.querySelector('input');
-                    input.value = old;
-                    input.focus();
-                    input.setSelectionRange(input.value.length, input.value.length);
-                    const done = async save => {
-                        const val = input.value.trim();
-                        if (save && val !== old) {
-                            try {
-                                await D.updateRecordNote(h.id, r.no, val);
-                                r.note = val;
-                                U.showToast(`已保存 第${r.no}题 知识点`);
-                            } catch (err) { U.showToast(err.message); }
-                        }
-                        renderPage();
-                    };
-                    noteEl.querySelector('.note-save').addEventListener('click', e2 => { e2.stopPropagation(); done(true); });
-                    noteEl.querySelector('.note-cancel').addEventListener('click', e2 => { e2.stopPropagation(); done(false); });
-                    input.addEventListener('keydown', e2 => {
-                        if (e2.key === 'Enter') { e2.preventDefault(); done(true); }
-                        if (e2.key === 'Escape') { done(false); }
-                    });
+                    enterNoteEdit(h, r, it);
                 });
                 grid.appendChild(it);
             });
