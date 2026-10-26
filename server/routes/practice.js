@@ -272,25 +272,75 @@ router.post('/:id/skip', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-/* POST /api/practice/:id/finish { ms } */
+/* POST /api/practice/:id/finish { ms }
+   结算练习会话：更新汇总，并把本轮练习归档为一条历史记录
+   （rounds + records 同主模式格式；note 留空，历史页可编辑/收藏/删除） */
 router.post('/:id/finish', async (req, res) => {
+    const conn = await pool.getConnection();
     try {
         const sessionId = num(req.params.id);
         const ms = num(req.body && req.body.ms);
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const [s] = await pool.query(
+        await conn.beginTransaction();
+        const [s] = await conn.query(
             `UPDATE practice_sessions SET total_ms = ?, finished_at = ?,
              rate = ROUND(correct_count / total_count * 100, 1)
              WHERE id = ? AND finished_at IS NULL`, [ms, now, sessionId]
         );
-        if (s.affectedRows === 0) return res.status(404).json({ error: '会话不存在或已结束' });
-        const [row] = await pool.query('SELECT * FROM practice_sessions WHERE id=?', [sessionId]);
+        if (s.affectedRows === 0) {
+            await conn.rollback();
+            return res.status(404).json({ error: '会话不存在或已结束' });
+        }
+        const [row] = await conn.query('SELECT * FROM practice_sessions WHERE id=?', [sessionId]);
         const r = row[0];
+
+        // 归档历史概要（rounds）
+        const rid = Date.now();
+        const fmt = t => {
+            const totalSec = t / 1000;
+            const minutes = String(Math.floor(totalSec / 60)).padStart(2, '0');
+            const seconds = (totalSec % 60).toFixed(2).padStart(5, '0');
+            return minutes + ':' + seconds;
+        };
+        await conn.query(
+            `INSERT INTO rounds
+                (id, mode, mode_name, title, description, finished_at, max_count,
+                 total_ms, correct, rate, cat_id, cat_name, sub_id, sub_name)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [rid, 'practice', '练习模式', str(r.bank_name, 100), '', now, r.total_count,
+             r.total_ms, r.correct_count, r.rate, r.cat_id, r.cat_name, r.sub_id, r.sub_name]
+        );
+        // 归档历史明细（records：累计用时 + 格式化时间）
+        const [recs] = await conn.query(
+            'SELECT no, ms, result FROM practice_records WHERE session_id=? ORDER BY no ASC', [sessionId]
+        );
+        if (recs.length) {
+            let cum = 0;
+            const vals = [];
+            const params = [];
+            recs.forEach(rr => {
+                cum += num(rr.ms);
+                vals.push('(?,?,?,?,?,?,?)');
+                params.push(rid, rr.no, num(rr.ms), cum, fmt(cum),
+                    rr.result === 'ok' || rr.result === 'ng' || rr.result === 'skip' ? rr.result : 'ok', '');
+            });
+            await conn.query(
+                `INSERT INTO records (round_id, no, ms, cum_ms, time_str, result, note) VALUES ${vals.join(',')}`,
+                params
+            );
+        }
+        await conn.commit();
         res.json({
             id: r.id, rate: r.rate, total: r.total_count, done: r.done_count,
-            correct: r.correct_count, wrong: r.wrong_count, skipped: r.skipped_count, totalMs: r.total_ms
+            correct: r.correct_count, wrong: r.wrong_count, skipped: r.skipped_count, totalMs: r.total_ms,
+            archived: { id: rid }
         });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+        await conn.rollback();
+        res.status(500).json({ error: e.message });
+    } finally {
+        conn.release();
+    }
 });
 
 /* ---------- 历史 / 统计 ---------- */

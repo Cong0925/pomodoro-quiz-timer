@@ -463,6 +463,7 @@ button:hover {
 
 .history-mode.single { background: #eaf1ff; color: #2563eb; }
 .history-mode.batch { background: #f3e8ff; color: #7c3aed; }
+.history-mode.practice { background: #e6f7ee; color: #16a34a; }
 
 .history-meta {
     font-size: 14px;

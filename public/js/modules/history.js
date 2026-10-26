@@ -33,7 +33,8 @@
         const opts = [
             { value: '', label: '全部模式' },
             { value: 'single', label: '单题模式' },
-            { value: 'batch', label: '整组模式' }
+            { value: 'batch', label: '整组模式' },
+            { value: 'practice', label: '练习模式' }
         ];
         sel.innerHTML = '';
         opts.forEach(o => {
@@ -215,7 +216,7 @@
                 it.className = 'detail-item';
                 const mark = r.result === 'ok' ? '✓' : r.result === 'skip' ? '○' : '✗';
                 const markCls = r.result === 'ok' ? 'mark-ok' : r.result === 'skip' ? 'mark-skip' : 'mark-ng';
-                const timeHtml = h.mode === 'single' ? `<span class="di-time">${r.timeStr || ''}</span>` : '';
+                const timeHtml = (h.mode === 'single' || h.mode === 'practice') ? `<span class="di-time">${r.timeStr || ''}</span>` : '';
                 const starSvg = () => '<svg viewBox="0 0 24 24" class="star-icon"><path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z"/></svg>';
                 const noteText = r.note
                     ? `<span class="di-note-text note-${r.result}" title="${U.escapeHtml(r.note)}">${U.escapeHtml(r.note)}</span>`
@@ -385,7 +386,7 @@
                     title: h.title || '未命名轮次',
                     mode: h.mode,
                     modeName: h.modeName,
-                    timeStr: h.mode === 'single' ? r.timeStr : '',
+                    timeStr: (h.mode === 'single' || h.mode === 'practice') ? r.timeStr : '',
                     catId: h.catId || '',
                     catName: h.catName || '',
                     subId: h.subId || '',
