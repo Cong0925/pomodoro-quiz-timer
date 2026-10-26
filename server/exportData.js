@@ -49,7 +49,37 @@ async function exportAll(conn) {
     const memos = {};
     m.forEach(x => { memos[x.d] = { type: x.type, title: x.title, text: x.content || '' }; });
 
-    return { version: 2, categories, history, favorites, studyDaily, memos };
+    /* 练习模式数据 */
+    const [qb] = await conn.query('SELECT id, name, cat_id, sub_id, description FROM question_banks ORDER BY id');
+    const questionBanks = qb.map(x => ({
+        id: x.id, name: x.name, catId: x.cat_id, subId: x.sub_id, description: x.description
+    }));
+    const [qs] = await conn.query(
+        'SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source FROM questions ORDER BY id');
+    const questions = qs.map(x => ({
+        id: x.id, bankId: x.bank_id, type: x.type, stem: x.stem, options: x.options,
+        answer: x.answer, analysis: x.analysis, difficulty: x.difficulty, source: x.source
+    }));
+    const [ps] = await conn.query(
+        `SELECT id, bank_id, bank_name, mode, total_count, done_count, correct_count, wrong_count,
+                skipped_count, rate, total_ms, cat_id, cat_name, sub_id, sub_name, started_at, finished_at
+         FROM practice_sessions ORDER BY id`);
+    const [pr] = await conn.query(
+        `SELECT session_id, JSON_ARRAYAGG(JSON_OBJECT(
+            'no', no, 'questionId', question_id, 'userAnswer', user_answer, 'result', result, 'ms', ms)) AS recs
+         FROM practice_records GROUP BY session_id`);
+    const prMap = {};
+    pr.forEach(r => { prMap[r.session_id] = parseJsonArray(r.recs); });
+    const practiceSessions = ps.map(x => ({
+        id: x.id, bankId: x.bank_id, bankName: x.bank_name, mode: x.mode,
+        totalCount: x.total_count, doneCount: x.done_count, correctCount: x.correct_count,
+        wrongCount: x.wrong_count, skippedCount: x.skipped_count, rate: x.rate, totalMs: x.total_ms,
+        catId: x.cat_id, catName: x.cat_name, subId: x.sub_id, subName: x.sub_name,
+        startedAt: x.started_at, finishedAt: x.finished_at, records: prMap[x.id] || []
+    }));
+
+    return { version: 2, categories, history, favorites, studyDaily, memos,
+             practice: { questionBanks, questions, practiceSessions } };
 }
 
 module.exports = { exportAll };

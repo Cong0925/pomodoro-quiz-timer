@@ -161,12 +161,95 @@ async function importData(conn, data) {
         }
     }
 
+    /* 5. 练习模式数据（文件为准替换） */
+    let pBanks = 0, pQuestions = 0, pSessions = 0;
+    if (data.practice && typeof data.practice === 'object') {
+        await conn.query('DELETE FROM practice_records');
+        await conn.query('DELETE FROM practice_sessions');
+        await conn.query('DELETE FROM questions');
+        await conn.query('DELETE FROM question_banks');
+
+        const banks = Array.isArray(data.practice.questionBanks) ? data.practice.questionBanks : [];
+        for (let i = 0; i < banks.length; i += BATCH) {
+            const chunk = banks.slice(i, i + BATCH);
+            const vals = [], params = [];
+            chunk.forEach(b => {
+                vals.push('(?,?,?,?,?)');
+                params.push(num(b.id) || 0, str(b.name, 100), str(b.catId, 32) || null,
+                    str(b.subId, 64) || null, str(b.description, 255));
+            });
+            await conn.query(
+                'INSERT INTO question_banks (id, name, cat_id, sub_id, description) VALUES ' + vals.join(','),
+                params);
+        }
+        pBanks = banks.length;
+
+        const qs = Array.isArray(data.practice.questions) ? data.practice.questions : [];
+        for (let i = 0; i < qs.length; i += BATCH) {
+            const chunk = qs.slice(i, i + BATCH);
+            const vals = [], params = [];
+            chunk.forEach(q => {
+                vals.push('(?,?,?,?,?,?,?,?,?)');
+                params.push(num(q.id) || 0, num(q.bankId) || 0, str(q.type, 10) || 'single',
+                    str(q.stem, 20000), JSON.stringify(q.options || []), str(q.answer, 50),
+                    str(q.analysis, 20000), Math.min(3, Math.max(1, num(q.difficulty) || 2)),
+                    str(q.source, 100));
+            });
+            await conn.query(
+                `INSERT INTO questions (id, bank_id, type, stem, options, answer, analysis, difficulty, source)
+                 VALUES ` + vals.join(','), params);
+        }
+        pQuestions = qs.length;
+
+        const sessions = Array.isArray(data.practice.practiceSessions) ? data.practice.practiceSessions : [];
+        for (let i = 0; i < sessions.length; i += BATCH) {
+            const chunk = sessions.slice(i, i + BATCH);
+            const vals = [], params = [];
+            chunk.forEach(s => {
+                vals.push('(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+                params.push(num(s.id) || 0, num(s.bankId) || 0, str(s.bankName, 100),
+                    str(s.mode, 10) || 'order', num(s.totalCount), num(s.doneCount), num(s.correctCount),
+                    num(s.wrongCount), num(s.skippedCount), num(s.rate), num(s.totalMs),
+                    str(s.catId, 32) || null, str(s.catName, 100) || null, str(s.subId, 64) || null,
+                    str(s.subName, 100) || null, s.startedAt || '1970-01-01 00:00:00',
+                    s.finishedAt || null);
+            });
+            await conn.query(
+                `INSERT INTO practice_sessions (id, bank_id, bank_name, mode, total_count, done_count,
+                    correct_count, wrong_count, skipped_count, rate, total_ms,
+                    cat_id, cat_name, sub_id, sub_name, started_at, finished_at)
+                 VALUES ` + vals.join(','), params);
+        }
+        pSessions = sessions.length;
+
+        /* practice_records：按会话插入（自增 id） */
+        for (const s of sessions) {
+            const recs = Array.isArray(s.records) ? s.records : [];
+            const sid = num(s.id) || 0;
+            for (let j = 0; j < recs.length; j += BATCH) {
+                const chunk = recs.slice(j, j + BATCH);
+                const vals = [], params = [];
+                chunk.forEach(r => {
+                    vals.push('(?,?,?,?,?,?,?)');
+                    const res = r.result === 'ok' || r.result === 'ng' || r.result === 'skip' ? r.result : 'ok';
+                    params.push(sid, num(r.questionId) || 0, num(r.no) || 0,
+                        r.userAnswer == null || r.userAnswer === '' ? null : str(r.userAnswer, 50),
+                        res, num(r.ms), null);
+                });
+                await conn.query(
+                    'INSERT INTO practice_records (session_id, question_id, no, user_answer, result, ms, answered_at) VALUES ' + vals.join(','),
+                    params);
+            }
+        }
+    }
+
     return {
         h: rounds.length,
         f: favs.length,
         hasCats: Array.isArray(data.categories) && data.categories.length > 0,
         hasStudy: !!(data.studyDaily && typeof data.studyDaily === 'object'),
-        hasMemos: !!(data.memos && typeof data.memos === 'object')
+        hasMemos: !!(data.memos && typeof data.memos === 'object'),
+        practice: { banks: pBanks, questions: pQuestions, sessions: pSessions }
     };
 }
 

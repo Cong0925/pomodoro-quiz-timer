@@ -15,6 +15,7 @@
     const viewFavorites = document.getElementById('viewFavorites');
     const viewStats = document.getElementById('viewStats');
     const viewCalendar = document.getElementById('viewCalendar');
+    const viewPractice = document.getElementById('viewPractice');
     const viewCategories = document.getElementById('viewCategories');
     const viewSettings = document.getElementById('viewSettings');
     const historyBadge = document.getElementById('historyBadge');
@@ -53,6 +54,7 @@
         viewFavorites.hidden = view !== 'favorites';
         viewStats.hidden = view !== 'stats';
         viewCalendar.hidden = view !== 'calendar';
+        viewPractice.hidden = view !== 'practice';
         viewCategories.hidden = view !== 'categories';
         viewSettings.hidden = view !== 'settings';
         setMenuActive(view, PQ.timer.workMode);
@@ -60,6 +62,7 @@
         if (view === 'favorites') { PQ.favorites.renderFilter(); PQ.favorites.renderFavs(); }
         if (view === 'stats') PQ.stats.renderStats();
         if (view === 'calendar') PQ.calendar.renderCalendar();
+        if (view === 'practice') PQ.practice.enter();
         if (view === 'categories') PQ.categories.renderManager();
         if (view === 'settings') PQ.settings.renderSettings();
     }

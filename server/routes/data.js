@@ -92,6 +92,35 @@ async function exportMemos() {
     return o;
 }
 
+async function exportPractice() {
+    const [qb] = await pool.query('SELECT id, name, cat_id, sub_id, description FROM question_banks ORDER BY id');
+    const questionBanks = qb.map(x => ({ id: x.id, name: x.name, catId: x.cat_id, subId: x.sub_id, description: x.description }));
+    const [qs] = await pool.query(
+        'SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source FROM questions ORDER BY id');
+    const questions = qs.map(x => ({
+        id: x.id, bankId: x.bank_id, type: x.type, stem: x.stem, options: x.options,
+        answer: x.answer, analysis: x.analysis, difficulty: x.difficulty, source: x.source
+    }));
+    const [ps] = await pool.query(
+        `SELECT id, bank_id, bank_name, mode, total_count, done_count, correct_count, wrong_count,
+                skipped_count, rate, total_ms, cat_id, cat_name, sub_id, sub_name, started_at, finished_at
+         FROM practice_sessions ORDER BY id`);
+    const [pr] = await pool.query(
+        `SELECT session_id, JSON_ARRAYAGG(JSON_OBJECT(
+            'no', no, 'questionId', question_id, 'userAnswer', user_answer, 'result', result, 'ms', ms)) AS recs
+         FROM practice_records GROUP BY session_id`);
+    const prMap = {};
+    (pr || []).forEach(x => { prMap[x.session_id] = parseJsonArray(x.recs); });
+    const practiceSessions = ps.map(x => ({
+        id: x.id, bankId: x.bank_id, bankName: x.bank_name, mode: x.mode,
+        totalCount: x.total_count, doneCount: x.done_count, correctCount: x.correct_count,
+        wrongCount: x.wrong_count, skippedCount: x.skipped_count, rate: x.rate, totalMs: x.total_ms,
+        catId: x.cat_id, catName: x.cat_name, subId: x.sub_id, subName: x.sub_name,
+        startedAt: x.started_at, finishedAt: x.finished_at, records: prMap[x.id] || []
+    }));
+    return { questionBanks, questions, practiceSessions };
+}
+
 /* GET /api/export 导出全部数据（旧版 v2 JSON 格式） */
 router.get('/export', async (req, res) => {
     try {
@@ -101,7 +130,8 @@ router.get('/export', async (req, res) => {
             history: await exportHistory(),
             favorites: await exportFavorites(),
             studyDaily: await exportStudyDaily(),
-            memos: await exportMemos()
+            memos: await exportMemos(),
+            practice: await exportPractice()
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -118,6 +148,10 @@ router.get('/info', async (req, res) => {
         const [favs] = await pool.query('SELECT COUNT(*) n FROM favorites');
         const [memos] = await pool.query('SELECT COUNT(*) n FROM memos');
         const [study] = await pool.query('SELECT COUNT(*) n, COALESCE(SUM(ms),0) ms FROM study_daily');
+        const [pb] = await pool.query('SELECT COUNT(*) n FROM question_banks');
+        const [pq] = await pool.query('SELECT COUNT(*) n FROM questions');
+        const [ps] = await pool.query('SELECT COUNT(*) n FROM practice_sessions');
+        const [pp] = await pool.query('SELECT COUNT(*) n FROM practice_records');
         res.json({
             dbName: process.env.DB_NAME || 'pomodoro-quiz-timer',
             host: (process.env.DB_HOST || 'localhost') + ':' + (process.env.DB_PORT || 3306),
@@ -128,7 +162,11 @@ router.get('/info', async (req, res) => {
             favorites: favs[0].n,
             memos: memos[0].n,
             studyDays: study[0].n,
-            studyMs: study[0].ms
+            studyMs: study[0].ms,
+            questionBanks: pb[0].n,
+            questions: pq[0].n,
+            practiceSessions: ps[0].n,
+            practiceRecords: pp[0].n
         });
     } catch (e) {
         res.status(500).json({ error: e.message });

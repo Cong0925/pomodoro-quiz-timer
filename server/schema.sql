@@ -152,6 +152,111 @@ CREATE TABLE IF NOT EXISTS memos (
     PRIMARY KEY (memo_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='日历备忘';
 
+-- ------------------------------------------------------------
+-- 8. question_banks 练习题库
+--    某分类（大类/小类）下的题目集合，如"公务员考试-资料分析"
+--    cat_id/sub_id 引用 categories / category_subs（删除分类不级联题库，
+--    由前端管理端约束；题库可独立命名跨分类使用）
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS question_banks (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '题库ID',
+    name        VARCHAR(100) NOT NULL                COMMENT '题库名称',
+    cat_id      VARCHAR(32)  NULL                    COMMENT '关联大类ID',
+    sub_id      VARCHAR(64)  NULL                    COMMENT '关联小类ID',
+    description VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '题库描述',
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_cat (cat_id),
+    KEY idx_sub (sub_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='练习题库';
+
+-- ------------------------------------------------------------
+-- 9. questions 题目
+--    type: single=单选 multi=多选 judge=判断
+--    options 存 JSON：[{label:'A',text:'...'}, ...]；判断题为 ['正确','错误'] 或空
+--    answer：单选 'A' / 多选 'AB' / 判断 'T'|'F'
+--    删除题库时级联删除题目；删除题目不影响练习历史（practice_records 存题号快照）
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS questions (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '题目ID',
+    bank_id     BIGINT       NOT NULL                COMMENT '所属题库ID',
+    type        VARCHAR(10)  NOT NULL DEFAULT 'single' COMMENT '题型 single/multi/judge',
+    stem        TEXT         NOT NULL                COMMENT '题干',
+    options     JSON         NULL                    COMMENT '选项JSON',
+    answer      VARCHAR(50)  NOT NULL                COMMENT '正确答案',
+    analysis    TEXT         NULL                    COMMENT '答案解析',
+    difficulty  TINYINT      NOT NULL DEFAULT 2      COMMENT '难度 1易 2中 3难',
+    source      VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '题目来源（可选）',
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_bank (bank_id),
+    CONSTRAINT fk_q_bank FOREIGN KEY (bank_id) REFERENCES question_banks (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='练习题目';
+
+-- ------------------------------------------------------------
+-- 10. practice_sessions 练习会话（一次练习 = 类似 rounds）
+--     cat_id/cat_name/sub_id/sub_name 存分类快照（分类改名/删除不影响历史）
+--     mode: order=顺序 random=随机 review=错题重练
+--     rate: 正确率 = 答对数 / 全部题数（跳过计错，与计时模式口径一致）
+--     bank_id 不设外键：题库删除后历史记录仍保留
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS practice_sessions (
+    id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+    bank_id       BIGINT       NOT NULL                COMMENT '题库ID（不设外键，保留历史）',
+    bank_name     VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '题库名称快照',
+    mode          VARCHAR(10)  NOT NULL DEFAULT 'order' COMMENT 'order/random/review',
+    total_count   INT          NOT NULL DEFAULT 0      COMMENT '本轮题量',
+    done_count    INT          NOT NULL DEFAULT 0      COMMENT '已作答题数（对+错，不含跳过）',
+    correct_count INT          NOT NULL DEFAULT 0      COMMENT '答对题数',
+    wrong_count   INT          NOT NULL DEFAULT 0      COMMENT '答错题数',
+    skipped_count INT          NOT NULL DEFAULT 0      COMMENT '跳过题数',
+    rate          DECIMAL(5,1) NOT NULL DEFAULT 0      COMMENT '正确率（%，1位小数）',
+    total_ms      BIGINT       NOT NULL DEFAULT 0      COMMENT '总用时（毫秒）',
+    cat_id        VARCHAR(32)  NULL                    COMMENT '大类ID快照',
+    cat_name      VARCHAR(100) NULL                    COMMENT '大类名称快照',
+    sub_id        VARCHAR(64)  NULL                    COMMENT '小类ID快照',
+    sub_name      VARCHAR(100) NULL                    COMMENT '小类名称快照',
+    started_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
+    finished_at   DATETIME     NULL                    COMMENT '结束时间',
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_bank (bank_id),
+    KEY idx_finished (finished_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='练习会话';
+
+-- ------------------------------------------------------------
+-- 11. practice_records 练习明细（每题一条）
+--     user_answer 作答内容；NULL=未答（跳过）
+--     result: ok=对 ng=错 skip=跳过
+--     question_id 不设外键：题目删除后练习明细仍保留（历史可回看题干快照存于客户端渲染）
+--     会话删除时级联删除明细
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS practice_records (
+    id          BIGINT   NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    session_id  BIGINT   NOT NULL                COMMENT '所属会话ID',
+    question_id BIGINT   NOT NULL                COMMENT '题目ID（不设外键）',
+    no          INT      NOT NULL                COMMENT '题号（从1开始）',
+    user_answer VARCHAR(50) NULL                 COMMENT '作答（NULL=未答）',
+    result      VARCHAR(4) NOT NULL DEFAULT 'ok' COMMENT 'ok=对 ng=错 skip=跳过',
+    ms          BIGINT   NOT NULL DEFAULT 0      COMMENT '本题用时（毫秒）',
+    answered_at DATETIME NULL                    COMMENT '作答时间',
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_session_no (session_id, no),
+    KEY idx_question (question_id),
+    CONSTRAINT fk_pr_session FOREIGN KEY (session_id) REFERENCES practice_sessions (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='练习明细';
+
+-- ============================================================
+-- 扩展预留说明（后续按需追加，不影响现有表）：
+--  · 若要支持"历史软删除"，可给 rounds 增加 deleted_at DATETIME NULL
+--  · 若要支持"一天多条备忘"，可把 memos 主键改为自增 id + memo_date 索引
+--  · 若要支持用户/多端，可增加 users 表并给业务表加 user_id 外键
+-- ============================================================
+
 -- ============================================================
 -- 扩展预留说明（后续按需追加，不影响现有表）：
 --  · 若要支持"历史软删除"，可给 rounds 增加 deleted_at DATETIME NULL
