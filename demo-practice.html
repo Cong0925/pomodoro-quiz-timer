@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>练习模式 · 设计 Demo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%232563eb'/%3E%3Cpath d='M5 5h9a3 3 0 0 1 3 3v11l-2.2-1.6L12.6 19l-2.2-1.6L8.2 19V8H5z' fill='white'/%3E%3C/svg%3E">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #1f2937; }
+.layout { display: flex; min-height: 100vh; }
+
+/* ===== 侧边栏（对齐现有项目） ===== */
+.sidebar { width: 220px; background: #fff; border-right: 1px solid #e5e7eb; padding: 16px 12px; flex-shrink: 0; display: flex; flex-direction: column; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; border-bottom: 1px solid #eef2f7; }
+.brand-icon { width: 34px; height: 34px; flex-shrink: 0; }
+.brand-name { font-size: 15px; font-weight: 700; }
+.brand-sub { font-size: 11px; color: #9ca3af; }
+.menu { margin-top: 10px; flex: 1; }
+.menu-group-label { font-size: 11px; color: #9ca3af; padding: 12px 10px 5px; }
+.menu-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; color: #374151; font-size: 13.5px; text-decoration: none; cursor: pointer; }
+.menu-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.menu-item:hover { background: #f3f4f6; }
+.menu-item.active { background: #eaf1ff; color: #2563eb; font-weight: 600; }
+.menu-item.demo-active { background: #eaf1ff; color: #2563eb; font-weight: 600; }
+.menu-badge { margin-left: auto; background: #2563eb; color: #fff; font-size: 11px; border-radius: 10px; padding: 0 7px; min-width: 18px; text-align: center; line-height: 18px; }
+.demo-tag { font-size: 10px; color: #2563eb; border: 1px solid #2563eb; border-radius: 4px; padding: 0 5px; margin-left: auto; line-height: 16px; }
+
+/* ===== 主区 ===== */
+.main { flex: 1; padding: 22px 28px; max-width: 1200px; min-width: 0; }
+.view-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+.view-header h2 { font-size: 20px; }
+.view-header .demo-note { font-size: 12px; color: #2563eb; background: #eaf1ff; padding: 4px 10px; border-radius: 6px; }
+.tabs { display: flex; gap: 6px; background: #fff; padding: 4px; border-radius: 10px; border: 1px solid #e5e7eb; }
+.tab-btn { padding: 7px 18px; border: none; background: transparent; border-radius: 7px; font-size: 13.5px; color: #6b7280; cursor: pointer; }
+.tab-btn.active { background: #2563eb; color: #fff; font-weight: 600; }
+
+/* ===== 通用卡片 ===== */
+.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; }
+.section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.section-title small { font-weight: 400; color: #9ca3af; font-size: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border: none; border-radius: 8px; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-ghost { background: #f3f4f6; color: #374151; }
+.btn-ghost:hover { background: #e5e7eb; }
+.btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+
+/* ===== 开始练习 ===== */
+.step-label { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 10px; }
+.bank-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.bank-card { border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 14px; cursor: pointer; transition: border-color .15s, box-shadow .15s; background: #fff; }
+.bank-card:hover { border-color: #93c5fd; }
+.bank-card.selected { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+.bank-card .bc-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+.bank-card .bc-sub { font-size: 12px; color: #2563eb; background: #eaf1ff; border-radius: 4px; padding: 1px 7px; }
+.bank-card .bc-desc { font-size: 12px; color: #6b7280; margin: 6px 0 8px; line-height: 1.5; }
+.bank-card .bc-count { font-size: 12px; color: #9ca3af; }
+.opt-row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 14px; }
+.mode-chip { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border: 1.5px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-size: 13px; min-width: 130px; }
+.mode-chip:hover { border-color: #93c5fd; }
+.mode-chip.selected { border-color: #2563eb; background: #eaf1ff; }
+.mode-chip b { font-size: 13.5px; color: #1f2937; }
+.mode-chip span { font-size: 11.5px; color: #6b7280; }
+.count-row { display: flex; gap: 8px; margin-top: 14px; }
+.count-btn { width: 44px; height: 36px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; }
+.count-btn.selected { border-color: #2563eb; background: #eaf1ff; color: #2563eb; font-weight: 700; }
+.start-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding-top: 16px; border-top: 1px solid #eef2f7; }
+.start-bar .tip { font-size: 12px; color: #9ca3af; }
+
+/* ===== 答题页 ===== */
+.practice-top { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.practice-top .p-title { font-size: 15px; font-weight: 700; }
+.practice-top .p-meta { font-size: 12px; color: #6b7280; }
+.progress-wrap { flex: 1; }
+.progress-bar { height: 6px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+.progress-bar i { display: block; height: 100%; background: #2563eb; border-radius: 4px; transition: width .2s; }
+.p-counts { display: flex; gap: 14px; font-size: 12.5px; }
+.p-counts b { font-weight: 700; }
+.p-counts .c-ok { color: #16a34a; } .p-counts .c-ng { color: #dc2626; } .p-counts .c-skip { color: #f59e0b; }
+.q-card .q-no { font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
+.q-card .q-stem { font-size: 15px; line-height: 1.8; margin-bottom: 16px; }
+.opt-list { display: flex; flex-direction: column; gap: 10px; }
+.opt-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-size: 14px; line-height: 1.6; transition: border-color .15s, background .15s; }
+.opt-item:hover:not(:disabled) { border-color: #93c5fd; }
+.opt-item:disabled { cursor: default; }
+.opt-item .opt-label { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid #d1d5db; display: flex; align-items: center; justify-content: center; font-size: 12.5px; color: #6b7280; font-weight: 600; }
+.opt-item .opt-text { flex: 1; }
+.opt-item.correct { border-color: #16a34a; background: #f0fdf4; }
+.opt-item.correct .opt-label { background: #16a34a; border-color: #16a34a; color: #fff; }
+.opt-item.wrong { border-color: #dc2626; background: #fef2f2; }
+.opt-item.wrong .opt-label { background: #dc2626; border-color: #dc2626; color: #fff; }
+.opt-item.reveal { border-color: #16a34a; background: #f0fdf4; }
+.opt-item.reveal .opt-label { background: #16a34a; border-color: #16a34a; color: #fff; }
+.opt-item.dim { opacity: .55; }
+.analysis-box { margin-top: 16px; border-top: 1px dashed #e5e7eb; padding-top: 14px; }
+.analysis-box .a-title { font-size: 13px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
+.analysis-box .a-body { font-size: 13.5px; line-height: 1.8; color: #4b5563; }
+.analysis-box .a-tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 11px; background: #f3f4f6; color: #6b7280; border-radius: 4px; padding: 2px 8px; }
+.q-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.skip-btn { background: #fef3c7; color: #b45309; }
+.skip-btn:hover { background: #fde68a; }
+
+/* ===== 结算 ===== */
+.result-box { text-align: center; padding: 30px 20px; }
+.result-box .r-score { font-size: 40px; font-weight: 800; color: #2563eb; }
+.result-box .r-label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+.r-grid { display: flex; justify-content: center; gap: 36px; margin: 22px 0; }
+.r-grid .rg-item { text-align: center; }
+.r-grid .rg-item b { display: block; font-size: 22px; }
+.r-grid .rg-item span { font-size: 12px; color: #6b7280; }
+.r-grid .c-ok { color: #16a34a; } .r-grid .c-ng { color: #dc2626; } .r-grid .c-skip { color: #f59e0b; }
+
+/* ===== 题库管理 ===== */
+.manage-layout { display: grid; grid-template-columns: 280px 1fr; gap: 14px; }
+.bank-list { display: flex; flex-direction: column; gap: 8px; }
+.bank-row { padding: 11px 13px; border: 1.5px solid #e5e7eb; border-radius: 9px; cursor: pointer; background: #fff; }
+.bank-row:hover { border-color: #93c5fd; }
+.bank-row.active { border-color: #2563eb; background: #eaf1ff; }
+.bank-row .br-name { font-size: 13.5px; font-weight: 700; display: flex; justify-content: space-between; }
+.bank-row .br-meta { font-size: 11.5px; color: #6b7280; margin-top: 3px; }
+.qlist-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.qlist-head .ql-title { font-size: 14px; font-weight: 700; }
+.q-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.q-table th { text-align: left; font-size: 12px; color: #6b7280; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
+.q-table td { padding: 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+.q-table .q-stem-cell { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-table tr:hover td { background: #fafbfd; }
+.op-link { color: #2563eb; cursor: pointer; font-size: 12.5px; margin-right: 10px; }
+.op-link.danger { color: #dc2626; }
+.diff { font-size: 11.5px; padding: 1px 8px; border-radius: 4px; }
+.diff-1 { background: #f0fdf4; color: #16a34a; } .diff-2 { background: #fef9c3; color: #a16207; } .diff-3 { background: #fef2f2; color: #dc2626; }
+
+/* ===== 练习记录 ===== */
+.rec-card { border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; margin-bottom: 10px; overflow: hidden; }
+.rec-head { display: flex; align-items: center; gap: 12px; padding: 13px 16px; cursor: pointer; }
+.rec-head:hover { background: #fafbfd; }
+.rec-no { width: 26px; height: 26px; border-radius: 8px; background: #eaf1ff; color: #2563eb; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.rec-title { font-weight: 600; font-size: 13.5px; flex: 1; min-width: 0; }
+.rec-title .rt-sub { display: block; font-size: 11.5px; color: #9ca3af; font-weight: 400; }
+.rec-rate { font-size: 15px; font-weight: 800; color: #16a34a; }
+.rec-rate.low { color: #dc2626; }
+.rec-toggle { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; color: #9ca3af; transition: transform .15s; }
+.rec-card.open .rec-toggle { transform: rotate(90deg); }
+.rec-body { border-top: 1px solid #f3f4f6; padding: 6px 16px 14px; }
+.rec-detail-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #fafbfd; font-size: 12.5px; }
+.rec-detail-row:last-child { border-bottom: none; }
+.rd-no { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.rd-ok { background: #f0fdf4; color: #16a34a; } .rd-ng { background: #fef2f2; color: #dc2626; } .rd-skip { background: #fef9c3; color: #b45309; }
+.rd-stem { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-ans { color: #6b7280; flex-shrink: 0; }
+.rd-ans b { color: #1f2937; }
+
+/* ===== 弹窗 ===== */
+.modal-mask { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: none; align-items: center; justify-content: center; z-index: 50; }
+.modal-mask.show { display: flex; }
+.modal { width: 560px; max-width: calc(100vw - 40px); max-height: calc(100vh - 60px); overflow-y: auto; background: #fff; border-radius: 14px; padding: 20px 22px; }
+.modal h3 { font-size: 16px; margin-bottom: 14px; }
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; font-size: 12.5px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+.form-row input, .form-row select, .form-row textarea { width: 100%; padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; }
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus { outline: none; border-color: #2563eb; }
+.form-row textarea { resize: vertical; min-height: 60px; line-height: 1.6; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row .opt-label-static { width: 24px; height: 24px; border-radius: 50%; background: #f3f4f6; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-right: 8px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.cat-card { border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 16px 14px; cursor: pointer; transition: border-color .15s, box-shadow .15s; background: #fff; }
+.cat-card:hover { border-color: #93c5fd; }
+.cat-card.selected { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+.cat-card .cc-name { font-size: 15px; font-weight: 700; }
+.cat-card .cc-desc { font-size: 12px; color: #6b7280; margin-top: 4px; line-height: 1.5; }
+.cat-card .cc-count { font-size: 11.5px; color: #9ca3af; margin-top: 8px; }
+.mg-cat-title { font-size: 12px; font-weight: 700; color: #9ca3af; margin: 14px 2px 6px; }
+.mg-cat-title:first-child { margin-top: 0; }
+
+#toast { position: fixed; left: 50%; bottom: 36px; transform: translateX(-50%) translateY(20px); background: #1f2937; color: #fff; font-size: 13px; padding: 9px 18px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 99; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 900px) {
+  .sidebar { width: 64px; padding: 12px 6px; }
+  .sidebar .brand-text, .sidebar .menu-item span, .sidebar .menu-group-label, .sidebar .demo-tag { display: none; }
+  .sidebar .menu-item { justify-content: center; }
+  .main { padding: 16px; }
+  .manage-layout { grid-template-columns: 1fr; }
+  .start-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ===== 侧边栏（演示：练习模式入口） ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" fill="#2563eb"/><path d="M12 7v5l3.5 1.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+      <div class="brand-text"><div class="brand-name">刷题计时器</div><div class="brand-sub">计时 · 统计 · 留痕</div></div>
+    </div>
+    <nav class="menu">
+      <div class="menu-group-label">计时模式</div>
+      <div class="menu-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 13l3-3M9 2h6M12 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg><span>单题模式</span></div>
+      <div class="menu-item"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>整组模式</span></div>
+
+      <div class="menu-group-label">练习</div>
+      <div class="menu-item demo-active"><svg viewBox="0 0 24 24"><path d="M4 5h8a3 3 0 0 1 3 3v11l-1.6-1.2-1.6 1.2-1.6-1.2L8.6 18l-1.6 1.2V8H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15.5 7h4.5a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-2.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>练习模式</span><span class="demo-tag">新</span></div>
+
+      <div class="menu-group-label">数据</div>
+      <div class="menu-item"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>历史记录</span></div>
+      <div class="menu-item"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>错题收藏</span></div>
+      <div class="menu-item"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>学习统计</span></div>
+      <div class="menu-item"><svg viewBox="0 0 24 24"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 12h7v7h-7zM4 15h7v4H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>分类管理</span></div>
+
+      <div class="menu-group-label">备忘</div>
+      <div class="menu-item"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>日历备忘</span></div>
+      <div class="menu-group-label">系统</div>
+      <div class="menu-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>设置</span></div>
+    </nav>
+  </aside>
+
+  <!-- ===== 主区 ===== -->
+  <main class="main">
+    <div class="view-header">
+      <h2>练习模式</h2>
+      <span class="demo-note">设计 Demo · 点击可交互 · 数据为示例</span>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="start">开始练习</button>
+      <button class="tab-btn" data-tab="manage">题库管理</button>
+      <button class="tab-btn" data-tab="records">练习记录</button>
+    </div>
+
+    <!-- ===== Tab1 开始练习 ===== -->
+    <section id="tab-start" style="margin-top:16px">
+      <div class="card" id="startSetup">
+        <div class="section-title">选择考试大类</div>
+        <div class="cat-grid" id="catGrid"></div>
+
+        <div class="section-title" style="margin-top:22px">选择题库 <small id="bankCatLabel">请先选择大类</small></div>
+        <div class="bank-grid" id="bankGrid"></div>
+
+        <div class="step-label" style="margin-top:22px">练习方式</div>
+        <div class="opt-row" id="modeRow"></div>
+
+        <div class="step-label" style="margin-top:20px">题量</div>
+        <div class="count-row" id="countRow"></div>
+
+        <div class="start-bar">
+          <span class="tip" id="startTip">选择题库后可开始练习</span>
+          <button class="btn btn-primary" id="btnStart" disabled>开始练习</button>
+        </div>
+      </div>
+
+      <div class="card" id="practiceView" hidden>
+        <div class="practice-top">
+          <div class="p-title" id="pTitle"></div>
+          <div class="p-meta" id="pMeta"></div>
+          <div class="progress-wrap"><div class="progress-bar"><i id="pBar" style="width:0%"></i></div></div>
+          <div class="p-counts">
+            <span>对 <b class="c-ok" id="pcOk">0</b></span>
+            <span>错 <b class="c-ng" id="pcNg">0</b></span>
+            <span>跳 <b class="c-skip" id="pcSkip">0</b></span>
+            <span>用时 <b id="pcTime">00:00</b></span>
+          </div>
+        </div>
+        <div class="q-card">
+          <div class="q-no" id="qNo"></div>
+          <div class="q-stem" id="qStem"></div>
+          <div class="opt-list" id="optList"></div>
+          <div class="analysis-box" id="qAnalysis" hidden></div>
+          <div class="q-actions">
+            <button class="btn skip-btn" id="btnSkip">跳过本题</button>
+            <button class="btn btn-primary" id="btnNext" hidden>下一题</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card result-box" id="resultView" hidden>
+        <div class="r-score" id="rScore"></div>
+        <div class="r-label">正确率（跳过计错）</div>
+        <div class="r-grid">
+          <div class="rg-item"><b class="c-ok" id="rOk"></b><span>答对</span></div>
+          <div class="rg-item"><b class="c-ng" id="rNg"></b><span>答错</span></div>
+          <div class="rg-item"><b class="c-skip" id="rSkip"></b><span>跳过</span></div>
+          <div class="rg-item"><b id="rTime"></b><span>用时</span></div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:8px">
+          <button class="btn btn-ghost" id="btnReplay">再练一次</button>
+          <button class="btn btn-ghost" id="btnReview">回看全部解析</button>
+          <button class="btn btn-primary" id="btnBackStart">返回题库</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Tab2 题库管理 ===== -->
+    <section id="tab-manage" hidden style="margin-top:16px">
+      <div class="manage-layout">
+        <div>
+          <div class="section-title">题库</div>
+          <div class="bank-list" id="bankList"></div>
+        </div>
+        <div class="card">
+          <div class="qlist-head">
+            <span class="ql-title" id="qlTitle"></span>
+            <button class="btn btn-primary btn-sm" id="btnAddQ">新增题目</button>
+          </div>
+          <table class="q-table">
+            <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:70px">答案</th><th style="width:70px">难度</th><th style="width:90px">操作</th></tr></thead>
+            <tbody id="qTbody"></tbody>
+          </table>
+          <div id="qEmpty" style="text-align:center;color:#9ca3af;font-size:13px;padding:26px 0">该题库暂无题目</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Tab3 练习记录 ===== -->
+    <section id="tab-records" hidden style="margin-top:16px">
+      <div id="recList"></div>
+    </section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<!-- ===== 题目编辑弹窗 ===== -->
+<div class="modal-mask" id="qModal">
+  <div class="modal">
+    <h3 id="qModalTitle">新增题目</h3>
+    <div class="form-row">
+      <label>题干</label>
+      <textarea id="fStem" rows="3" placeholder="输入题目题干"></textarea>
+    </div>
+    <div class="form-row"><label>选项（正确答案请与下方保持一致）</label></div>
+    <div id="fOpts"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>正确答案</label><select id="fAnswer"></select></div>
+      <div class="form-row"><label>难度</label>
+        <select id="fDiff"><option value="1">简单</option><option value="2" selected>中等</option><option value="3">困难</option></select>
+      </div>
+    </div>
+    <div class="form-row"><label>解析</label><textarea id="fAnalysis" rows="3" placeholder="答案解析 / 知识点讲解"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancelQ">取消</button>
+      <button class="btn btn-primary" id="btnSaveQ">保存题目</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== 示例数据 ===== */
+const CATS = [
+  { id: 'gk', name: '公务员考试', desc: '行测 + 申论备考练习', count: 4 },
+  { id: 'sy', name: '事业单位', desc: '公共基础 + 职测练习', count: 2 },
+  { id: 'js', name: '教师资格', desc: '综合素质 + 教育知识', count: 1 },
+];
+const BANKS = [
+  { id: 1, name: '言语理解·成语辨析', catId: 'gk', cat: '公务员考试', sub: '言语理解', count: 8, desc: '高频成语 + 语境辨析，重点积累实词与成语' },
+  { id: 2, name: '判断推理·图形规律', catId: 'gk', cat: '公务员考试', sub: '判断推理', count: 5, desc: '图形推理常见规律：对称、旋转、数量' },
+  { id: 3, name: '资料分析·速算技巧', catId: 'gk', cat: '公务员考试', sub: '资料分析', count: 4, desc: '增长率、比重、基期量速算技巧' },
+  { id: 4, name: '数量关系·行程工程', catId: 'gk', cat: '公务员考试', sub: '数量关系', count: 3, desc: '行程问题、工程问题核心公式' },
+  { id: 5, name: '公基·法律常识', catId: 'sy', cat: '事业单位', sub: '公共基础', count: 4, desc: '宪法、民法、行政法高频考点' },
+  { id: 6, name: '言语·病句辨析', catId: 'sy', cat: '事业单位', sub: '言语理解', count: 3, desc: '病句类型与修改技巧' },
+  { id: 7, name: '综合素质·文化素养', catId: 'js', cat: '教师资格', sub: '综合素质', count: 3, desc: '文化常识 + 科学素养' },
+];
+const QUESTIONS = {
+  1: [
+    { stem: '依次填入横线处最恰当的一项是：改革进入深水区，矛盾问题愈发（  ），更需要我们（  ）进取，敢于啃硬骨头。', opts: ['错综复杂 砥砺', '盘根错节 踟蹰', '千头万绪 畏缩', '扑朔迷离 观望'], answer: 'A', analysis: '"错综复杂"形容头绪繁多、情况复杂，与"深水区、矛盾问题"搭配恰当；"砥砺进取"表示磨炼意志、奋勇向前，符合改革语境。', tags: ['成语辨析', '语境搭配'] },
+    { stem: '下列句子中，加点成语使用恰当的一项是：', opts: ['他的演讲旁征博引，令人耳目一新', '面对困难，他总是一意孤行地坚持己见', '这场演出登峰造极，观众纷纷离场', '新政策实施后，市场前景讳莫如深'], answer: 'A', analysis: 'A 中"旁征博引"指引用大量材料作依据，搭配演讲恰当。B"一意孤行"含贬义且与"坚持己见"重复；C"登峰造极"指达到最高境界，与观众离场矛盾；D"讳莫如深"指隐瞒不说，与"前景"搭配不当。', tags: ['成语使用'] },
+    { stem: '填入横线处最恰当的是：调查研究要（  ）问题导向，把情况摸清、把问题找准，切忌（  ）地走过场。', opts: ['坚持 浮光掠影', '秉承 深入浅出', '树立 一丝不苟', '强化 脚踏实地'], answer: 'A', analysis: '"坚持问题导向"为常见搭配；"浮光掠影"比喻观察不细致、印象不深，恰好对应"走过场"。', tags: ['固定搭配'] },
+    { stem: '下列与"不谋而合"意思最接近的成语是：', opts: ['殊途同归', '一拍即合', '异曲同工', '志同道合'], answer: 'C', analysis: '"不谋而合"指事先没有商量而彼此见解相同；"异曲同工"比喻话的说法不同而用意相同，或做法不同而效果一样，语义最接近。"殊途同归"侧重结果相同，途径不同。', tags: ['近义成语'] },
+    { stem: '依次填入的词语最恰当的一项是：基层治理要（  ）更多社会力量参与，形成共建共治共享的（  ）。', opts: ['引导 格局', '指导 局面', '诱导 框架', '引领 圈套'], answer: 'A', analysis: '"引导社会力量参与"搭配自然；"共建共治共享的格局"是政策常用表述。B"指导"带自上而下意味；C"诱导"含贬义；D"圈套"明显不符。', tags: ['固定搭配'] },
+    { stem: '文中画横线成语使用错误的是：①他做事总是（胸有成竹），从不临阵磨枪。②该方案（首当其冲）地解决了资金问题。③对于谣言，我们要（明辨是非）。④成绩面前他始终保持（虚怀若谷）。', opts: ['①', '②', '③', '④'], answer: 'B', analysis: '"首当其冲"指最先受到攻击或遭遇灾难，不能用于"解决问题"。"胸有成竹""明辨是非""虚怀若谷"使用均正确。', tags: ['成语误用'] },
+    { stem: '填入横线处最恰当的一项是：无论时代如何变迁，为人民服务的初心始终不能（  ），干事创业的激情始终不能（  ）。', opts: ['改变 消退', '更改 膨胀', '动摇 削减', '变动 减弱'], answer: 'A', analysis: '"初心不能改变""激情不能消退"搭配最为自然流畅，语义符合"始终如一"的语境。', tags: ['语境辨析'] },
+    { stem: '依次填入横线处的成语最恰当的一组是：面对百年未有之大变局，我们既要（  ）防范风险，又要（  ）抢抓机遇。', opts: ['未雨绸缪 乘势而上', '亡羊补牢 随波逐流', '临渴掘井 守株待兔', '防微杜渐 坐失良机'], answer: 'A', analysis: '"未雨绸缪"指事前做好准备，"乘势而上"指趁着有利形势积极行动，与"防范风险、抢抓机遇"完美对应。', tags: ['成语辨析'] },
+  ],
+  2: [
+    { stem: '从所给四个选项中，选择最合适的一个填入问号处，使之呈现一定规律性：\n○ ○ ○\n○ ● ○\n○ ○ ?', opts: ['○', '●', '◇', '△'], answer: 'B', analysis: '观察发现图形按行移动，黑色圆点按顺时针方向每次移动一个位置，故问号处应为黑色圆点。', tags: ['位置规律'] },
+    { stem: '图形呈现的规律是：①△△△ ②△△△ ③△△△ ④△△△（每一行三角形数量依次增加 1、2、3、4）', opts: ['数量递增', '对称变化', '旋转变化', '笔画递增'], answer: 'A', analysis: '每行三角形个数依次为 1、2、3、4，呈数量递增规律。', tags: ['数量规律'] },
+    { stem: '下列图形中，与其他三个不同类的是：A.对称图形 B.非对称图形 C.对称图形 D.对称图形', opts: ['A', 'B', 'C', 'D'], answer: 'B', analysis: 'A、C、D 均为对称图形，B 为非对称图形，故选 B。', tags: ['分类思维'] },
+    { stem: '图形序列：□ ▷ ○ □ ▷ ○ □ ▷ ?，问号处应为：', opts: ['□', '▷', '○', '△'], answer: 'C', analysis: '图形按"□ ▷ ○"三循环重复出现，第 9 个图形应为 ○。', tags: ['循环规律'] },
+    { stem: '两个图形叠加后，重叠区域为黑色，其余为白色，叠加结果最可能是：', opts: ['全黑', '全白', '黑块居中', '黑块分散'], answer: 'C', analysis: '两图形中心区域重叠，叠加后黑色区域位于中心位置。', tags: ['叠加规律'] },
+  ],
+  3: [
+    { stem: '2023 年某省 GDP 为 8.6 万亿元，2024 年同比增长 6.2%，则 2024 年该省 GDP 约为：', opts: ['9.13 万亿元', '9.35 万亿元', '9.57 万亿元', '9.79 万亿元'], answer: 'A', analysis: '8.6 × (1 + 6.2%) = 8.6 × 1.062 ≈ 9.13 万亿元。', tags: ['现期量', '速算'] },
+    { stem: '2024 年某商品销售额 1250 万元，2023 年为 1000 万元，则同比增长率为：', opts: ['20%', '25%', '22.5%', '27.5%'], answer: 'B', analysis: '(1250 - 1000) ÷ 1000 = 25%。', tags: ['增长率'] },
+    { stem: '某地区 2024 年粮食产量 5200 万吨，比上年增长 4%，则 2023 年产量约为：', opts: ['4950 万吨', '5000 万吨', '5050 万吨', '5100 万吨'], answer: 'B', analysis: '基期量 = 现期量 ÷ (1 + 增长率) = 5200 ÷ 1.04 ≈ 5000 万吨。', tags: ['基期量'] },
+    { stem: '某市 2024 年常住人口 2100 万，其中城镇人口 1365 万，则城镇化率为：', opts: ['60%', '62%', '65%', '68%'], answer: 'C', analysis: '1365 ÷ 2100 = 65%。', tags: ['比重'] },
+  ],
+  4: [
+    { stem: '甲、乙两地相距 480 公里，一辆汽车从甲地开往乙地，速度为 80 公里/小时，返回时速度为 120 公里/小时，则该车往返平均速度为：', opts: ['90 公里/小时', '96 公里/小时', '100 公里/小时', '104 公里/小时'], answer: 'B', analysis: '平均速度 = 2v₁v₂ ÷ (v₁ + v₂) = 2×80×120 ÷ 200 = 96 公里/小时。', tags: ['行程问题'] },
+    { stem: '一项工程，甲单独做需 10 天完成，乙单独做需 15 天完成，两人合作需多少天？', opts: ['5 天', '6 天', '7 天', '8 天'], answer: 'B', analysis: '1 ÷ (1/10 + 1/15) = 1 ÷ (1/6) = 6 天。', tags: ['工程问题'] },
+    { stem: '某商品进价 200 元，按 40% 的利润率定价后打 8 折出售，则每件商品的利润为：', opts: ['16 元', '20 元', '24 元', '28 元'], answer: 'C', analysis: '定价 = 200 × 1.4 = 280 元，折后 = 280 × 0.8 = 224 元，利润 = 224 - 200 = 24 元。', tags: ['利润问题'] },
+  ],
+};
+
+/* 练习记录（示例） */
+const RECORDS = [
+  { id: 1, title: '言语理解·成语辨析', mode: '顺序练习', date: '2026-10-23 21:14', total: 8, ok: 5, ng: 2, skip: 1, rate: 62.5, ms: 386000,
+    details: [
+      { no: 1, stem: '改革进入深水区，矛盾问题愈发（  ）…', my: 'A', ans: 'A', res: 'ok' },
+      { no: 2, stem: '下列句子中，加点成语使用恰当…', my: 'C', ans: 'A', res: 'ng' },
+      { no: 3, stem: '调查研究要（  ）问题导向…', my: 'A', ans: 'A', res: 'ok' },
+      { no: 4, stem: '下列与"不谋而合"意思最接近…', my: 'C', ans: 'C', res: 'ok' },
+      { no: 5, stem: '基层治理要（  ）更多社会力量…', my: 'B', ans: 'A', res: 'ng' },
+      { no: 6, stem: '文中画横线成语使用错误的是…', my: '—', ans: 'B', res: 'skip' },
+      { no: 7, stem: '为人民服务的初心始终不能…', my: 'A', ans: 'A', res: 'ok' },
+      { no: 8, stem: '面对百年未有之大变局…', my: 'A', ans: 'A', res: 'ok' },
+    ] },
+  { id: 2, title: '资料分析·速算技巧', mode: '随机练习', date: '2026-10-22 19:02', total: 4, ok: 3, ng: 1, skip: 0, rate: 75.0, ms: 240000,
+    details: [
+      { no: 1, stem: '2023 年某省 GDP 为 8.6 万亿元…', my: 'A', ans: 'A', res: 'ok' },
+      { no: 2, stem: '2024 年某商品销售额 1250 万元…', my: 'B', ans: 'B', res: 'ok' },
+      { no: 3, stem: '某地区 2024 年粮食产量 5200 万吨…', my: 'C', ans: 'B', res: 'ng' },
+      { no: 4, stem: '某市 2024 年常住人口 2100 万…', my: 'C', ans: 'C', res: 'ok' },
+    ] },
+];
+
+/* ===== 状态 ===== */
+let curTab = 'start';
+let selCat = null, selBank = null, selMode = 'order', selCount = 5;
+let practice = null; // { bank, questions, idx, ok, ng, skip, answers[], startTs }
+
+/* ===== 渲染：题库选择 ===== */
+function renderCats() {
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = CATS.map(c => `
+    <div class="cat-card ${selCat === c.id ? 'selected' : ''}" data-id="${c.id}">
+      <div class="cc-name">${c.name}</div>
+      <div class="cc-desc">${c.desc}</div>
+      <div class="cc-count">${c.count} 个题库</div>
+    </div>`).join('');
+  grid.querySelectorAll('.cat-card').forEach(el => el.addEventListener('click', () => {
+    selCat = el.dataset.id; selBank = null;
+    renderCats(); renderBanks(); renderCounts(); updateStartBtn();
+  }));
+}
+function renderBanks() {
+  const grid = document.getElementById('bankGrid');
+  const label = document.getElementById('bankCatLabel');
+  const banks = selCat ? BANKS.filter(b => b.catId === selCat) : [];
+  label.textContent = selCat ? (CATS.find(c => c.id === selCat).name + ' · 共 ' + banks.length + ' 个题库') : '请先选择大类';
+  grid.innerHTML = banks.map(b => `
+    <div class="bank-card ${selBank === b.id ? 'selected' : ''}" data-id="${b.id}">
+      <div class="bc-name">${b.name}<span class="bc-sub">${b.sub}</span></div>
+      <div class="bc-desc">${b.desc}</div>
+      <div class="bc-count">${b.count} 道题</div>
+    </div>`).join('');
+  grid.querySelectorAll('.bank-card').forEach(el => el.addEventListener('click', () => {
+    selBank = Number(el.dataset.id); renderBanks(); renderCounts(); updateStartBtn();
+  }));
+  renderModes(); renderCounts(); updateStartBtn();
+}
+function renderModes() {
+  const row = document.getElementById('modeRow');
+  const modes = [
+    { k: 'order', n: '顺序练习', d: '按题库顺序逐题作答' },
+    { k: 'random', n: '随机抽题', d: '打乱顺序随机抽取' },
+    { k: 'review', n: '错题重练', d: '抽取历史错题重点突破' },
+  ];
+  row.innerHTML = modes.map(m => `
+    <div class="mode-chip ${selMode === m.k ? 'selected' : ''}" data-k="${m.k}">
+      <b>${m.n}</b><span>${m.d}</span>
+    </div>`).join('');
+  row.querySelectorAll('.mode-chip').forEach(el => el.addEventListener('click', () => {
+    selMode = el.dataset.k;
+    if (selMode === 'review') selCount = Math.min(selCount, 5);
+    renderModes(); renderCounts(); updateStartBtn();
+  }));
+}
+function renderCounts() {
+  const row = document.getElementById('countRow');
+  const max = selBank ? BANKS.find(b => b.id === selBank).count : 10;
+  const counts = [5, 10, 15, 20].filter(c => c <= max);
+  if (!counts.includes(selCount)) selCount = counts[0] || 5;
+  row.innerHTML = counts.map(c => `<button class="count-btn ${selCount === c ? 'selected' : ''}" data-c="${c}">${c}</button>`).join('');
+  row.querySelectorAll('.count-btn').forEach(el => el.addEventListener('click', () => {
+    selCount = Number(el.dataset.c); renderCounts(); updateStartBtn();
+  }));
+}
+function updateStartBtn() {
+  const btn = document.getElementById('btnStart');
+  const tip = document.getElementById('startTip');
+  if (!selCat) { btn.disabled = true; tip.textContent = '请先选择考试大类'; return; }
+  if (!selBank) { btn.disabled = true; tip.textContent = '请选择题库'; return; }
+  btn.disabled = false;
+  tip.textContent = selMode === 'review' ? '将从练习记录中抽取错题' : `将抽取 ${selCount} 道题`;
+  if (selMode === 'review') tip.textContent += '（示例：暂无错题记录，将按顺序练习）';
+}
+
+/* ===== 开始 / 答题 ===== */
+function startPractice() {
+  const qs = [...QUESTIONS[selBank]];
+  let picked = qs;
+  if (selMode === 'random') picked = qs.sort(() => Math.random() - 0.5);
+  picked = picked.slice(0, selCount);
+  practice = { bank: BANKS.find(b => b.id === selBank), questions: picked, idx: 0, ok: 0, ng: 0, skip: 0, answers: [], startTs: Date.now() };
+  document.getElementById('startSetup').hidden = true;
+  document.getElementById('resultView').hidden = true;
+  document.getElementById('practiceView').hidden = false;
+  document.getElementById('pTitle').textContent = practice.bank.name;
+  document.getElementById('pMeta').textContent = practice.bank.cat + ' / ' + practice.bank.sub + ' · ' + (selMode === 'order' ? '顺序' : selMode === 'random' ? '随机' : '错题重练');
+  document.getElementById('btnSkip').hidden = false;
+  document.getElementById('btnNext').hidden = true;
+  document.getElementById('qAnalysis').hidden = true;
+  tickTimer();
+  renderQ();
+}
+function renderQ() {
+  const q = practice.questions[practice.idx];
+  document.getElementById('qNo').textContent = `第 ${practice.idx + 1} / ${practice.questions.length} 题`;
+  document.getElementById('qStem').textContent = q.stem;
+  document.getElementById('pBar').style.width = (practice.idx / practice.questions.length * 100) + '%';
+  const list = document.getElementById('optList');
+  list.innerHTML = q.opts.map((t, i) => {
+    const label = String.fromCharCode(65 + i);
+    return `<div class="opt-item" data-k="${label}"><span class="opt-label">${label}</span><span class="opt-text">${t}</span></div>`;
+  }).join('');
+  list.querySelectorAll('.opt-item').forEach(el => el.addEventListener('click', () => answer(el.dataset.k)));
+  document.getElementById('btnSkip').hidden = false;
+  document.getElementById('btnNext').hidden = true;
+  document.getElementById('qAnalysis').hidden = true;
+}
+function answer(k) {
+  const q = practice.questions[practice.idx];
+  const correct = k === q.answer;
+  practice.answers.push({ no: practice.idx + 1, my: k, ans: q.answer, res: correct ? 'ok' : 'ng' });
+  if (correct) practice.ok++; else practice.ng++;
+  renderResult(k);
+}
+function skipQ() {
+  const q = practice.questions[practice.idx];
+  practice.answers.push({ no: practice.idx + 1, my: '—', ans: q.answer, res: 'skip' });
+  practice.skip++;
+  renderResult(null);
+}
+function renderResult(my) {
+  const q = practice.questions[practice.idx];
+  const list = document.getElementById('optList');
+  const items = [...list.querySelectorAll('.opt-item')];
+  items.forEach(el => {
+    el.disabled = true;
+    const k = el.dataset.k;
+    if (k === q.answer) el.classList.add('reveal');
+    else if (k === my) el.classList.add('wrong');
+    else el.classList.add('dim');
+  });
+  const ab = document.getElementById('qAnalysis');
+  ab.hidden = false;
+  ab.innerHTML = `<div class="a-title">解析 · ${my ? (my === q.answer ? '回答正确' : '回答错误') : '本题跳过'}</div>
+    <div class="a-body">${q.analysis}</div>
+    <div class="a-tags">${q.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>`;
+  document.getElementById('btnSkip').hidden = true;
+  document.getElementById('btnNext').hidden = false;
+  updateCounts();
+}
+function nextQ() {
+  practice.idx++;
+  if (practice.idx >= practice.questions.length) { finish(); return; }
+  renderQ();
+}
+function updateCounts() {
+  document.getElementById('pcOk').textContent = practice.ok;
+  document.getElementById('pcNg').textContent = practice.ng;
+  document.getElementById('pcSkip').textContent = practice.skip;
+}
+function fmtMs(ms) {
+  const s = Math.floor(ms / 1000);
+  return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}
+function tickTimer() {
+  if (!practice) return;
+  document.getElementById('pcTime').textContent = fmtMs(Date.now() - practice.startTs);
+  setTimeout(tickTimer, 500);
+}
+function finish() {
+  const total = practice.questions.length;
+  const rate = Math.round(practice.ok / total * 1000) / 10;
+  const ms = Date.now() - practice.startTs;
+  document.getElementById('practiceView').hidden = true;
+  document.getElementById('resultView').hidden = false;
+  document.getElementById('rScore').textContent = rate + '%';
+  document.getElementById('rOk').textContent = practice.ok;
+  document.getElementById('rNg').textContent = practice.ng;
+  document.getElementById('rSkip').textContent = practice.skip;
+  document.getElementById('rTime').textContent = fmtMs(ms);
+  // 结算后并入记录列表（示例）
+  RECORDS.unshift({ id: Date.now(), title: practice.bank.name, mode: selMode === 'order' ? '顺序练习' : selMode === 'random' ? '随机练习' : '错题重练', date: '2026-10-26 刚刚', total, ok: practice.ok, ng: practice.ng, skip: practice.skip, rate, ms, details: practice.answers.map(a => ({ no: a.no, stem: practice.questions[a.no - 1].stem.slice(0, 22) + '…', my: a.my, ans: a.ans, res: a.res })) });
+}
+
+/* ===== Tab 切换 ===== */
+function switchTab(tab) {
+  curTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('tab-start').hidden = tab !== 'start';
+  document.getElementById('tab-manage').hidden = tab !== 'manage';
+  document.getElementById('tab-records').hidden = tab !== 'records';
+  if (tab === 'manage') renderManage();
+  if (tab === 'records') renderRecords();
+}
+
+/* ===== 题库管理 ===== */
+let curBank = 1;
+function renderManage() {
+  const list = document.getElementById('bankList');
+  list.innerHTML = CATS.map(c => {
+    const banks = BANKS.filter(b => b.catId === c.id);
+    return '<div class="mg-cat-title">' + c.name + '</div>' + banks.map(b => `
+    <div class="bank-row ${curBank === b.id ? 'active' : ''}" data-id="${b.id}">
+      <div class="br-name">${b.name}<span style="font-weight:400;font-size:11px;color:#9ca3af">${b.count}题</span></div>
+      <div class="br-meta">${b.cat} · ${b.sub}</div>
+    </div>`).join('');
+  }).join('');
+  list.querySelectorAll('.bank-row').forEach(el => el.addEventListener('click', () => { curBank = Number(el.dataset.id); renderManage(); }));
+  document.getElementById('qlTitle').textContent = BANKS.find(b => b.id === curBank).name;
+  const qs = QUESTIONS[curBank] || [];
+  const tb = document.getElementById('qTbody');
+  tb.innerHTML = qs.map((q, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td class="q-stem-cell" title="${q.stem}">${q.stem.split('\n')[0]}</td>
+      <td><b>${q.answer}</b></td>
+      <td><span class="diff diff-${q.diff || 2}">${q.diff === 1 ? '简单' : q.diff === 3 ? '困难' : '中等'}</span></td>
+      <td><span class="op-link" data-act="edit" data-i="${i}">编辑</span><span class="op-link danger" data-act="del" data-i="${i}">删除</span></td>
+    </tr>`).join('');
+  tb.querySelectorAll('.op-link').forEach(el => el.addEventListener('click', () => {
+    const i = Number(el.dataset.i);
+    if (el.dataset.act === 'edit') openQModal(i); else delQ(i);
+  }));
+  document.getElementById('qEmpty').style.display = qs.length ? 'none' : 'block';
+}
+function delQ(i) {
+  if (!confirm('确认删除该题目？')) return;
+  QUESTIONS[curBank].splice(i, 1);
+  BANKS.find(b => b.id === curBank).count = QUESTIONS[curBank].length;
+  renderManage();
+}
+let editIdx = -1;
+function openQModal(i) {
+  editIdx = i;
+  document.getElementById('qModalTitle').textContent = i >= 0 ? '编辑题目' : '新增题目';
+  const q = i >= 0 ? QUESTIONS[curBank][i] : { stem: '', opts: ['', '', '', ''], answer: 'A', diff: 2, analysis: '' };
+  document.getElementById('fStem').value = q.stem;
+  document.getElementById('fAnalysis').value = q.analysis || '';
+  document.getElementById('fDiff').value = String(q.diff || 2);
+  const sel = document.getElementById('fAnswer');
+  sel.innerHTML = q.opts.map((_, j) => `<option value="${String.fromCharCode(65 + j)}">${String.fromCharCode(65 + j)}</option>`).join('');
+  sel.value = q.answer;
+  document.getElementById('fOpts').innerHTML = q.opts.map((t, j) => `
+    <div class="form-row"><span class="opt-label-static">${String.fromCharCode(65 + j)}</span>
+    <input type="text" data-oi="${j}" value="${t}" placeholder="选项 ${String.fromCharCode(65 + j)} 内容" style="width:calc(100% - 40px);display:inline-block;vertical-align:middle"></div>`).join('');
+  document.getElementById('qModal').classList.add('show');
+}
+function saveQ() {
+  const stem = document.getElementById('fStem').value.trim();
+  if (!stem) { alert('请填写题干'); return; }
+  const opts = [...document.querySelectorAll('#fOpts input')].map(el => el.value.trim());
+  if (opts.some(o => !o)) { alert('请填写所有选项'); return; }
+  const q = { stem, opts, answer: document.getElementById('fAnswer').value, diff: Number(document.getElementById('fDiff').value), analysis: document.getElementById('fAnalysis').value.trim(), tags: ['未分类'] };
+  if (editIdx >= 0) QUESTIONS[curBank][editIdx] = q;
+  else { if (!QUESTIONS[curBank]) QUESTIONS[curBank] = []; QUESTIONS[curBank].push(q); BANKS.find(b => b.id === curBank).count++; }
+  document.getElementById('qModal').classList.remove('show');
+  renderManage();
+}
+
+/* ===== 练习记录 ===== */
+function renderRecords() {
+  const el = document.getElementById('recList');
+  el.innerHTML = RECORDS.map(r => `
+    <div class="rec-card" data-id="${r.id}">
+      <div class="rec-head">
+        <div class="rec-no">${r.id > 1000 ? '新' : 'R'}</div>
+        <div class="rec-title">${r.title}<span class="rt-sub">${r.mode} · ${r.date}</span></div>
+        <span class="rec-rate ${r.rate < 60 ? 'low' : ''}">${r.rate}%</span>
+        <svg class="rec-toggle" viewBox="0 0 24 24" width="18" height="18"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="rec-body" hidden>
+        ${r.details.map(d => `
+        <div class="rec-detail-row">
+          <span class="rd-no rd-${d.res}">${d.res === 'ok' ? '✓' : d.res === 'skip' ? '○' : '✗'}</span>
+          <span class="rd-stem">${d.stem}</span>
+          <span class="rd-ans">我的 <b>${d.my}</b> · 答案 <b>${d.ans}</b></span>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('.rec-head').forEach(h => h.addEventListener('click', () => {
+    const card = h.parentElement;
+    card.classList.toggle('open');
+    card.querySelector('.rec-body').hidden = !card.classList.contains('open');
+  }));
+}
+
+/* ===== 事件绑定 ===== */
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+document.getElementById('btnStart').addEventListener('click', startPractice);
+document.getElementById('btnSkip').addEventListener('click', skipQ);
+document.getElementById('btnNext').addEventListener('click', nextQ);
+document.getElementById('btnBackStart').addEventListener('click', () => {
+  practice = null;
+  document.getElementById('resultView').hidden = true;
+  document.getElementById('practiceView').hidden = true;
+  document.getElementById('startSetup').hidden = false;
+  renderBanks();
+});
+document.getElementById('btnReplay').addEventListener('click', () => { document.getElementById('resultView').hidden = true; startPractice(); });
+document.getElementById('btnReview').addEventListener('click', () => {
+  document.getElementById('resultView').hidden = true;
+  document.getElementById('practiceView').hidden = false;
+  document.getElementById('btnSkip').hidden = true;
+  document.getElementById('btnNext').hidden = true;
+  document.getElementById('qAnalysis').hidden = false;
+  practice.idx = 0;
+  renderQ();
+  const q = practice.questions[0];
+  // 回看模式：直接展示第一题并展开解析
+  renderQ();
+  renderResult(practice.answers[0] ? practice.answers[0].my : null);
+});
+document.getElementById('btnAddQ').addEventListener('click', () => openQModal(-1));
+document.getElementById('btnCancelQ').addEventListener('click', () => document.getElementById('qModal').classList.remove('show'));
+document.getElementById('btnSaveQ').addEventListener('click', saveQ);
+document.querySelector('.modal-mask').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+
+
+/* 装饰菜单项占位反馈 */
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1600);
+}
+document.querySelectorAll('nav .menu-item').forEach(el => {
+  el.addEventListener('click', () => showToast('Demo 中仅演示练习模式，其余为现有功能入口'));
+});
+
+renderCats(); renderBanks();
+
+</script>
+</body>
+</html>
