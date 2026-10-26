@@ -1,0 +1,165 @@
+/* ============================================================
+ * PQ Timer - components.css
+ * 自建 UI 组件样式（视觉仿 Element Plus）
+ * 组件：pq-toast（消息提示）、pq-confirm（确认弹框）
+ * 后续新组件（alert / notification / dropdown 等）统一追加在此文件，
+ * 对应逻辑写在 js/core/ui.js
+ * ============================================================ */
+
+/* ===== 消息提示（Element Plus Message 风格） ===== */
+.pq-toast-wrap {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+    width: max-content;
+    max-width: 90vw;
+}
+.pq-toast {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ebeef5;
+    font-size: 14px;
+    color: #303133;
+    line-height: 1.5;
+    opacity: 0;
+    transform: translateY(-12px);
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: auto;
+    cursor: pointer;
+    max-width: 80vw;
+}
+.pq-toast.in { opacity: 1; transform: translateY(0); }
+.pq-toast.out { opacity: 0; transform: translateY(-12px); }
+.pq-toast-icon { display: inline-flex; flex-shrink: 0; align-items: center; }
+.pq-toast--success .pq-toast-icon { color: #67c23a; }
+.pq-toast--warning .pq-toast-icon { color: #e6a23c; }
+.pq-toast--error .pq-toast-icon { color: #f56c6c; }
+.pq-toast--info .pq-toast-icon { color: #909399; }
+.pq-toast--success { border-color: #e1f3d8; }
+.pq-toast--warning { border-color: #faecd8; }
+.pq-toast--error { border-color: #fde2e2; }
+.pq-toast--info { border-color: #e4e7ed; }
+
+/* ===== 确认弹框（Element Plus MessageBox 风格） ===== */
+.pq-confirm-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.pq-confirm-mask.in { opacity: 1; }
+.pq-confirm-mask.out { opacity: 0; }
+.pq-confirm {
+    width: 420px;
+    max-width: calc(100vw - 48px);
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+    padding: 22px 22px 18px;
+    position: relative;
+    transform: scale(0.92);
+    transition: transform 0.2s;
+}
+.pq-confirm-mask.in .pq-confirm { transform: scale(1); }
+.pq-confirm-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #909399;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+.pq-confirm-close:hover { background: #f4f4f5; color: #606266; }
+.pq-confirm-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.pq-confirm-icon {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.pq-confirm-icon.normal { color: #409eff; }
+.pq-confirm-icon.danger { color: #f56c6c; }
+.pq-confirm-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+}
+.pq-confirm-body {
+    font-size: 14px;
+    color: #606266;
+    line-height: 1.6;
+    margin: 0 0 20px 0;
+    padding-left: 32px;
+    word-break: break-all;
+}
+.pq-confirm-ftr {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+.pq-btn-cancel,
+.pq-btn-ok {
+    height: 34px;
+    padding: 0 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+}
+.pq-btn-cancel {
+    background: #fff;
+    border-color: #dcdfe6;
+    color: #606266;
+}
+.pq-btn-cancel:hover {
+    border-color: #c6e2ff;
+    color: #409eff;
+    background: #ecf5ff;
+}
+.pq-btn-ok.danger {
+    background: #f56c6c;
+    border-color: #f56c6c;
+    color: #fff;
+}
+.pq-btn-ok.danger:hover {
+    background: #f78989;
+    border-color: #f78989;
+}
+.pq-btn-ok.primary {
+    background: #409eff;
+    border-color: #409eff;
+    color: #fff;
+}
+.pq-btn-ok.primary:hover {
+    background: #66b1ff;
+    border-color: #66b1ff;
+}

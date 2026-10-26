@@ -5,32 +5,8 @@
 (function () {
     'use strict';
 
-    const toastWrap = document.getElementById('toast-wrap');
-    const TOAST_ICONS = {
-        success: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>',
-        warning: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-        error: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-        info: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
-    };
-
-    /* 消息提示：仿 Element Plus Message，顶部居中、多条堆叠、3 秒自动消失 */
-    function showToast(msg, type) {
-        if (!toastWrap) return;
-        type = type || 'info';
-        const item = document.createElement('div');
-        item.className = 'pq-toast pq-toast--' + type;
-        item.innerHTML = '<span class="pq-toast-icon">' + (TOAST_ICONS[type] || TOAST_ICONS.info) + '</span><span class="pq-toast-msg">' + msg + '</span>';
-        toastWrap.appendChild(item);
-        requestAnimationFrame(() => item.classList.add('in'));
-        const close = () => {
-            if (item.classList.contains('out')) return;
-            item.classList.remove('in');
-            item.classList.add('out');
-            setTimeout(() => item.remove(), 280);
-        };
-        const timer = setTimeout(close, 3000);
-        item.addEventListener('click', () => { clearTimeout(timer); close(); });
-    }
+    /* 消息提示：由 PQ.ui 组件库提供（js/core/ui.js），此处仅做转发兼容 */
+    function showToast(msg, type) { PQ.ui.showToast(msg, type); }
 
     /* mm:ss.xx */
     function formatTime(ms) {

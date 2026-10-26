@@ -465,7 +465,8 @@
     }
 
     async function delQ(qid) {
-        if (!confirm('确认删除该题目？')) return;
+        const ok = await PQ.ui.confirm({ title: '删除题目', message: '删除后无法恢复，确定删除该题目？', confirmText: '删除', danger: true });
+        if (!ok) return;
         try {
             await api.del('/api/practice/questions/' + qid);
             state.banks = await api.get('/api/practice/banks');
@@ -582,8 +583,9 @@
 
     async function delBank(id) {
         const bank = state.banks.find(b => b.id === id);
-        const tip = bank ? `删除题库「${bank.name}」将同时删除其下 ${bank.count} 道题目，练习记录保留（快照不受影响）。确定删除？` : '确定删除该题库？';
-        if (!confirm(tip)) return;
+        const tip = bank ? `删除题库「${bank.name}」将同时删除其下 ${bank.count} 道题目，练习记录保留（快照不受影响）。` : '删除后无法恢复，确定删除该题库？';
+        const ok = await PQ.ui.confirm({ title: '删除题库', message: tip, confirmText: '删除', danger: true });
+        if (!ok) return;
         try {
             await api.del('/api/practice/banks/' + id);
             state.banks = await api.get('/api/practice/banks');

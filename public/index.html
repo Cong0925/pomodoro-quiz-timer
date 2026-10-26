@@ -6,6 +6,7 @@
     <title>刷题计时器 | 双模式 + 历史记录</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%232563eb'/%3E%3Cpath d='M12 6v6l4 2' stroke='white' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/components.css">
 </head>
 <body>
     <div class="layout">
@@ -576,6 +577,7 @@
     <div class="pq-toast-wrap" id="toast-wrap"></div>
 
     <!-- 模块化脚本加载顺序：core（基础）→ modules（功能）→ app（入口） -->
+    <script src="./js/core/ui.js"></script>
     <script src="./js/core/utils.js"></script>
         <script src="./js/core/api.js"></script>
     <script src="./js/core/storage.js"></script>
