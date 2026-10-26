@@ -2276,7 +2276,8 @@ button:hover {
 .p-br-meta { font-size: 11.5px; color: #9ca3af; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-bank-row.active .p-br-meta { color: #94a3b8; }
 .p-br-ops { display: flex; gap: 2px; }
-.p-op-btn { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; color: #6b7280; border-radius: 7px; cursor: pointer; }
+.p-op-btn { width: 26px; height: 26px; padding: 0; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; color: #6b7280; border-radius: 7px; cursor: pointer; }
+.p-op-btn svg { flex: 0 0 auto; width: 14px; height: 14px; }
 .p-op-btn:hover { background: #eef2f7; color: #2563eb; }
 .p-op-btn.danger:hover { background: #fef2f2; color: #dc2626; }
 .p-manage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; padding: 4px 2px 14px; border-bottom: 1px solid #f0f2f5; }
