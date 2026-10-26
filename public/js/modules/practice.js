@@ -168,14 +168,20 @@
     function updateStartBtn() {
         const btn = el('pStartBtn');
         const tip = el('pStartTip');
-        if (!state.selCat) { btn.disabled = true; tip.textContent = '请先选择考试大类'; return; }
-        if (!state.selSub) { btn.disabled = true; tip.textContent = '请先选择二级分类'; return; }
-        if (!state.selBank) { btn.disabled = true; tip.textContent = '请选择题库'; return; }
+        // 按钮始终可点：未完成选择时点击由 startPractice 弹 toast 提示
         btn.disabled = false;
+        if (!state.selCat) { btn.classList.add('muted'); tip.textContent = '请先选择考试大类'; return; }
+        if (!state.selSub) { btn.classList.add('muted'); tip.textContent = '请先选择二级分类'; return; }
+        if (!state.selBank) { btn.classList.add('muted'); tip.textContent = '请选择题库'; return; }
+        btn.classList.remove('muted');
         tip.textContent = state.mode === 'review' ? '将从练习历史中抽取错题，不足部分补随机题' : `将抽取 ${state.count} 道题`;
     }
 
     async function startPractice() {
+        // 未完成选择时给出明确提示，按钮不静默无反应
+        if (!state.selCat) { U.showToast('请先选择考试大类'); return; }
+        if (!state.selSub) { U.showToast('请先选择二级分类'); return; }
+        if (!state.selBank) { U.showToast('请先选择题库'); return; }
         try {
             const r = await api.post('/api/practice/start', {
                 bankId: state.selBank, mode: state.mode, count: state.count

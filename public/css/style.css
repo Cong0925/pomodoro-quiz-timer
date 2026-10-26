@@ -2212,7 +2212,9 @@ button:hover {
 .p-count-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .p-count-btn { width: 44px; height: 34px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; font-family: inherit; }
 .p-count-btn.selected { border-color: #2563eb; background: #eaf1ff; color: #2563eb; font-weight: 700; }
-.p-start-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #eef2f7; flex-wrap: wrap; }
+.p-start-bar {
+.p-start-bar .df-btn.muted { opacity: .5; cursor: pointer; }
+ display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #eef2f7; flex-wrap: wrap; }
 
 /* 答题页 */
 .p-run-top { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
