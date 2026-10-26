@@ -47,6 +47,14 @@
         if (!state.banks.length) {
             try { state.banks = await api.get('/api/practice/banks'); } catch (e) { U.showToast('题库加载失败：' + e.message); }
         }
+        // 默认选择：第一个大类 → 第一个二级分类 → 该分类下第一个题库
+        if (!state.selCat && state.cats.length) {
+            state.selCat = state.cats[0].id;
+            const cat = state.cats[0];
+            if (cat.subs && cat.subs.length) state.selSub = cat.subs[0].id;
+            const banks = state.banks.filter(b => b.catId === state.selCat && (b.subId || '') === state.selSub);
+            if (banks.length) state.selBank = banks[0].id;
+        }
         switchTab(state.ptab);
     }
 
