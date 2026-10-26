@@ -2258,6 +2258,12 @@ button:hover {
 .p-manage-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
 .p-bank-panel { padding: 16px 14px; }
 .p-bank-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.p-bank-filter { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 10px; }
+.p-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border: none; border-radius: 14px; background: #f3f4f6; color: #6b7280; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+.p-chip:hover { background: #e5e9f0; }
+.p-chip.active { background: #2563eb; color: #fff; }
+.p-chip i { font-style: normal; font-size: 10.5px; background: rgba(255,255,255,.9); color: #6b7280; border-radius: 8px; padding: 0 5px; line-height: 14px; }
+.p-chip.active i { color: #2563eb; }
 .p-bank-toolbar .p-section-title { margin: 0; font-size: 15px; }
 .p-bank-list { display: flex; flex-direction: column; gap: 6px; max-height: 620px; overflow-y: auto; padding: 0 2px 4px 0; }
 .p-mg-cat-title { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: #6b7280; margin: 16px 6px 6px; letter-spacing: .3px; }

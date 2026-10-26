@@ -15,7 +15,7 @@
         banks: [],                // 题库列表
         selCat: null, selSub: null, selBank: null, mode: 'order', count: 5,
         run: null,                // 运行中会话 { sessionId, questions, idx, ok, ng, skip, answers, startTs, review }
-        curBank: 1, editIdx: -1,  // 题库管理
+        curBank: 1, editIdx: -1, mgSub: 'all',  // 题库管理（mgSub: 管理页分类筛选，'all'=全部）
         recPage: 1, recTotal: 0,  // 练习记录分页
         stats: null,              // 练习统计
         timer: null
@@ -331,14 +331,25 @@
     /* ---------- 题库管理 ---------- */
 
     async function renderManage() {
-        // 当前题库失效时默认选第一个
-        if (!state.banks.find(b => b.id === state.curBank)) {
-            state.curBank = state.banks.length ? state.banks[0].id : 0;
-        }
         const list = el('pBankList');
         const editSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
         const delSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-        // 题库列表按大类分组（单次遍历，避免分组重复渲染）
+        // 分类筛选 chips（二级分类，只显示有题库的分类）
+        const filter = el('pBankFilter');
+        const subCount = {};
+        state.banks.forEach(b => { const k = b.subId || ''; subCount[k] = (subCount[k] || 0) + 1; });
+        const chips = [{ id: 'all', name: '全部', n: state.banks.length }];
+        state.cats.forEach(c => (c.subs || []).forEach(s => { if (subCount[s.id]) chips.push({ id: s.id, name: s.name, n: subCount[s.id] }); }));
+        if (subCount['']) chips.push({ id: '', name: '未分类', n: subCount[''] });
+        filter.innerHTML = chips.map(ch => `
+            <button class="p-chip ${state.mgSub === ch.id ? 'active' : ''}" data-f="${ch.id}"><span>${U.escapeHtml(ch.name)}</span><i>${ch.n}</i></button>`).join('');
+        filter.querySelectorAll('.p-chip').forEach(x => x.addEventListener('click', () => { state.mgSub = x.dataset.f; renderManage(); }));
+        // 题库列表按当前筛选
+        const filtered = state.mgSub === 'all' ? state.banks : state.banks.filter(b => (b.subId || '') === state.mgSub);
+        if (!filtered.find(b => b.id === state.curBank)) {
+            state.curBank = filtered.length ? filtered[0].id : 0;
+        }
+        // 题库行（单次遍历，避免分组重复渲染）
         const bankRow = b => `
             <div class="p-bank-row ${state.curBank === b.id ? 'active' : ''}" data-id="${b.id}">
                 <span class="p-br-ind"></span>
@@ -352,12 +363,19 @@
                 </div>
             </div>`;
         let html = '';
-        state.cats.forEach(c => {
-            const banks = state.banks.filter(b => b.catId === c.id);
-            if (banks.length) html += '<div class="p-mg-cat-title"><span>' + U.escapeHtml(c.name) + '</span><i>' + banks.length + '</i></div>' + banks.map(bankRow).join('');
-        });
-        const uncat = state.banks.filter(b => !b.catId);
-        if (uncat.length) html += '<div class="p-mg-cat-title"><span>未分类</span><i>' + uncat.length + '</i></div>' + uncat.map(bankRow).join('');
+        if (state.mgSub === 'all') {
+            state.cats.forEach(c => {
+                const banks = filtered.filter(b => b.catId === c.id);
+                if (banks.length) html += '<div class="p-mg-cat-title"><span>' + U.escapeHtml(c.name) + '</span><i>' + banks.length + '</i></div>' + banks.map(bankRow).join('');
+            });
+            const uncat = filtered.filter(b => !b.catId);
+            if (uncat.length) html += '<div class="p-mg-cat-title"><span>未分类</span><i>' + uncat.length + '</i></div>' + uncat.map(bankRow).join('');
+        } else if (filtered.length) {
+            const cat = state.cats.find(c => (c.subs || []).some(s => s.id === state.mgSub));
+            const sub = cat ? (cat.subs || []).find(s => s.id === state.mgSub) : null;
+            const title = state.mgSub === '' ? '未分类' : (sub ? sub.name : '分类');
+            html += '<div class="p-mg-cat-title"><span>' + U.escapeHtml(title) + '</span><i>' + filtered.length + '</i></div>' + filtered.map(bankRow).join('');
+        }
         list.innerHTML = html;
         list.querySelectorAll('.p-bank-row').forEach(x => {
             x.addEventListener('click', e => {
@@ -479,11 +497,19 @@
         const bank = id ? state.banks.find(b => b.id === id) : null;
         el('pFBankName').value = bank ? bank.name : '';
         el('pFBankDesc').value = bank ? (bank.description || '') : '';
-        renderBankCatSub(bank ? bank.catId : (state.selCat || ''));
+        // 新增时默认分类：优先跟随管理页当前筛选的分类
+        let defCat = state.selCat || '';
+        if (!bank && state.mgSub !== 'all' && state.mgSub !== '') {
+            const cat = state.cats.find(c => (c.subs || []).some(s => s.id === state.mgSub));
+            if (cat) defCat = cat.id;
+        }
+        renderBankCatSub(bank ? bank.catId : defCat);
         if (bank) {
             const catSel = el('pFBankCat');
             catSel.value = bank.catId || '';
             renderBankSubs(bank.catId, bank.subId || '');
+        } else if (state.mgSub !== 'all' && state.mgSub !== '') {
+            renderBankSubs(defCat, state.mgSub);
         }
         el('pBankModalMask').classList.add('show');
     }
