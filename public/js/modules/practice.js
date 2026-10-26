@@ -146,8 +146,11 @@
 
     function renderCounts() {
         const row = el('pCountRow');
-        const counts = [5, 10, 15, 20, 25, 30];
-        if (!counts.includes(state.count)) state.count = 5;
+        const bank = state.banks.find(b => b.id === state.selBank);
+        const max = bank ? Math.max(bank.count, 1) : 5;
+        const counts = [5, 10, 15, 20, 25, 30].filter(c => c <= max);
+        if (counts.length === 0) counts.push(Math.max(1, max));
+        if (!counts.includes(state.count)) state.count = counts[0];
         row.innerHTML = counts.map(c => `<button class="p-count-btn ${state.count === c ? 'selected' : ''}" data-c="${c}">${c}</button>`).join('');
         row.querySelectorAll('.p-count-btn').forEach(x => x.addEventListener('click', () => {
             state.count = Number(x.dataset.c); renderCounts(); updateStartBtn();
