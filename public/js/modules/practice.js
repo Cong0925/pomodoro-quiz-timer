@@ -321,11 +321,26 @@
                 <div class="p-bank-row ${state.curBank === b.id ? 'active' : ''}" data-id="${b.id}">
                     <div class="p-br-name">${U.escapeHtml(b.name)}<span class="p-br-count">${b.count}题</span></div>
                     <div class="p-br-meta">${U.escapeHtml(b.description || '')}</div>
+                    <div class="p-br-ops">
+                        <span data-op="edit" data-id="${b.id}">编辑</span>
+                        <span data-op="del" data-id="${b.id}">删除</span>
+                    </div>
                 </div>`).join('');
         }).join('');
-        list.querySelectorAll('.p-bank-row').forEach(x => x.addEventListener('click', () => {
-            state.curBank = Number(x.dataset.id); renderManage();
-        }));
+        list.querySelectorAll('.p-bank-row').forEach(x => {
+            x.addEventListener('click', e => {
+                if (e.target.closest('.p-br-ops')) return;
+                state.curBank = Number(x.dataset.id); renderManage();
+            });
+        });
+        list.querySelectorAll('.p-br-ops span').forEach(s => {
+            s.addEventListener('click', e => {
+                e.stopPropagation();
+                const id = Number(s.dataset.id);
+                if (s.dataset.op === 'edit') openBankModal(id);
+                else delBank(id);
+            });
+        });
 
         const bank = state.banks.find(b => b.id === state.curBank);
         el('pManageTitle').textContent = bank ? bank.name : '';
@@ -405,6 +420,73 @@
             state.banks = await api.get('/api/practice/banks');
             renderManage();
             U.showToast('题目已保存');
+        } catch (e) { U.showToast(e.message); }
+    }
+
+    /* ---------- 题库管理：新增/编辑/删除 ---------- */
+
+    async function openBankModal(id) {
+        state.editBank = id || 0;
+        el('pBankModalTitle').textContent = id ? '编辑题库' : '新增题库';
+        const bank = id ? state.banks.find(b => b.id === id) : null;
+        el('pFBankName').value = bank ? bank.name : '';
+        el('pFBankDesc').value = bank ? (bank.description || '') : '';
+        renderBankCatSub(bank ? bank.catId : (state.selCat || ''));
+        if (bank) {
+            const catSel = el('pFBankCat');
+            catSel.value = bank.catId || '';
+            renderBankSubs(bank.catId, bank.subId || '');
+        }
+        el('pBankModalMask').classList.add('show');
+    }
+
+    function renderBankCatSub(cur) {
+        const catSel = el('pFBankCat');
+        catSel.innerHTML = '<option value="">（不指定）</option>' + state.cats.map(c =>
+            `<option value="${c.id}" ${c.id === cur ? 'selected' : ''}>${U.escapeHtml(c.name)}</option>`).join('');
+        catSel.value = cur || '';
+        renderBankSubs(cur || '', null);
+    }
+
+    function renderBankSubs(catId, cur) {
+        const subSel = el('pFBankSub');
+        const cat = state.cats.find(c => c.id === catId);
+        subSel.innerHTML = '<option value="">（无）</option>' + (cat ? cat.subs.map(s =>
+            `<option value="${s.id}" ${s.id === cur ? 'selected' : ''}>${U.escapeHtml(s.name)}</option>`).join('') : '');
+        subSel.value = cur || '';
+    }
+
+    async function saveBank() {
+        const name = el('pFBankName').value.trim();
+        if (!name) { U.showToast('请填写题库名称'); return; }
+        const body = {
+            name,
+            catId: el('pFBankCat').value,
+            subId: el('pFBankSub').value,
+            description: el('pFBankDesc').value.trim()
+        };
+        try {
+            if (state.editBank) await api.put('/api/practice/banks/' + state.editBank, body);
+            else await api.post('/api/practice/banks', body);
+            el('pBankModalMask').classList.remove('show');
+            state.banks = await api.get('/api/practice/banks');
+            if (!state.selBank && state.banks.length) state.selBank = state.banks[0].id;
+            renderManage();
+            U.showToast(state.editBank ? '题库已更新' : '题库已创建');
+        } catch (e) { U.showToast(e.message); }
+    }
+
+    async function delBank(id) {
+        const bank = state.banks.find(b => b.id === id);
+        const tip = bank ? `删除题库「${bank.name}」将同时删除其下 ${bank.count} 道题目，练习记录保留（快照不受影响）。确定删除？` : '确定删除该题库？';
+        if (!confirm(tip)) return;
+        try {
+            await api.del('/api/practice/banks/' + id);
+            state.banks = await api.get('/api/practice/banks');
+            if (state.selBank === id) state.selBank = state.banks.length ? state.banks[0].id : null;
+            if (!state.banks.find(b => b.id === state.curBank)) state.curBank = state.banks.length ? state.banks[0].id : 0;
+            renderManage();
+            U.showToast('题库已删除');
         } catch (e) { U.showToast(e.message); }
     }
 
@@ -504,6 +586,11 @@
         el('pPaneRun').hidden = true;
         el('pPaneStart').hidden = false;
     });
+    el('pAddBankBtn').addEventListener('click', () => openBankModal(0));
+    el('pBankCancel').addEventListener('click', () => el('pBankModalMask').classList.remove('show'));
+    el('pBankSave').addEventListener('click', saveBank);
+    el('pBankModalMask').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+    el('pFBankCat').addEventListener('change', e => { renderBankSubs(e.target.value, null); });
     el('pAddQBtn').addEventListener('click', () => openQModal(0));
     el('pQCancel').addEventListener('click', () => el('pQModalMask').classList.remove('show'));
     el('pQSave').addEventListener('click', saveQ);

@@ -348,7 +348,10 @@
                 <div class="practice-pane" id="pPaneManage" hidden>
                     <div class="p-manage-layout">
                         <div>
-                            <div class="p-section-title">题库</div>
+                            <div class="p-bank-toolbar">
+                                <div class="p-section-title" style="margin:0">题库</div>
+                                <button class="df-btn primary small" id="pAddBankBtn">新增题库</button>
+                            </div>
                             <div class="p-bank-list" id="pBankList"></div>
                         </div>
                         <div class="df-card p-card">
@@ -481,6 +484,31 @@
             <div class="modal-buttons">
                 <button id="catModalCancel">取消</button>
                 <button id="catModalSave">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 练习模式：题库编辑弹窗 -->
+    <div class="modal-mask" id="pBankModalMask">
+        <div class="modal-box p-q-modal">
+            <p id="pBankModalTitle">新增题库</p>
+            <label class="p-form-label">题库名称</label>
+            <input type="text" id="pFBankName" maxlength="100" placeholder="如：言语理解·成语辨析">
+            <div class="p-form-grid">
+                <div>
+                    <label class="p-form-label">所属大类</label>
+                    <select id="pFBankCat"></select>
+                </div>
+                <div>
+                    <label class="p-form-label">所属小类（可选）</label>
+                    <select id="pFBankSub"></select>
+                </div>
+            </div>
+            <label class="p-form-label">描述</label>
+            <textarea id="pFBankDesc" rows="2" placeholder="题库说明，选填"></textarea>
+            <div class="modal-buttons">
+                <button id="pBankCancel">取消</button>
+                <button id="pBankSave">保存题库</button>
             </div>
         </div>
     </div>

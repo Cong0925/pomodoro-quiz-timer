@@ -2251,7 +2251,14 @@ button:hover {
 
 /* 题库管理 */
 .p-manage-layout { display: grid; grid-template-columns: 290px 1fr; gap: 14px; align-items: start; }
+.p-bank-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .p-bank-list { display: flex; flex-direction: column; gap: 6px; max-height: 560px; overflow-y: auto; }
+.p-bank-row { position: relative; }
+.p-bank-row .p-br-ops { display: none; margin-top: 6px; gap: 12px; font-size: 12px; }
+.p-bank-row:hover .p-br-ops { display: flex; }
+.p-bank-row.active .p-br-ops { display: flex; }
+.p-br-ops span { color: #2563eb; cursor: pointer; }
+.p-br-ops span:last-child { color: #dc2626; }
 .p-mg-cat-title { font-size: 12px; font-weight: 700; color: #9ca3af; margin: 12px 2px 4px; }
 .p-mg-cat-title:first-child { margin-top: 0; }
 .p-bank-row { padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 9px; cursor: pointer; background: #fff; }
