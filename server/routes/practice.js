@@ -5,7 +5,15 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { num, str } = require('../utils');
+const { num, str } = require('../utils')
+
+/* 本地时间 YYYY-MM-DD HH:mm:ss（与主模式归档一致，避免 UTC 时差） */
+const localNow = () => {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' +
+        p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+};;
 
 const router = express.Router();
 
@@ -236,7 +244,7 @@ router.post('/:id/answer', async (req, res) => {
 
         const correct = userAnswer === str(q[0].answer, 50);
         const result = correct ? 'ok' : 'ng';
-        const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const now = localNow();
         await pool.query(
             'INSERT INTO practice_records (session_id, question_id, no, user_answer, result, ms, answered_at) VALUES (?,?,?,?,?,?,?)',
             [sessionId, questionId, no, userAnswer || null, result, ms, now]
@@ -262,7 +270,7 @@ router.post('/:id/skip', async (req, res) => {
         const questionId = num(req.body && req.body.questionId);
         const [q] = await pool.query('SELECT id, answer, analysis FROM questions WHERE id=?', [questionId]);
         if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
-        const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const now = localNow();
         await pool.query(
             'INSERT INTO practice_records (session_id, question_id, no, user_answer, result, ms, answered_at) VALUES (?,?,?,?,?,?,?)',
             [sessionId, questionId, no, null, 'skip', ms, now]
@@ -280,7 +288,7 @@ router.post('/:id/finish', async (req, res) => {
     try {
         const sessionId = num(req.params.id);
         const ms = num(req.body && req.body.ms);
-        const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const now = localNow();
         await conn.beginTransaction();
         const [s] = await conn.query(
             `UPDATE practice_sessions SET total_ms = ?, finished_at = ?,
