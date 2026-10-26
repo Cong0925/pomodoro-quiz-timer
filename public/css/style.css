@@ -2255,37 +2255,51 @@ button:hover {
 .p-result-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 
 /* 题库管理 */
-.p-manage-layout { display: grid; grid-template-columns: 290px 1fr; gap: 14px; align-items: start; }
+.p-manage-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
 .p-bank-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.p-bank-list { display: flex; flex-direction: column; gap: 6px; max-height: 560px; overflow-y: auto; }
-.p-bank-row { position: relative; }
-.p-bank-row .p-br-ops { display: none; margin-top: 6px; gap: 12px; font-size: 12px; }
-.p-bank-row:hover .p-br-ops { display: flex; }
-.p-bank-row.active .p-br-ops { display: flex; }
-.p-br-ops span { color: #2563eb; cursor: pointer; }
-.p-br-ops span:last-child { color: #dc2626; }
-.p-mg-cat-title { font-size: 12px; font-weight: 700; color: #9ca3af; margin: 12px 2px 4px; }
+.p-bank-toolbar .p-section-title { margin: 0; }
+.p-bank-list { display: flex; flex-direction: column; gap: 4px; max-height: 600px; overflow-y: auto; padding-right: 2px; }
+.p-mg-cat-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #9ca3af; margin: 14px 4px 6px; }
 .p-mg-cat-title:first-child { margin-top: 0; }
-.p-bank-row { padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 9px; cursor: pointer; background: #fff; }
-.p-bank-row:hover { border-color: #93c5fd; }
-.p-bank-row.active { border-color: #2563eb; background: #eaf1ff; }
-.p-br-name { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
-.p-br-count { font-size: 11px; color: #9ca3af; font-weight: 400; flex-shrink: 0; }
-.p-br-meta { font-size: 11.5px; color: #6b7280; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.p-manage-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.p-manage-title { font-size: 14px; font-weight: 700; }
+.p-mg-cat-title i { font-style: normal; font-size: 11px; color: #c0c6cf; background: #f3f4f6; border-radius: 8px; padding: 1px 7px; }
+.p-bank-row { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px 10px 16px; border-radius: 10px; cursor: pointer; background: transparent; transition: background .15s; }
+.p-bank-row:hover { background: #f7f9fc; }
+.p-bank-row.active { background: #f0f6ff; }
+.p-br-ind { position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: transparent; }
+.p-bank-row.active .p-br-ind { background: #2563eb; }
+.p-br-main { flex: 1; min-width: 0; }
+.p-br-name { font-size: 13.5px; font-weight: 700; color: #1f2937; display: flex; justify-content: space-between; gap: 8px; }
+.p-bank-row.active .p-br-name { color: #1d4ed8; }
+.p-br-count { font-size: 11px; color: #9ca3af; font-weight: 400; background: #f3f4f6; border-radius: 8px; padding: 1px 7px; flex-shrink: 0; }
+.p-bank-row.active .p-br-count { background: #dbeafe; color: #2563eb; }
+.p-br-meta { font-size: 11.5px; color: #9ca3af; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-br-ops { display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
+.p-bank-row:hover .p-br-ops, .p-bank-row.active .p-br-ops { opacity: 1; }
+.p-op-btn { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; color: #6b7280; border-radius: 7px; cursor: pointer; }
+.p-op-btn:hover { background: #eef2f7; color: #2563eb; }
+.p-op-btn.danger:hover { background: #fef2f2; color: #dc2626; }
+.p-manage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; padding: 4px 2px 14px; border-bottom: 1px solid #f0f2f5; }
+.p-manage-info { min-width: 0; }
+.p-manage-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.p-manage-title { font-size: 18px; font-weight: 800; color: #111827; }
+.p-manage-path { font-size: 12px; color: #2563eb; background: #eef4ff; border-radius: 6px; padding: 2px 8px; font-weight: 500; }
+.p-manage-stat { font-size: 12px; color: #9ca3af; margin-top: 4px; }
 .p-q-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.p-q-table th { text-align: left; font-size: 12px; color: #6b7280; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; }
-.p-q-table td { padding: 9px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
-.p-q-table tr:hover td { background: #fafbfd; }
-.p-q-stem-cell { max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.p-diff { font-size: 11.5px; padding: 1px 8px; border-radius: 4px; }
-.p-diff-1 { background: #f0fdf4; color: #16a34a; }
-.p-diff-2 { background: #fef9c3; color: #a16207; }
-.p-diff-3 { background: #fef2f2; color: #dc2626; }
-.p-op-link { color: #2563eb; cursor: pointer; font-size: 12.5px; margin-right: 10px; }
-.p-op-link.danger { color: #dc2626; }
-.p-empty { text-align: center; color: #9ca3af; font-size: 13px; padding: 26px 0; }
+.p-q-table th { text-align: left; font-size: 12px; color: #9ca3af; padding: 10px; border-bottom: 1px solid #eef0f3; font-weight: 600; letter-spacing: .5px; }
+.p-q-table td { padding: 11px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.p-q-table tbody tr { transition: background .12s; }
+.p-q-table tbody tr:hover { background: #f8fafc; }
+.p-q-no { color: #c0c6cf; font-size: 12px; }
+.p-q-stem-cell { max-width: 430px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-ans-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; }
+.p-diff { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; }
+.p-diff i { width: 6px; height: 6px; border-radius: 50%; }
+.p-diff-1 { color: #16a34a; } .p-diff-1 i { background: #16a34a; }
+.p-diff-2 { color: #d97706; } .p-diff-2 i { background: #f59e0b; }
+.p-diff-3 { color: #dc2626; } .p-diff-3 i { background: #ef4444; }
+.p-q-ops { white-space: nowrap; }
+.p-empty { text-align: center; color: #9ca3af; font-size: 13px; padding: 36px 0; }
+.p-empty p { margin: 10px 0 14px; }
 
 /* 练习记录 */
 .p-stats-bar { display: flex; gap: 26px; margin-bottom: 14px; flex-wrap: wrap; }

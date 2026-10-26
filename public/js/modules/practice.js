@@ -335,35 +335,37 @@
         if (!state.banks.find(b => b.id === state.curBank)) {
             state.curBank = state.banks.length ? state.banks[0].id : 0;
         }
-        // 题库列表按大类分组
         const list = el('pBankList');
-        list.innerHTML = state.cats.map(c => {
+        const editSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+        const delSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        // 题库列表按大类分组（单次遍历，避免分组重复渲染）
+        const bankRow = b => `
+            <div class="p-bank-row ${state.curBank === b.id ? 'active' : ''}" data-id="${b.id}">
+                <span class="p-br-ind"></span>
+                <div class="p-br-main">
+                    <div class="p-br-name">${U.escapeHtml(b.name)}<span class="p-br-count">${b.count} 题</span></div>
+                    <div class="p-br-meta">${U.escapeHtml(b.description || '暂无描述')}</div>
+                </div>
+                <div class="p-br-ops">
+                    <button class="p-op-btn" data-op="edit" data-id="${b.id}" title="编辑题库">${editSvg}</button>
+                    <button class="p-op-btn danger" data-op="del" data-id="${b.id}" title="删除题库">${delSvg}</button>
+                </div>
+            </div>`;
+        let html = '';
+        state.cats.forEach(c => {
             const banks = state.banks.filter(b => b.catId === c.id);
-            const bankRow = b => `
-                <div class="p-bank-row ${state.curBank === b.id ? 'active' : ''}" data-id="${b.id}">
-                    <div class="p-br-name">${U.escapeHtml(b.name)}<span class="p-br-count">${b.count}题</span></div>
-                    <div class="p-br-meta">${U.escapeHtml(b.description || '')}</div>
-                    <div class="p-br-ops">
-                        <span data-op="edit" data-id="${b.id}">编辑</span>
-                        <span data-op="del" data-id="${b.id}">删除</span>
-                    </div>
-                </div>`;
-            let html = '';
-            state.cats.forEach(c => {
-                const banks = state.banks.filter(b => b.catId === c.id);
-                if (banks.length) html += '<div class="p-mg-cat-title">' + U.escapeHtml(c.name) + '</div>' + banks.map(bankRow).join('');
-            });
-            const uncat = state.banks.filter(b => !b.catId);
-            if (uncat.length) html += '<div class="p-mg-cat-title">未分类</div>' + uncat.map(bankRow).join('');
-            return html;
-        }).join('');
+            if (banks.length) html += '<div class="p-mg-cat-title"><span>' + U.escapeHtml(c.name) + '</span><i>' + banks.length + '</i></div>' + banks.map(bankRow).join('');
+        });
+        const uncat = state.banks.filter(b => !b.catId);
+        if (uncat.length) html += '<div class="p-mg-cat-title"><span>未分类</span><i>' + uncat.length + '</i></div>' + uncat.map(bankRow).join('');
+        list.innerHTML = html;
         list.querySelectorAll('.p-bank-row').forEach(x => {
             x.addEventListener('click', e => {
                 if (e.target.closest('.p-br-ops')) return;
                 state.curBank = Number(x.dataset.id); renderManage();
             });
         });
-        list.querySelectorAll('.p-br-ops span').forEach(s => {
+        list.querySelectorAll('.p-br-ops button').forEach(s => {
             s.addEventListener('click', e => {
                 e.stopPropagation();
                 const id = Number(s.dataset.id);
@@ -372,23 +374,39 @@
             });
         });
 
+        // 右侧头部：标题 + 分类路径 + 题量统计
         const bank = state.banks.find(b => b.id === state.curBank);
-        el('pManageTitle').textContent = bank ? bank.name : '';
+        el('pManageTitle').textContent = bank ? bank.name : '未选题库';
+        if (bank) {
+            const cat = state.cats.find(c => c.id === bank.catId);
+            const sub = cat && cat.subs ? cat.subs.find(s => s.id === bank.subId) : null;
+            el('pManagePath').textContent = (cat ? cat.name : '') + (sub ? ' / ' + sub.name : '') || '未分类';
+            el('pManageStat').textContent = bank.count + ' 道题 · ' + (bank.description || '暂无描述');
+        } else {
+            el('pManagePath').textContent = '';
+            el('pManageStat').textContent = '';
+        }
         const qs = await loadQuestions(state.curBank);
+        const diffMap = { 1: ['简单', 'p-diff-1'], 2: ['中等', 'p-diff-2'], 3: ['困难', 'p-diff-3'] };
         el('pQTbody').innerHTML = qs.map((q, i) => {
-            const diff = q.difficulty === 1 ? '简单' : q.difficulty === 3 ? '困难' : '中等';
+            const dm = diffMap[q.difficulty] || diffMap[2];
             return `<tr>
-                <td>${i + 1}</td>
+                <td class="p-q-no">${i + 1}</td>
                 <td class="p-q-stem-cell" title="${U.escapeHtml(q.stem)}">${U.escapeHtml(q.stem.split('\n')[0])}</td>
-                <td><b>${U.escapeHtml(q.answer)}</b></td>
-                <td><span class="p-diff p-diff-${q.difficulty}">${diff}</span></td>
-                <td><span class="p-op-link" data-act="edit" data-i="${i}" data-qid="${q.id}">编辑</span><span class="p-op-link danger" data-act="del" data-i="${i}" data-qid="${q.id}">删除</span></td>
+                <td><span class="p-ans-badge">${U.escapeHtml(q.answer)}</span></td>
+                <td><span class="p-diff ${dm[1]}"><i></i>${dm[0]}</span></td>
+                <td class="p-q-ops">
+                    <button class="p-op-btn" data-act="edit" data-qid="${q.id}" title="编辑题目">${editSvg}</button>
+                    <button class="p-op-btn danger" data-act="del" data-qid="${q.id}" title="删除题目">${delSvg}</button>
+                </td>
             </tr>`;
         }).join('');
-        el('pQTbody').querySelectorAll('.p-op-link').forEach(x => x.addEventListener('click', () => {
+        el('pQTbody').querySelectorAll('.p-op-btn').forEach(x => x.addEventListener('click', () => {
             if (x.dataset.act === 'edit') openQModal(Number(x.dataset.qid));
             else delQ(Number(x.dataset.qid));
         }));
+        const eb = el('pQEmptyAddBtn');
+        if (eb) eb.onclick = () => openQModal(0);
         el('pQEmpty').style.display = qs.length ? 'none' : 'block';
     }
 
