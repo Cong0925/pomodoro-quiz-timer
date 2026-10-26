@@ -15,7 +15,7 @@
         banks: [],                // 题库列表
         selCat: null, selSub: null, selBank: null, mode: 'order', count: 5,
         run: null,                // 运行中会话 { sessionId, questions, idx, ok, ng, skip, answers, startTs, review }
-        curBank: 1, editIdx: -1, mgSub: 'all',  // 题库管理（mgSub: 管理页分类筛选，'all'=全部）
+        curBank: 1, editIdx: -1, mgCat: 'all', mgSub: 'all',  // 题库管理（两层下拉筛选：大类→二级分类）
         recPage: 1, recTotal: 0,  // 练习记录分页
         stats: null,              // 练习统计
         timer: null
@@ -334,18 +334,25 @@
         const list = el('pBankList');
         const editSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
         const delSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-        // 分类筛选 chips（二级分类，只显示有题库的分类）
-        const filter = el('pBankFilter');
-        const subCount = {};
-        state.banks.forEach(b => { const k = b.subId || ''; subCount[k] = (subCount[k] || 0) + 1; });
-        const chips = [{ id: 'all', name: '全部', n: state.banks.length }];
-        state.cats.forEach(c => (c.subs || []).forEach(s => { if (subCount[s.id]) chips.push({ id: s.id, name: s.name, n: subCount[s.id] }); }));
-        if (subCount['']) chips.push({ id: '', name: '未分类', n: subCount[''] });
-        filter.innerHTML = chips.map(ch => `
-            <button class="p-chip ${state.mgSub === ch.id ? 'active' : ''}" data-f="${ch.id}"><span>${U.escapeHtml(ch.name)}</span><i>${ch.n}</i></button>`).join('');
-        filter.querySelectorAll('.p-chip').forEach(x => x.addEventListener('click', () => { state.mgSub = x.dataset.f; renderManage(); }));
+        // 两层下拉：大类 → 二级分类（select 元素常驻，用 onchange 避免监听器累积）
+        const catSel = el('pMgCatSel');
+        const subSel = el('pMgSubSel');
+        catSel.innerHTML = '<option value="all">全部大类</option>' + state.cats.map(c =>
+            `<option value="${c.id}" ${state.mgCat === c.id ? 'selected' : ''}>${U.escapeHtml(c.name)}（${state.banks.filter(b => b.catId === c.id).length}）</option>`).join('');
+        const subList = [];
+        state.cats.forEach(c => (c.subs || []).forEach(s => {
+            if (state.banks.some(b => b.catId === c.id && (b.subId || '') === s.id)) subList.push({ id: s.id, name: s.name, catId: c.id });
+        }));
+        if (state.banks.some(b => b.catId === state.mgCat && !b.subId)) subList.push({ id: '', name: '未分类', catId: state.mgCat });
+        if (state.mgSub !== 'all' && !subList.some(s => s.id === state.mgSub)) state.mgSub = 'all';
+        subSel.innerHTML = '<option value="all">全部分类</option>' + subList.map(s =>
+            `<option value="${s.id}" ${state.mgSub === s.id ? 'selected' : ''}>${U.escapeHtml(s.name)}</option>`).join('');
+        catSel.onchange = () => { state.mgCat = catSel.value; state.mgSub = 'all'; renderManage(); };
+        subSel.onchange = () => { state.mgSub = subSel.value; renderManage(); };
         // 题库列表按当前筛选
-        const filtered = state.mgSub === 'all' ? state.banks : state.banks.filter(b => (b.subId || '') === state.mgSub);
+        let filtered = state.banks;
+        if (state.mgCat !== 'all') filtered = filtered.filter(b => b.catId === state.mgCat);
+        if (state.mgSub !== 'all') filtered = filtered.filter(b => (b.subId || '') === state.mgSub);
         if (!filtered.find(b => b.id === state.curBank)) {
             state.curBank = filtered.length ? filtered[0].id : 0;
         }
@@ -363,18 +370,27 @@
                 </div>
             </div>`;
         let html = '';
-        if (state.mgSub === 'all') {
+        const catTitle = (name, n) => '<div class="p-mg-cat-title"><span>' + U.escapeHtml(name) + '</span><i>' + n + '</i></div>';
+        if (state.mgSub === 'all' && state.mgCat === 'all') {
             state.cats.forEach(c => {
                 const banks = filtered.filter(b => b.catId === c.id);
-                if (banks.length) html += '<div class="p-mg-cat-title"><span>' + U.escapeHtml(c.name) + '</span><i>' + banks.length + '</i></div>' + banks.map(bankRow).join('');
+                if (banks.length) html += catTitle(c.name, banks.length) + banks.map(bankRow).join('');
             });
             const uncat = filtered.filter(b => !b.catId);
-            if (uncat.length) html += '<div class="p-mg-cat-title"><span>未分类</span><i>' + uncat.length + '</i></div>' + uncat.map(bankRow).join('');
+            if (uncat.length) html += catTitle('未分类', uncat.length) + uncat.map(bankRow).join('');
+        } else if (state.mgSub === 'all') {
+            const cat = state.cats.find(c => c.id === state.mgCat);
+            (cat && cat.subs ? cat.subs : []).forEach(s => {
+                const banks = filtered.filter(b => (b.subId || '') === s.id);
+                if (banks.length) html += catTitle(s.name, banks.length) + banks.map(bankRow).join('');
+            });
+            const uncat = filtered.filter(b => !b.subId);
+            if (uncat.length) html += catTitle('未分类', uncat.length) + uncat.map(bankRow).join('');
         } else if (filtered.length) {
             const cat = state.cats.find(c => (c.subs || []).some(s => s.id === state.mgSub));
             const sub = cat ? (cat.subs || []).find(s => s.id === state.mgSub) : null;
             const title = state.mgSub === '' ? '未分类' : (sub ? sub.name : '分类');
-            html += '<div class="p-mg-cat-title"><span>' + U.escapeHtml(title) + '</span><i>' + filtered.length + '</i></div>' + filtered.map(bankRow).join('');
+            html += catTitle(title, filtered.length) + filtered.map(bankRow).join('');
         }
         list.innerHTML = html;
         list.querySelectorAll('.p-bank-row').forEach(x => {
@@ -497,12 +513,9 @@
         const bank = id ? state.banks.find(b => b.id === id) : null;
         el('pFBankName').value = bank ? bank.name : '';
         el('pFBankDesc').value = bank ? (bank.description || '') : '';
-        // 新增时默认分类：优先跟随管理页当前筛选的分类
+        // 新增时默认分类：优先跟随管理页两层下拉当前选择
         let defCat = state.selCat || '';
-        if (!bank && state.mgSub !== 'all' && state.mgSub !== '') {
-            const cat = state.cats.find(c => (c.subs || []).some(s => s.id === state.mgSub));
-            if (cat) defCat = cat.id;
-        }
+        if (!bank && state.mgCat !== 'all') defCat = state.mgCat;
         renderBankCatSub(bank ? bank.catId : defCat);
         if (bank) {
             const catSel = el('pFBankCat');
