@@ -2420,9 +2420,26 @@ button:hover {
     background: #fafbfd; border-radius: 8px;
 }
 .m-rec-detail .p-rec-summary { font-size: 13px; font-weight: 600; color: #374151; padding: 6px 0 2px; }
-.m-rec-detail .p-rec-row { font-size: 13px; padding: 9px 0; }
-.m-rec-detail .p-rd-ans { font-size: 12.5px; color: #4b5563; }
-.m-rec-detail .p-rd-ans b { font-weight: 700; color: #111827; }
+/* 速算明细：仿历史记录，一行 5 个题目单元；上题目、下答案+解析 */
+.m-rec-detail .m-rec-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+.m-rec-detail .m-rec-cell {
+    display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+    padding: 8px 10px; min-height: 96px;
+    background: #f8fafc; border: 1px solid #eef1f5; border-radius: 8px;
+    font-size: 14px; color: #4b5563; font-variant-numeric: tabular-nums;
+}
+.m-rec-cell .m-rc-top { display: flex; align-items: center; gap: 6px; }
+.m-rec-cell .m-rc-stem { font-size: 13px; font-weight: 600; color: #111827; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-rec-cell .m-rc-ans { margin-top: auto; font-size: 12px; color: #4b5563; border-top: 1px solid #e5e7eb; padding-top: 5px; }
+.m-rec-cell .m-rc-ans b { font-weight: 700; color: #111827; }
+.m-rec-cell .m-rc-tip { font-size: 12px; color: #6b7280; background: #eff6ff; border-radius: 6px; padding: 6px 8px; line-height: 1.5; }
+@media (max-width: 700px) {
+    .m-rec-detail .m-rec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* 技巧手册 */
 .m-manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
