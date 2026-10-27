@@ -36,7 +36,9 @@
         { k: 2, n: '中等', d: '高频考法 / 两位分母' },
         { k: 3, n: '困难', d: '生僻分母 / 多步估算' }
     ];
-    const COUNT_OPTIONS = [10, 15, 20];
+    const COUNT_OPTIONS = [10, 15, 20, 0];   // 0 = 无限流（循环随机抽题，随时可结束）
+    const INFINITE = 0;
+    const BATCH_SIZE = 10;                    // 无限流单批题量
     const DIFF_NAMES = { 0: '不限难度', 1: '简单', 2: '中等', 3: '困难' };
 
     /* 百化分速查表（1/2 ~ 1/20，用于技巧手册） */
@@ -95,8 +97,10 @@
         grid.innerHTML = Object.values(TYPES).map(t => `
             <div class="m-type-card ${state.type === t.k ? 'active' : ''}" data-k="${t.k}">
                 <div class="m-tc-icon">${t.icon}</div>
-                <div class="m-tc-name">${t.n}</div>
-                <div class="m-tc-desc">${t.d}</div>
+                <div class="m-tc-info">
+                    <div class="m-tc-name">${t.n}</div>
+                    <div class="m-tc-desc">${t.d}</div>
+                </div>
             </div>`).join('');
         grid.querySelectorAll('.m-type-card').forEach(x => x.addEventListener('click', () => {
             state.type = x.dataset.k;
@@ -107,9 +111,9 @@
     function renderCounts() {
         const row = el('mCountRow');
         if (!COUNT_OPTIONS.includes(state.count)) state.count = COUNT_OPTIONS[0];
-        row.innerHTML = COUNT_OPTIONS.map(c => `<button class="p-count-btn ${state.count === c ? 'selected' : ''}" data-c="${c}">${c}</button>`).join('');
+        row.innerHTML = COUNT_OPTIONS.map(c => `<button class="p-count-btn ${state.count === c ? 'selected' : ''}" data-c="${c}">${c === INFINITE ? '∞ 无限' : c}</button>`).join('');
         row.querySelectorAll('.p-count-btn').forEach(x => x.addEventListener('click', () => {
-            state.count = Number(x.dataset.c); renderCounts();
+            state.count = Number(x.dataset.c); renderCounts(); updateStartBtn();
         }));
     }
 
@@ -125,7 +129,9 @@
     }
 
     function updateStartBtn() {
-        el('mStartTip').textContent = `将抽取 ${state.count} 道「${TYPES[state.type].n}」题，答完即时判对错并给出技巧`;
+        el('mStartTip').textContent = state.count === INFINITE
+            ? `「${TYPES[state.type].n}」不限题量 · 循环随机抽题，答完自动续题，随时可结束`
+            : `将抽取 ${state.count} 道「${TYPES[state.type].n}」题，答完即时判对错并给出技巧`;
     }
 
     async function startRun() {
@@ -135,6 +141,7 @@
             });
             state.run = {
                 sessionId: r.sessionId, qtype: r.qtype, qtypeName: r.qtypeName,
+                infinite: !!r.infinite, total: r.total,
                 questions: r.questions, idx: 0, ok: 0, ng: 0, skip: 0,
                 answers: [], startTs: Date.now(), phase: 'run', finished: false
             };
@@ -143,7 +150,7 @@
             el('mPaneRun').hidden = false;
             el('mRunTitle').textContent = r.qtypeName;
             el('mRunMeta').textContent = '速算练习 · ' + (DIFF_NAMES[state.diff] || '不限难度') +
-                ' · 共 ' + r.total + ' 题';
+                (state.run.infinite ? ' · 无限流（循环抽题）' : ' · 共 ' + r.total + ' 题');
             startClock();
             renderQ();
         } catch (e) {
@@ -163,8 +170,12 @@
     function renderQ() {
         const q = state.run.questions[state.run.idx];
         const no = state.run.idx + 1;
-        el('mQNo').textContent = `第 ${no} / ${state.run.questions.length} 题 · ${TYPES[q.qtype] ? TYPES[q.qtype].n : ''}`;
-        el('mRunBar').style.width = (state.run.idx / state.run.questions.length * 100) + '%';
+        el('mQNo').textContent = state.run.infinite
+            ? `第 ${no} 题 · 无限流 · ${TYPES[q.qtype] ? TYPES[q.qtype].n : ''}`
+            : `第 ${no} / ${state.run.questions.length} 题 · ${TYPES[q.qtype] ? TYPES[q.qtype].n : ''}`;
+        el('mRunBar').style.width = (state.run.infinite
+            ? (state.run.idx % BATCH_SIZE) / BATCH_SIZE
+            : state.run.idx / state.run.questions.length) * 100 + '%';
 
         /* 比大小：题干拆两个分数卡 A/B（视觉辅助），选项列表 2 项 */
         const compareRow = el('mCompareRow');
@@ -206,6 +217,7 @@
         el('mAnalysis').hidden = true;
         el('mSkipBtn').hidden = false;
         el('mNextBtn').hidden = true;
+        el('mEndBtn').hidden = !state.run.infinite;
     }
 
     async function answer(k) {
@@ -272,10 +284,41 @@
     async function nextQ() {
         state.run.idx++;
         if (state.run.idx >= state.run.questions.length) {
+            if (state.run.infinite) {
+                await loadMore();
+                return;
+            }
             await finish();
             return;
         }
         renderQ();
+    }
+
+    /* 无限流：答完一批自动续一批（排除已出题，题库轮完循环随机） */
+    async function loadMore() {
+        try {
+            const r = await api.post(`/api/mental/${state.run.sessionId}/more`, {});
+            if (r.questions && r.questions.length) {
+                state.run.questions = state.run.questions.concat(r.questions);
+                renderQ();
+                return;
+            }
+        } catch (e) {
+            U.showToast('加载下一批题目失败：' + e.message, 'error');
+        }
+        await finish();
+    }
+
+    /* 无限流：随时手动结束（已答题目计入结算） */
+    async function endRun() {
+        if (!state.run || !state.run.infinite) return;
+        const ok = await PQ.ui.confirm({
+            title: '结束练习',
+            message: '结束本轮无限流练习？已答题目将计入本次结算。',
+            confirmText: '结束'
+        });
+        if (!ok) return;
+        await finish();
     }
 
     /* ---------- 结算（归档历史） ---------- */
@@ -366,7 +409,7 @@
             <div class="m-session-item" data-id="${r.id}">
                 <div class="m-si-main">
                     <div class="m-si-title">${U.escapeHtml(r.qtype_name)}<span class="p-rec-sub"> · ${DIFF_NAMES[r.difficulty] || '不限难度'} · ${r.started_at || ''}</span></div>
-                    <div class="m-si-meta">共 ${r.total_count} 题 · 对 ${r.correct_count} · 错 ${r.wrong_count} · 跳 ${r.skipped_count} · 用时 ${U.formatMs(r.total_ms)}</div>
+                    <div class="m-si-meta">${r.total_count === 0 ? '∞ 无限流' : '共 ' + r.total_count + ' 题'} · 对 ${r.correct_count} · 错 ${r.wrong_count} · 跳 ${r.skipped_count} · 用时 ${U.formatMs(r.total_ms)}</div>
                 </div>
                 <span class="m-si-rate ${r.rate < 60 ? 'low' : ''}">${r.rate}%</span>
             </div>`).join('');
@@ -390,7 +433,7 @@
         const body = document.createElement('div');
         body.className = 'm-rec-detail';
         body.innerHTML = `
-            <div class="p-rec-summary">共 ${s.total_count} 题 · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 正确率 ${s.rate}% · 用时 ${U.formatMs(s.total_ms)}</div>
+            <div class="p-rec-summary">${s.total_count === 0 ? '∞ 无限流' : '共 ' + s.total_count + ' 题'} · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 正确率 ${s.rate}% · 用时 ${U.formatMs(s.total_ms)}</div>
             ${r.records.map(d => {
                 const ua = d.userAnswer != null && d.options[d.userAnswer] != null ? d.options[d.userAnswer] : '跳过';
                 const ca = d.answer != null && d.options[d.answer] != null ? d.options[d.answer] : '—';
@@ -431,6 +474,7 @@
     el('mStartBtn').addEventListener('click', startRun);
     el('mSkipBtn').addEventListener('click', skipQ);
     el('mNextBtn').addEventListener('click', nextQ);
+    el('mEndBtn').addEventListener('click', endRun);
     el('mReplayBtn').addEventListener('click', () => { el('mPaneResult').hidden = true; startRun(); });
     el('mBackBtn').addEventListener('click', backToStart);
 

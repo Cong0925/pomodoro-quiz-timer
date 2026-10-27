@@ -2361,12 +2361,14 @@ button:hover {
 /* 开始页：题型四选一（百化分 / 分数比大小 / 估算值 / 综合练习） */
 .m-type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .m-type-card {
-    border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 16px 14px; cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+    border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 13px 12px; cursor: pointer;
     transition: border-color .15s, background .15s, box-shadow .15s; user-select: none;
 }
-.m-type-card .m-tc-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; background: #eff6ff; color: #2563eb; }
-.m-type-card .m-tc-name { font-size: 14.5px; font-weight: 700; color: #1f2937; }
-.m-type-card .m-tc-desc { font-size: 12px; color: #6b7280; margin-top: 4px; line-height: 1.5; }
+.m-type-card .m-tc-icon { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #eff6ff; color: #2563eb; }
+.m-type-card .m-tc-info { min-width: 0; }
+.m-type-card .m-tc-name { font-size: 16.5px; font-weight: 700; color: #1f2937; }
+.m-type-card .m-tc-desc { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.4; }
 .m-type-card:hover { border-color: #93c5fd; }
 .m-type-card.active { border-color: #2563eb; background: #eff6ff; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
 .m-type-card.active .m-tc-name { color: #2563eb; }
@@ -2391,11 +2393,12 @@ button:hover {
 .m-review-item .m-ri-ans { color: #16a34a; margin-top: 3px; }
 .m-review-item .m-ri-tip { color: #2563eb; margin-top: 3px; }
 
-/* 练习记录：统计 + 会话卡片 */
-.m-rec-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-.m-rec-stat { flex: 1; min-width: 120px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; }
-.m-rec-stat b { display: block; font-size: 18px; color: #2563eb; }
-.m-rec-stat span { font-size: 11.5px; color: #6b7280; }
+/* 练习记录：统计（单行 5 等分）+ 会话卡片 */
+.m-rec-stats { display: flex; margin-bottom: 14px; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; background: #f9fafb; }
+.m-rec-stat { flex: 1; min-width: 0; padding: 10px 4px; text-align: center; border-right: 1px solid #e5e7eb; }
+.m-rec-stat:last-child { border-right: none; }
+.m-rec-stat b { display: block; font-size: 17px; color: #2563eb; }
+.m-rec-stat span { font-size: 11px; color: #6b7280; }
 .m-session-item {
     border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
     display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;

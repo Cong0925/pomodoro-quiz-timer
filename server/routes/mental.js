@@ -32,9 +32,20 @@ async function ensureSeed() {
     );
 }
 
+/* Fisher-Yates 洗牌（返回新数组） */
+function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+}
+
 /* 随机抽题：mixed 时三类各取 1/3 轮转，其余按题型抽；
-   不足题量时按实际数量（会话 total_count 以实际为准） */
-async function pickQuestions(qtype, difficulty, count) {
+   exclude 传 Set 可排除已出题目（无限流用）；
+   某题型一轮出尽后，只对该题型循环随机补齐（允许与已出重复），不影响其他题型 */
+async function pickQuestions(qtype, difficulty, count, exclude) {
     const where = ['active=1'];
     const params = [];
     if (difficulty >= 1 && difficulty <= 3) {
@@ -43,20 +54,40 @@ async function pickQuestions(qtype, difficulty, count) {
     }
     const types = qtype === 'mixed' ? ['percent', 'compare', 'estimate'] : [qtype];
     const per = qtype === 'mixed' ? Math.ceil(count / 3) : count;
+    const excl = exclude && exclude.size ? exclude : null;
     let ids = [];
     for (const t of types) {
         const [rows] = await pool.query(
-            `SELECT id FROM mental_questions WHERE qtype=? AND ${where.join(' AND ')} ORDER BY RAND() LIMIT ?`,
-            [...params, t, per]
+            `SELECT id FROM mental_questions WHERE qtype=? AND ${where.join(' AND ')} ORDER BY RAND() LIMIT 200`,
+            [...params, t]
         );
-        ids = ids.concat(rows.map(r => r.id));
+        const all = rows.map(r => r.id);
+        if (!all.length) continue;
+        const fresh = excl ? all.filter(id => !excl.has(id)) : all.slice();
+        const take = Math.min(per, fresh.length);
+        ids = ids.concat(fresh.slice(0, take));
+        if (take < per) {
+            /* 该题型已全部出过：循环随机补齐（排除本批已取，保证批内不重复） */
+            const taken = new Set(fresh.slice(0, take));
+            const remain = all.filter(id => !taken.has(id));
+            ids = ids.concat(shuffle(remain).slice(0, per - take));
+        }
     }
-    // 洗牌并截断到 count；mixed 多取部分裁掉
-    for (let i = ids.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        const tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
-    }
-    return ids.slice(0, count);
+    return shuffle(ids).slice(0, count);
+}
+
+/* 拉取一批题目详情（保持抽题顺序） */
+async function fetchQuestions(ids) {
+    if (!ids.length) return [];
+    const ph = ids.map(() => '?').join(',');
+    const [qs] = await pool.query(
+        `SELECT id, qtype, difficulty, stem, options FROM mental_questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
+        [...ids, ...ids]
+    );
+    return qs.map(q => ({
+        id: q.id, qtype: q.qtype, difficulty: q.difficulty,
+        stem: q.stem, options: fmtRecordOpts(q.options)
+    }));
 }
 
 /* 格式化单题（供历史回看：映射选项下标 → 文本） */
@@ -68,38 +99,51 @@ function fmtRecordOpts(opts) {
 /* ---------- 练习会话 ---------- */
 
 /* POST /api/mental/start { qtype, difficulty, count }
-   创建会话并返回抽题（不含答案与技巧，作答接口才返回） */
+   count<=0 表示无限流：total_count=0，首批 10 题，答完通过 /:id/more 循环续题；
+   定量模式 count 1~30。返回题目不含答案与技巧（作答接口才返回） */
 router.post('/start', asyncHandler(async (req, res) => {
     await ensureSeed();
     const qtype = VALID_TYPES.includes(req.body && req.body.qtype) ? req.body.qtype : 'mixed';
     const difficulty = num(req.body && req.body.difficulty);
-    const count = Math.min(30, Math.max(1, num(req.body && req.body.count) || 10));
+    const count = num(req.body && req.body.count);
+    const infinite = count <= 0;
+    const want = infinite ? 10 : Math.min(30, Math.max(1, count));
 
-    const ids = await pickQuestions(qtype, difficulty, count);
+    const ids = await pickQuestions(qtype, difficulty, want, null);
     if (ids.length === 0) return res.status(400).json({ error: '该题型暂无题目，请联系开发者补充内置题库' });
 
     const [r] = await pool.query(
         `INSERT INTO mental_sessions (qtype, qtype_name, difficulty, total_count)
          VALUES (?,?,?,?)`,
-        [qtype, TYPE_NAMES[qtype], difficulty, ids.length]
+        [qtype, TYPE_NAMES[qtype], difficulty, infinite ? 0 : ids.length]
     );
     const sessionId = r.insertId;
-
-    const ph = ids.map(() => '?').join(',');
-    const [qs] = await pool.query(
-        `SELECT id, qtype, difficulty, stem, options FROM mental_questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
-        [...ids, ...ids]
-    );
+    const questions = await fetchQuestions(ids);
     res.status(201).json({
         sessionId,
         qtype,
         qtypeName: TYPE_NAMES[qtype],
-        total: qs.length,
-        questions: qs.map(q => ({
-            id: q.id, qtype: q.qtype, difficulty: q.difficulty,
-            stem: q.stem, options: fmtRecordOpts(q.options)
-        }))
+        total: infinite ? 0 : questions.length,
+        infinite: !!infinite,
+        questions
     });
+}));
+
+/* POST /api/mental/:id/more  无限流追加一批（10 题，排除已出，题库轮完循环）
+   仅 total_count=0 的无限会话可用 */
+router.post('/:id/more', asyncHandler(async (req, res) => {
+    const sessionId = num(req.params.id);
+    const [s] = await pool.query('SELECT * FROM mental_sessions WHERE id=?', [sessionId]);
+    if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
+    if (s[0].total_count !== 0) return res.status(400).json({ error: '定量会话无需追加题目' });
+
+    const [used] = await pool.query('SELECT question_id FROM mental_records WHERE session_id=?', [sessionId]);
+    const excl = new Set(used.map(x => Number(x.question_id)));
+    /* 优先出未做过的；某题型轮完后 pickQuestions 内部自动循环补齐 */
+    const ids = await pickQuestions(s[0].qtype, s[0].difficulty, 10, excl);
+    if (ids.length === 0) return res.status(400).json({ error: '题库暂无题目，请联系开发者补充内置题库' });
+
+    res.json({ questions: await fetchQuestions(ids) });
 }));
 
 /* POST /api/mental/:id/answer { no, questionId, answer, ms }
@@ -186,15 +230,23 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
         const now = nowDateTime();
         await conn.beginTransaction();
 
-        const [s] = await conn.query(
-            `UPDATE mental_sessions SET total_ms=?, finished_at=?,
-             rate = ROUND(correct_count / total_count * 100, 1)
-             WHERE id=? AND finished_at IS NULL`, [ms, now, sessionId]
-        );
-        if (s.affectedRows === 0) {
+        /* 无限流（total_count=0）：按实际作答数结算，并把题量修正为实做题数 */
+        const [pre] = await conn.query(
+            'SELECT * FROM mental_sessions WHERE id=? AND finished_at IS NULL', [sessionId]);
+        if (pre.length === 0) {
             await conn.rollback();
             return res.status(404).json({ error: '会话不存在或已结束' });
         }
+        const p = pre[0];
+        const totalAns = p.done_count + p.skipped_count;
+        const totalBase = p.total_count === 0 ? totalAns : p.total_count;
+        const rate = totalBase ? Math.round(p.correct_count / totalBase * 1000) / 10 : 0;
+        const newTotal = p.total_count === 0 ? totalAns : p.total_count;
+        await conn.query(
+            `UPDATE mental_sessions SET total_ms=?, finished_at=?, total_count=?, rate=?
+             WHERE id=? AND finished_at IS NULL`,
+            [ms, now, newTotal, rate, sessionId]
+        );
         const [row] = await conn.query('SELECT * FROM mental_sessions WHERE id=?', [sessionId]);
         const r = row[0];
 

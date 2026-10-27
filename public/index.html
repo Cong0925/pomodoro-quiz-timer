@@ -424,10 +424,10 @@
                     <div class="df-card p-card">
                         <div class="p-section-title">选择题型</div>
                         <div class="m-type-grid" id="mTypeGrid"></div>
-                        <div class="p-section-title" style="margin-top:18px">题量</div>
-                        <div class="p-mode-row" id="mCountRow"></div>
                         <div class="p-section-title" style="margin-top:18px">难度</div>
                         <div class="p-mode-row" id="mDiffRow"></div>
+                        <div class="p-section-title" style="margin-top:18px">题量</div>
+                        <div class="p-mode-row" id="mCountRow"></div>
                         <div class="p-start-bar">
                             <span class="p-hint" id="mStartTip">答完即时判对错，并给出速算技巧提示</span>
                             <button class="df-btn primary" id="mStartBtn">开始练习</button>
@@ -457,6 +457,7 @@
                         <div class="p-opt-list" id="mOptList"></div>
                         <div class="p-analysis" id="mAnalysis" hidden></div>
                         <div class="p-q-actions">
+                            <button class="df-btn" id="mEndBtn" hidden>结束练习</button>
                             <button class="df-btn p-skip-btn" id="mSkipBtn">跳过本题</button>
                             <button class="df-btn primary" id="mNextBtn" hidden>下一题</button>
                         </div>
@@ -486,7 +487,7 @@
                 <!-- 练习记录 -->
                 <div class="practice-pane" id="mPaneRec" hidden>
                     <div class="p-rec-list" id="mRecList">
-                        <div id="mRecStats"></div>
+                        <div id="mRecStats" class="m-rec-stats"></div>
                         <div id="mRecListInner"></div>
                     </div>
                 </div>
