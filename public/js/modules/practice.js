@@ -607,17 +607,16 @@
     }
 
     function renderStatsUi(s) {
-        const host = el('pRecList');
-        const html = `
+        const host = el('pRecStats');
+        if (!host) return;
+        host.innerHTML = `
             <div class="df-card p-card p-stats-bar">
                 <div><b>${s.all.sessions}</b><span>累计练习</span></div>
                 <div><b>${s.all.totalQ}</b><span>累计题量</span></div>
                 <div><b>${s.all.rate}%</b><span>累计正确率</span></div>
                 <div><b>${s.today.totalQ}</b><span>今日题量</span></div>
                 <div><b>${Math.round(s.today.totalMs / 60000)}</b><span>今日分钟</span></div>
-            </div>
-            <div id="pRecListInner"></div>`;
-        host.innerHTML = html;
+            </div>`;
     }
 
     async function renderRecords(reset) {
