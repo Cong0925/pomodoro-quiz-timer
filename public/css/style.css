@@ -2232,6 +2232,9 @@ button:hover {
 .p-analysis { margin-top: 14px; border-top: 1px dashed #e5e7eb; padding-top: 12px; }
 .p-analysis-title { font-size: 13px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
 .p-analysis-body { font-size: 13.5px; line-height: 1.8; color: #4b5563; }
+/* 速算答题反馈区：判题标题 20px、技巧正文 18px（仅速算练习生效） */
+#viewMental .p-analysis-title { font-size: 20px; }
+#viewMental .p-analysis-body { font-size: 18px; }
 .p-q-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 .p-skip-btn { background: #fef3c7; color: #b45309; }
 .p-skip-btn:hover { background: #fde68a; }
