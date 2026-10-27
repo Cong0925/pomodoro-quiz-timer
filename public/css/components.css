@@ -344,3 +344,43 @@
 .pq-dialog__close:hover { color: var(--pq-text); background: #f5f7fa; }
 .pq-dialog__body { padding: 20px; overflow: auto; color: var(--pq-text2); font-size: 14px; line-height: 1.6; }
 .pq-dialog__footer { padding: 8px 20px 16px; text-align: right; display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ===== 表单（Element Form 风格，覆盖题目编辑弹窗） ===== */
+.p-form-label { font-size: 14px; font-weight: 500; color: var(--pq-text2); margin: 14px 0 6px; }
+.p-form-label:first-child { margin-top: 0; }
+.p-q-modal {
+    border-radius: 8px; padding: 24px 28px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+}
+.p-q-modal p {
+    font-size: 16px; font-weight: 600; color: var(--pq-text);
+    margin: 0 0 18px; padding-bottom: 12px; border-bottom: 1px solid var(--pq-border-light);
+}
+.p-q-modal .pq-select { width: 100%; }
+.p-q-modal .pq-textarea { min-height: 72px; }
+.p-q-modal .modal-buttons { justify-content: flex-end; }
+.p-hint { font-size: 12.5px; color: var(--pq-text3); font-weight: 400; line-height: 1.7; }
+.m-fill-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--pq-text2); cursor: pointer; user-select: none; padding-top: 6px; }
+.m-fill-chk input.pq-checkbox { width: 16px; height: 16px; }
+
+/* 选项行（Element 风格覆盖） */
+.p-form-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.p-form-opt-label {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+    background: #ecf5ff; color: var(--pq-primary);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+}
+.p-form-row input.pq-input {
+    flex: 1; padding: 8px 11px; border: 1px solid var(--pq-border);
+    border-radius: var(--pq-radius); font-size: 13.5px;
+}
+.p-form-row input.pq-input:focus {
+    border-color: var(--pq-primary); box-shadow: 0 0 0 2px rgba(64, 158, 255, .2); outline: none;
+}
+
+/* 弹窗入场动画 */
+.modal-box { animation: pq-modal-in .2s ease; }
+@keyframes pq-modal-in {
+    from { opacity: 0; transform: translateY(-14px) scale(.98); }
+    to { opacity: 1; transform: none; }
+}

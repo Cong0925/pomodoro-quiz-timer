@@ -755,7 +755,7 @@
         box.innerHTML = mg.editOpts.map((t, j) => `
             <div class="p-form-row">
                 <span class="p-form-opt-label">${String.fromCharCode(65 + j)}</span>
-                <input type="text" data-oi="${j}" value="${U.escapeHtml(String(t))}" placeholder="选项 ${String.fromCharCode(65 + j)} 内容">
+                <input type="text" class="pq-input pq-input--small" data-oi="${j}" value="${U.escapeHtml(String(t))}" placeholder="选项 ${String.fromCharCode(65 + j)} 内容">
                 <button class="p-op-btn danger m-opt-del" data-i="${j}" type="button" title="删除选项">${delSvg}</button>
             </div>`).join('');
         box.querySelectorAll('input').forEach(x => { x.oninput = () => {

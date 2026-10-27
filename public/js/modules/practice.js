@@ -525,7 +525,7 @@
         sel.value = answer;
         el('pFOpts').innerHTML = opts.map((t, j) => `
             <div class="p-form-row"><span class="p-form-opt-label">${String.fromCharCode(65 + j)}</span>
-            <input type="text" data-oi="${j}" value="${U.escapeHtml(String(t))}" placeholder="选项 ${String.fromCharCode(65 + j)} 内容"></div>`).join('');
+            <input type="text" class="pq-input pq-input--small" data-oi="${j}" value="${U.escapeHtml(String(t))}" placeholder="选项 ${String.fromCharCode(65 + j)} 内容"></div>`).join('');
         el('pQModalMask').classList.add('show');
     }
 
