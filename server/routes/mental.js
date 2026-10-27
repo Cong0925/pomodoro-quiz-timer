@@ -137,13 +137,13 @@ function fmtRecordOpts(opts) {
 /* POST /api/mental/start { qtype, difficulty, count, answerMode }
    count<=0 表示无限流：total_count=0，首批 10 题，答完通过 /:id/more 循环续题；
    定量模式 count 1~30。返回题目不含答案与技巧（作答接口才返回）；
-   answerMode=fill 仅对百化分生效：抽常规几分之一型填空题（fillable=1） */
+   answerMode=fill 对百化分、平方数生效：抽常规可填空题（fillable=1） */
 router.post('/start', asyncHandler(async (req, res) => {
     await ensureSeed();
     const qtype = VALID_TYPES.includes(req.body && req.body.qtype) ? req.body.qtype : 'mixed';
     const difficulty = num(req.body && req.body.difficulty);
     const count = num(req.body && req.body.count);
-    const answerMode = (req.body && req.body.answerMode === 'fill' && qtype === 'percent') ? 'fill' : 'choice';
+    const answerMode = (req.body && req.body.answerMode === 'fill' && (qtype === 'percent' || qtype === 'square')) ? 'fill' : 'choice';
     const infinite = count <= 0;
     const want = infinite ? 10 : Math.min(30, Math.max(1, count));
     const fillOnly = answerMode === 'fill';

@@ -44,11 +44,8 @@
     const INFINITE = 0;
     const BATCH_SIZE = 10;                    // 无限流单批题量
     const DIFF_NAMES = { 0: '不限难度', 1: '简单', 2: '中等', 3: '困难' };
-    /* 做题类型：选择题（四选一） / 填空题（仅百化分，常规几分之一型） */
-    const MODES = [
-        { k: 'choice', n: '选择题', d: '四选一，选项辅助判断' },
-        { k: 'fill', n: '填空题', d: '直接填写：12.5% 填 8，1/9 填 11.1' }
-    ];
+    /* 固定做题类型：百化分、平方数为填空题（直接填数字）；其余题型为选择题 */
+    function answerModeFor(t) { return (t === 'percent' || t === 'square') ? 'fill' : 'choice'; }
 
     /* 百化分速查表（1/2 ~ 1/20，用于技巧手册） */
     const PERCENT_TABLE = [
@@ -71,7 +68,6 @@
         type: 'percent',
         count: COUNT_OPTIONS[0],
         diff: 0,
-        answerMode: 'choice',
         run: null,            // 运行中会话 { sessionId, qtype, qtypeName, answerMode, questions, idx, ok, ng, skip, answers, startTs, itemStartTs, phase, finished }
         recPage: 1, recTotal: 0,
         stats: null,
@@ -125,22 +121,12 @@
         }));
     }
 
-    /* 做题类型：仅百化分可选（填空题面向常规几分之一型）；其他题型固定选择题 */
+    /* 做题类型已固定：百化分、平方数为填空题；其余题型为选择题。不再提供切换 */
     function renderModeRow() {
         const title = el('mModeTitle');
         const row = el('mModeRow');
-        if (!title || !row) return;
-        const visible = state.type === 'percent';
-        title.hidden = !visible;
-        row.hidden = !visible;
-        if (!visible) return;
-        row.innerHTML = MODES.map(m => `
-            <div class="p-mode-chip ${state.answerMode === m.k ? 'selected' : ''}" data-k="${m.k}">
-                <b>${m.n}</b><span>${m.d}</span>
-            </div>`).join('');
-        row.querySelectorAll('.p-mode-chip').forEach(x => x.addEventListener('click', () => {
-            state.answerMode = x.dataset.k; renderModeRow();
-        }));
+        if (title) title.hidden = true;
+        if (row) row.hidden = true;
     }
 
     function renderCounts() {
@@ -164,7 +150,7 @@
     }
 
     function updateStartBtn() {
-        const fillNote = (state.type === 'percent' && state.answerMode === 'fill') ? '（填空题：直接填数字）' : '';
+        const fillNote = (state.type === 'percent' || state.type === 'square') ? '（填空题：直接填数字）' : '';
         el('mStartTip').textContent = state.count === INFINITE
             ? `「${TYPES[state.type].n}」不限题量 · 循环随机抽题，答完自动续题，随时可结束${fillNote}`
             : `将抽取 ${state.count} 道「${TYPES[state.type].n}」题，答完即时判对错并给出技巧${fillNote}`;
@@ -173,7 +159,8 @@
     async function startRun() {
         try {
             const r = await api.post('/api/mental/start', {
-                qtype: state.type, difficulty: state.diff, count: state.count, answerMode: state.answerMode
+                qtype: state.type, difficulty: state.diff, count: state.count,
+                answerMode: answerModeFor(state.type)
             });
             state.run = {
                 sessionId: r.sessionId, qtype: r.qtype, qtypeName: r.qtypeName,
@@ -252,13 +239,15 @@
         list.querySelectorAll('.p-opt-item').forEach(x => x.addEventListener('click', () => answer(Number(x.dataset.k))));
         list.hidden = fillMode;
 
-        /* 填空题：百分数→填分母(1/?)；分数→填百分数数值(?%)，百分号固定 */
+        /* 填空题：百分数→填分母(1/?)；分数→填百分数数值(?%)，百分号固定；平方数→直接填数字 */
         const fillRow = el('mFillRow');
         if (fillMode) {
             const prefix = el('mFillPrefix'), suffix = el('mFillSuffix'), input = el('mFillInput');
             prefix.textContent = q.fillDir === 'den' ? '1/' : '';
             suffix.hidden = q.fillDir !== 'pct';
-            input.placeholder = q.fillDir === 'den' ? '填分母（如 12.5% 填 8）' : '填百分数数值（如 1/9 填 11.1）';
+            input.placeholder = q.fillDir === 'den' ? '填分母（如 12.5% 填 8）'
+                : q.fillDir === 'val' ? '填数字（如 13² 填 169）'
+                : '填百分数数值（如 1/9 填 11.1）';
             input.value = '';
             fillRow.hidden = false;
             input.focus();
