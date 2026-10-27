@@ -722,7 +722,8 @@ button:hover {
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
-    overflow-x: auto;
+    /* 不设 overflow（visible）：避免本容器成为滚动祖先，
+       让表头 position: sticky 相对页面滚动固定到视口顶部 */
 }
 
 .stats-table {
@@ -740,6 +741,11 @@ button:hover {
     font-size: 13px;
     border-bottom: 1px solid #e5e7eb;
     white-space: nowrap;
+    /* 表头随页面滚动固定到视口顶部（留 10px 边距，悬浮感） */
+    position: sticky;
+    top: 10px;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
 }
 
 .stats-table td {
@@ -756,6 +762,13 @@ button:hover {
 
 .stats-table tbody tr:hover {
     background: #fafbfc;
+}
+
+/* 窄屏兜底：表格可能横向溢出时恢复横向滚动容器（sticky 表头随之退化为跟随） */
+@media (max-width: 1000px) {
+    .stats-table-wrap {
+        overflow-x: auto;
+    }
 }
 
 .stats-empty {
