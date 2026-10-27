@@ -935,8 +935,8 @@ button:hover {
 
 .history-card.open .history-card-body {
     display: block;
-    /* 记录展开区高度上限 700px，超出后内部滚动，避免页面过长 */
-    max-height: 700px;
+    /* 记录展开区高度上限 600px，超出后内部滚动，避免页面过长 */
+    max-height: 600px;
     overflow-y: auto;
 }
 
@@ -2332,8 +2332,8 @@ button:hover {
 .p-rec-rate.low { color: #dc2626; }
 .p-rec-toggle { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; color: #9ca3af; flex-shrink: 0; transition: transform .15s; }
 .p-rec-card.open .p-rec-toggle { transform: rotate(90deg); }
-/* 题库练习记录明细：展开后高度上限 700px，超出内部滚动 */
-.p-rec-body { border-top: 1px solid #f3f4f6; padding: 6px 16px 14px; max-height: 700px; overflow-y: auto; }
+/* 题库练习记录明细：展开后高度上限 600px，超出内部滚动 */
+.p-rec-body { border-top: 1px solid #f3f4f6; padding: 6px 16px 14px; max-height: 600px; overflow-y: auto; }
 .p-rec-summary { font-size: 12.5px; color: #6b7280; padding: 8px 0 4px; }
 .p-rec-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #fafbfd; font-size: 12.5px; }
 .p-rec-row:last-child { border-bottom: none; }
@@ -2429,12 +2429,12 @@ button:hover {
 /* 会话卡折叠指示箭头：展开时旋转 90° */
 .m-session-item .p-rec-toggle { width: 18px; height: 18px; color: #9ca3af; flex-shrink: 0; transition: transform .15s; }
 .m-session-item.open .p-rec-toggle { transform: rotate(90deg); }
-/* 会话明细：独占整行铺满卡片，浅色底与标题区分隔；展开后高度上限 700px，超出内部滚动 */
+/* 会话明细：独占整行铺满卡片，浅色底与标题区分隔；展开后高度上限 600px，超出内部滚动 */
 .m-session-item .m-rec-detail {
     flex-basis: 100%; margin-top: 10px;
     border-top: 1px dashed #e5e7eb; padding: 10px 12px;
     background: #fafbfd; border-radius: 8px;
-    max-height: 700px; overflow-y: auto;
+    max-height: 600px; overflow-y: auto;
 }
 .m-rec-detail .p-rec-summary { font-size: 13px; font-weight: 600; color: #374151; padding: 6px 0 2px; }
 /* 速算明细：仿历史记录，一行 5 个题目单元；上题目、下答案+解析 */
