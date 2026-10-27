@@ -449,7 +449,6 @@
             <div class="p-rec-summary">${s.total_count === 0 ? '∞ 无限流' : '共 ' + s.total_count + ' 题'} · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 正确率 ${s.rate}% · 用时 ${U.formatMs(s.total_ms)}</div>
             <div class="m-rec-grid">
             ${r.records.map(d => {
-                const ua = d.userAnswer != null && d.options[d.userAnswer] != null ? d.options[d.userAnswer] : '跳过';
                 const ca = d.answer != null && d.options[d.answer] != null ? d.options[d.answer] : '—';
                 const tipHtml = d.tip ? `<div class="m-rc-tip">技巧：${U.escapeHtml(d.tip)}</div>` : '';
                 return `
@@ -458,7 +457,7 @@
                         <span class="p-rd-no p-rd-${d.result}">${d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗'}</span>
                         <span class="m-rc-stem" title="${U.escapeHtml(d.stem)}">${U.escapeHtml(d.stem)}</span>
                     </div>
-                    <div class="m-rc-ans">我的 <b>${U.escapeHtml(ua)}</b> · 答案 <b>${U.escapeHtml(ca)}</b></div>
+                    <div class="m-rc-ans">正确答案 <b>${U.escapeHtml(ca)}</b></div>
                     ${tipHtml}
                 </div>`;
             }).join('')}
