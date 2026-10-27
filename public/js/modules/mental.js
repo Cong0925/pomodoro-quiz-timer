@@ -327,9 +327,8 @@
         const ab = el('mAnalysis');
         ab.hidden = false;
         const head = result === 'ok' ? '回答正确' : result === 'skip' ? '本题跳过' : '回答错误';
-        const myHtml = fillMode ? `你填：<b>${U.escapeHtml(my == null ? '—' : my)}</b> · ` : '';
         const tipHtml = tip ? `<div class="p-analysis-body" style="margin-top:4px">技巧：${U.escapeHtml(tip)}</div>` : '';
-        ab.innerHTML = `<div class="p-analysis-title">${head} · ${myHtml}正确答案：${U.escapeHtml(correctAnswer || '—')}</div>${tipHtml}`;
+        ab.innerHTML = `<div class="p-analysis-title">${head} · 正确答案：${U.escapeHtml(correctAnswer || '—')}</div>${tipHtml}`;
         el('mSkipBtn').hidden = true;
         el('mNextBtn').hidden = false;
     }
@@ -563,7 +562,20 @@
     el('mBackBtn').addEventListener('click', backToStart);
     el('mFillBtn').addEventListener('click', answerFill);
     el('mFillInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); answerFill(); }
+        if (e.key !== 'Enter') return;
+        const nb = el('mNextBtn');
+        if (nb && !nb.hidden) return;   // 已作答:交给面板回车下一题
+        e.preventDefault();
+        answerFill();
+    });
+    /* 回车下一题：作答完成后（下一题按钮可见）按 Enter 直接进入下一题。
+       焦点可能在任何元素上（含隐藏输入框后回到 body），故用 document 级监听 */
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        const pane = el('mPaneRun');
+        if (!pane || pane.hidden) return;
+        const nb = el('mNextBtn');
+        if (nb && !nb.hidden) { e.preventDefault(); nextQ(); }
     });
 
     /* 暴露给 app.js */
