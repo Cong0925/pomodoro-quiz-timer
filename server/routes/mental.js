@@ -301,7 +301,7 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
         const [row] = await conn.query('SELECT * FROM mental_sessions WHERE id=?', [sessionId]);
         const r = row[0];
 
-        /* 归档历史概要（rounds：mode=mental，分类为空） */
+        /* 归档历史概要（rounds：mode=mental，分类固定为 公务员考试 → 速算） */
         const rid = Date.now();
         const fmt = t => {
             const totalSec = t / 1000;
@@ -309,13 +309,19 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
             const seconds = (totalSec % 60).toFixed(2).padStart(5, '0');
             return minutes + ':' + seconds;
         };
+        /* 速算分类：按名称解析（用户在分类管理添加的 公务员考试→速算），解析失败则按未分类归档 */
+        const [tagRows] = await conn.query(
+            `SELECT cs.id AS sub_id, cs.cat_id, c.name AS cat_name, cs.name AS sub_name
+             FROM category_subs cs JOIN categories c ON c.id = cs.cat_id
+             WHERE cs.name = '速算' ORDER BY cs.id LIMIT 1`);
+        const tag = tagRows[0] || { cat_id: null, cat_name: null, sub_id: null, sub_name: null };
         await conn.query(
             `INSERT INTO rounds
                 (id, mode, mode_name, title, description, finished_at, max_count,
                  total_ms, correct, rate, cat_id, cat_name, sub_id, sub_name)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [rid, 'mental', '速算练习', str(r.qtype_name, 100), '', now, r.total_count,
-             r.total_ms, r.correct_count, r.rate, null, null, null, null]
+             r.total_ms, r.correct_count, r.rate, tag.cat_id, tag.cat_name, tag.sub_id, tag.sub_name]
         );
         /* 归档历史明细（records：累计用时 + 格式化时间） */
         const [recs] = await conn.query(
