@@ -687,21 +687,16 @@
         renderMgPager(total, Math.max(1, Math.ceil(total / mg.pageSize)));
     }
 
-    /* 分页条：页大小切换 + 上一页/下一页（均重新向后端请求） */
+    /* 分页条：组件库分页（PQ.ui.pagination），切换页大小/翻页均重新向后端请求 */
     function renderMgPager(total, totalPages) {
         const host = el('mMgPager');
         if (!host) return;
-        host.style.display = total ? '' : 'none';
-        el('mMgPagerInfo').textContent = `共 ${total} 道 · 第 ${state.mg.page} / ${totalPages} 页`;
-        const sizeSel = el('mMgPagerSize');
-        sizeSel.value = String(state.mg.pageSize);
-        sizeSel.onchange = () => {
-            state.mg.pageSize = Number(sizeSel.value);
-            state.mg.page = 1;
-            renderManage();
-        };
-        el('mMgPrev').onclick = () => { if (state.mg.page > 1) { state.mg.page--; renderManage(); } };
-        el('mMgNext').onclick = () => { if (state.mg.page < totalPages) { state.mg.page++; renderManage(); } };
+        PQ.ui.pagination({
+            host: host, total: total, page: state.mg.page, pageSize: state.mg.pageSize,
+            sizes: [10, 20, 50, 100],
+            onChange: p => { state.mg.page = p; renderManage(); },
+            onSizeChange: s => { state.mg.pageSize = s; state.mg.page = 1; renderManage(); }
+        });
     }
 
     /* ---------- 管理弹窗：新增 / 编辑 ---------- */

@@ -475,21 +475,16 @@
         } catch (e) { U.showToast('题目加载失败：' + e.message, 'error'); return { total: 0, list: [] }; }
     }
 
-    /* 题库管理题目列表分页条 */
+    /* 题库管理题目列表分页条：组件库分页（PQ.ui.pagination） */
     function renderQPager(total, totalPages) {
         const host = el('pQPager');
         if (!host) return;
-        host.style.display = total ? '' : 'none';
-        el('pQPagerInfo').textContent = `共 ${total} 道 · 第 ${state.mgQPage} / ${totalPages} 页`;
-        const sizeSel = el('pQPagerSize');
-        sizeSel.value = String(state.mgQPageSize);
-        sizeSel.onchange = () => {
-            state.mgQPageSize = Number(sizeSel.value);
-            state.mgQPage = 1;
-            renderManage();
-        };
-        el('pQPrev').onclick = () => { if (state.mgQPage > 1) { state.mgQPage--; renderManage(); } };
-        el('pQNext').onclick = () => { if (state.mgQPage < totalPages) { state.mgQPage++; renderManage(); } };
+        PQ.ui.pagination({
+            host: host, total: total, page: state.mgQPage, pageSize: state.mgQPageSize,
+            sizes: [10, 20, 50, 100],
+            onChange: p => { state.mgQPage = p; renderManage(); },
+            onSizeChange: s => { state.mgQPageSize = s; state.mgQPage = 1; renderManage(); }
+        });
     }
 
     async function loadQuestions(bankId) {

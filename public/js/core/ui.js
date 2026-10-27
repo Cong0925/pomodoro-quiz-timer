@@ -85,6 +85,70 @@
                 mask.addEventListener('click', e => { if (e.target === mask) close(false); });
                 document.addEventListener('keydown', escKey);
             });
+        },
+
+        /* ---- 标签（Element Tag 风格） ---- */
+        /* tag({ text, type: primary/success/warning/danger/info, closable }) → HTML 字符串 */
+        tag(o) {
+            const type = o.type || 'primary';
+            return '<span class="pq-tag pq-tag--' + type + '">' + esc(o.text) +
+                (o.closable ? '<span class="pq-tag__close" data-pq-tag-close>' + ICONS.error.replace('width="16"', 'width="12"').replace('height="16"', 'height="12"') + '</span>' : '') +
+                '</span>';
+        },
+
+        /* ---- 开关（Element Switch 风格） ---- */
+        /* switch({ checked, disabled, onchange }) → 已绑定事件的元素 */
+        switch(o) {
+            const box = document.createElement('span');
+            box.className = 'pq-switch' + (o.checked ? ' on' : '');
+            box.setAttribute('role', 'switch');
+            box.setAttribute('aria-checked', String(!!o.checked));
+            if (o.disabled) box.setAttribute('disabled', '');
+            box.addEventListener('click', () => {
+                if (o.disabled) return;
+                const on = !box.classList.contains('on');
+                box.classList.toggle('on', on);
+                box.setAttribute('aria-checked', String(on));
+                if (typeof o.onchange === 'function') o.onchange(on);
+            });
+            return box;
+        },
+
+        /* ---- 分页条（Element Pagination 风格） ---- */
+        /* pagination({ host, total, page, pageSize, sizes, onChange, onSizeChange }) */
+        pagination(o) {
+            const host = o.host;
+            if (!host) return;
+            const total = o.total || 0;
+            const pageSize = o.pageSize || 10;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const page = Math.min(Math.max(1, o.page || 1), totalPages);
+            const sizes = o.sizes || [10, 20, 50, 100];
+            host.style.display = total ? '' : 'none';
+            host.innerHTML =
+                '<span class="pq-pagination__total">共 ' + total + ' 道 · 第 ' + page + ' / ' + totalPages + ' 页</span>' +
+                '<select class="pq-select pq-select--small pq-pagination__size">' +
+                sizes.map(s => '<option value="' + s + '"' + (s === pageSize ? ' selected' : '') + '>' + s + ' 条/页</option>').join('') +
+                '</select>' +
+                '<button class="pq-btn pq-btn--small" data-dir="prev"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>' +
+                '<button class="pq-btn pq-btn--small" data-dir="next"' + (page >= totalPages ? ' disabled' : '') + '>下一页</button>';
+            const sizeSel = host.querySelector('.pq-pagination__size');
+            sizeSel.onchange = () => { if (typeof o.onSizeChange === 'function') o.onSizeChange(Number(sizeSel.value)); };
+            host.querySelector('[data-dir="prev"]').onclick = () => { if (page > 1 && typeof o.onChange === 'function') o.onChange(page - 1); };
+            host.querySelector('[data-dir="next"]').onclick = () => { if (page < totalPages && typeof o.onChange === 'function') o.onChange(page + 1); };
+        },
+
+        /* ---- 加载中 ---- */
+        spinner(size) {
+            const px = size || 18;
+            return '<span class="pq-spinner" style="width:' + px + 'px;height:' + px + 'px;border-width:' + Math.max(2, Math.round(px / 9)) + 'px"></span>';
+        },
+
+        /* ---- 空状态（Element Empty 风格） ---- */
+        empty(text) {
+            return '<div class="pq-empty"><span class="pq-empty__icon">' +
+                '<svg viewBox="0 0 64 41" width="60" height="40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M23.9 14.4 13.2 26.6 9.5 22.9 0 32.4V41h64V0L48.2 15.8 40.5 8.1 32.3 16.4 23.9 14.4Z" fill="#f0f2f5"/><path d="M0 34.6V41h64v-2.9L48.2 26.1 40.5 33.8l-8.2-8.3-8.4 8.3L16.9 27 0 34.6Z" fill="#dce3ec"/><path d="M15.5 14.8A3.5 3.5 0 1 0 15.5 8a3.5 3.5 0 0 0 0 6.8Z" fill="#c0c4cc"/><path d="M43.3 29.7c-4 0-8.2-3.1-8.2-6.3 0-3.2 3.1-6.7 8.2-6.7 5.2 0 8.3 3.4 8.3 6.7 0 3.2-3.2 6.3-8.3 6.3Z" fill="#c0c4cc"/></svg>' +
+                '</span><span>' + esc(text || '暂无数据') + '</span></div>';
         }
     };
 

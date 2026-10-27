@@ -380,7 +380,7 @@
                                     </div>
                                     <div class="p-manage-stat" id="pManageStat"></div>
                                 </div>
-                                <button class="df-btn primary small" id="pAddQBtn">+ 新增题目</button>
+                                <button class="pq-btn pq-btn--primary pq-btn--small" id="pAddQBtn">+ 新增题目</button>
                             </div>
                             <table class="p-q-table">
                                 <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:70px">答案</th><th style="width:70px">难度</th><th style="width:90px">操作</th></tr></thead>
@@ -400,7 +400,7 @@
                             <div class="p-empty" id="pQEmpty">
                                 <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h2"/></svg>
                                 <p>该题库暂无题目</p>
-                                <button class="df-btn primary small" id="pQEmptyAddBtn">新增题目</button>
+                                <button class="pq-btn pq-btn--primary pq-btn--small" id="pQEmptyAddBtn">新增题目</button>
                             </div>
                         </div>
                     </div>
@@ -455,7 +455,7 @@
                         <div class="df-card p-card p-bank-panel">
                             <div class="p-bank-toolbar">
                                 <div class="p-section-title" style="margin:0">题型题库</div>
-                                <button class="df-btn primary small" id="mAddQBtn">+ 新增题目</button>
+                                <button class="pq-btn pq-btn--primary pq-btn--small" id="mAddQBtn">+ 新增题目</button>
                             </div>
                             <div class="m-mg-groups" id="mMgGroups"></div>
                         </div>
@@ -479,7 +479,7 @@
                                         <option value="3">困难</option>
                                     </select>
                                     <input type="search" id="mMgKw" placeholder="搜索题干 / 技巧 / 标签">
-                                    <label class="m-mg-inactive"><input type="checkbox" id="mMgInactive"> 含停用</label>
+                                    <label class="m-mg-inactive"><input type="checkbox" class="pq-checkbox" id="mMgInactive"> 含停用</label>
                                 </div>
                             </div>
                             <table class="p-q-table">
@@ -500,7 +500,7 @@
                             <div class="p-empty" id="mMgEmpty" hidden>
                                 <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h2"/></svg>
                                 <p id="mMgEmptyText">该筛选下暂无题目</p>
-                                <button class="df-btn primary small" id="mMgEmptyAddBtn">新增题目</button>
+                                <button class="pq-btn pq-btn--primary pq-btn--small" id="mMgEmptyAddBtn">新增题目</button>
                             </div>
                         </div>
                     </div>
@@ -779,8 +779,8 @@
             <label class="p-form-label">解析</label>
             <textarea id="pFAnalysis" rows="3" placeholder="答案解析 / 知识点讲解"></textarea>
             <div class="modal-buttons">
-                <button id="pQCancel">取消</button>
-                <button id="pQSave">保存题目</button>
+                <button class="pq-btn" id="pQCancel">取消</button>
+                <button class="pq-btn pq-btn--primary" id="pQSave">保存题目</button>
             </div>
         </div>
     </div>
@@ -810,14 +810,14 @@
                 </div>
                 <div>
                     <label class="p-form-label">作答形式</label>
-                    <label class="m-fill-chk"><input type="checkbox" id="mFFillable"> 填空题（直接填数字）</label>
+                    <label class="m-fill-chk"><input type="checkbox" class="pq-checkbox" id="mFFillable"> 填空题（直接填数字）</label>
                 </div>
             </div>
             <label class="p-form-label">题干</label>
             <textarea id="mFStem" rows="2" placeholder="如：12.5% 与 1/8 谁大；13² 等于？；12.9% × 820 ≈ ？"></textarea>
             <label class="p-form-label" id="mFOptsLabel">选项（选择题）</label>
             <div id="mFOpts"></div>
-            <button class="df-btn small" id="mFOptAdd" type="button">+ 添加选项</button>
+            <button class="pq-btn pq-btn--small" id="mFOptAdd" type="button">+ 添加选项</button>
             <div class="p-form-grid">
                 <div>
                     <label class="p-form-label" id="mFAnswerLabel">正确答案</label>
@@ -829,8 +829,8 @@
             <label class="p-form-label">技巧 / 解析</label>
             <textarea id="mFTip" rows="3" placeholder="速算技巧提示，如：12.5% = 1/8，820 ÷ 8 ≈ 102.5"></textarea>
             <div class="modal-buttons">
-                <button id="mQCancel">取消</button>
-                <button id="mQSave">保存题目</button>
+                <button class="pq-btn" id="mQCancel">取消</button>
+                <button class="pq-btn pq-btn--primary" id="mQSave">保存题目</button>
             </div>
         </div>
     </div>
