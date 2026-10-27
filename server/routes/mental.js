@@ -15,16 +15,22 @@ const router = express.Router();
 const TYPE_NAMES = { percent: '百化分', compare: '分数比大小', estimate: '估算值', square: '平方数', mixed: '综合练习' };
 const VALID_TYPES = ['percent', 'compare', 'estimate', 'square', 'mixed'];
 
-/* ---- 内置题库：按题型补种（该题型为空时写入其种子题目，幂等） ---- */
+/* ---- 内置题库：按题型+标签分组补种（该组为空时写入其种子题目，幂等，可增量新增） ---- */
 async function ensureSeed() {
     const groups = {};
-    SEED_QUESTIONS.forEach(q => { (groups[q.qtype] = groups[q.qtype] || []).push(q); });
-    for (const qtype of Object.keys(groups)) {
-        const [rows] = await pool.query('SELECT COUNT(*) AS n FROM mental_questions WHERE qtype=?', [qtype]);
+    SEED_QUESTIONS.forEach(q => {
+        const k = q.qtype + '|' + (q.tag || '');
+        (groups[k] = groups[k] || []).push(q);
+    });
+    for (const k of Object.keys(groups)) {
+        const sep = k.indexOf('|');
+        const qtype = k.slice(0, sep);
+        const tag = k.slice(sep + 1);
+        const [rows] = await pool.query('SELECT COUNT(*) AS n FROM mental_questions WHERE qtype=? AND IFNULL(tag,"")=?', [qtype, tag]);
         if (rows[0].n > 0) continue;
         const vals = [];
         const params = [];
-        groups[qtype].forEach(q => {
+        groups[k].forEach(q => {
             vals.push('(?,?,?,?,?,?,?,?,?)');
             params.push(q.qtype, q.difficulty, q.stem, JSON.stringify(q.options), String(q.answer), q.tip, q.tag || '', 1, q.fillable ? 1 : 0);
         });
@@ -100,7 +106,9 @@ async function fetchQuestions(ids, fillOnly) {
 /* 填空题元信息：由正确答案文本推导
    - 答案形如 "1/8" → fillDir='den'（题干是百分数，填分母，如 12.5% → 8）
    - 答案形如 "14.3%" → fillDir='pct'（题干是分数，填百分数数值，如 1/7 → 14.3，百分号固定）
-   fillExpected 为规范答案字符串（如 "8" / "14.3"），同时作为 records 快照与判题基准 */
+   - 答案形如 "169" → fillDir='val'（平方数等纯整数答案）
+   - 答案形如 "1.7" → fillDir='dec'（幂次估算等小数近似答案，如 1.2³ → 1.7）
+   fillExpected 为规范答案字符串（如 "8" / "14.3" / "169" / "1.7"），同时作为 records 快照与判题基准 */
 function fillMeta(q) {
     const opts = fmtRecordOpts(q.options);
     const ansTxt = opts[num(q.answer)] !== undefined ? String(opts[num(q.answer)]) : String(q.answer || '');
@@ -110,13 +118,15 @@ function fillMeta(q) {
     if (pct) return { fillDir: 'pct', fillExpected: pct[1] };
     const int = ansTxt.match(/^\d+$/);
     if (int) return { fillDir: 'val', fillExpected: int[0] };
+    const dec = ansTxt.match(/^\d+\.\d+$/);
+    if (dec) return { fillDir: 'dec', fillExpected: dec[0] };
     return { fillDir: 'pct', fillExpected: ansTxt.replace(/[^\d.]/g, '') || '0' };
 }
 
 /* 填空题判对：四舍五入到 1 位小数一致
    - den（填分母）：整数必须精确
    - val（填数值）：整数必须精确（平方数等纯整数答案）
-   - pct（填百分数）：round1(输入) === round1(期望) */
+   - pct（填百分数）/ dec（填小数）：round1(输入) === round1(期望) */
 function fillCheck(input, q) {
     const { fillDir, fillExpected } = fillMeta(q);
     const n = parseFloat(input);

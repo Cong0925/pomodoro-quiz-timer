@@ -239,7 +239,7 @@
         list.querySelectorAll('.p-opt-item').forEach(x => x.addEventListener('click', () => answer(Number(x.dataset.k))));
         list.hidden = fillMode;
 
-        /* 填空题：百分数→填分母(1/?)；分数→填百分数数值(?%)，百分号固定；平方数→直接填数字 */
+        /* 填空题：百分数→填分母(1/?)；分数→填百分数数值(?%)，百分号固定；平方数/幂次→直接填数字 */
         const fillRow = el('mFillRow');
         if (fillMode) {
             const prefix = el('mFillPrefix'), suffix = el('mFillSuffix'), input = el('mFillInput');
@@ -247,6 +247,7 @@
             suffix.hidden = q.fillDir !== 'pct';
             input.placeholder = q.fillDir === 'den' ? '填分母（如 12.5% 填 8）'
                 : q.fillDir === 'val' ? '填数字（如 13² 填 169）'
+                : q.fillDir === 'dec' ? '填数值（如 1.2³ 填 1.7）'
                 : '填百分数数值（如 1/9 填 11.1）';
             input.value = '';
             fillRow.hidden = false;

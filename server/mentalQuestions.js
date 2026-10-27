@@ -76,7 +76,18 @@ const QUESTIONS = [
     { qtype: 'square', difficulty: 2, stem: '225 = ?²', options: ['15', '14', '16', '17'], answer: 0, tip: '225 = 15²。', tag: '平方数-反查', fillable: 1 },
     { qtype: 'square', difficulty: 2, stem: '256 = ?²', options: ['16', '15', '17', '18'], answer: 0, tip: '256 = 16²。', tag: '平方数-反查', fillable: 1 },
     { qtype: 'square', difficulty: 3, stem: '289 = ?²', options: ['17', '16', '18', '15'], answer: 0, tip: '289 = 17²。', tag: '平方数-反查', fillable: 1 },
-    { qtype: 'square', difficulty: 3, stem: '324 = ?²', options: ['18', '17', '19', '16'], answer: 0, tip: '324 = 18²。', tag: '平方数-反查', fillable: 1 }
+    { qtype: 'square', difficulty: 3, stem: '324 = ?²', options: ['18', '17', '19', '16'], answer: 0, tip: '324 = 18²。', tag: '平方数-反查', fillable: 1 },
+    /* 幂次估算：1.x 连乘，资料分析增长类高频（答案为四舍五入近似值） */
+    { qtype: 'square', difficulty: 2, stem: '1.2³ = ?', options: ['1.7', '1.5', '1.9', '1.6'], answer: 0, tip: '连乘：1.2×1.2=1.44，再×1.2≈1.73，记 1.7。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '1.2⁴ = ?', options: ['2', '2.1', '1.8', '2.3'], answer: 0, tip: '1.2²=1.44，再平方≈2.07，估算取 2。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '1.3³ = ?', options: ['2.2', '2.4', '2.0', '2.6'], answer: 0, tip: '1.3×1.3=1.69，再×1.3≈2.20，记 2.2。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '1.3⁴ = ?', options: ['2.9', '2.7', '3.1', '2.5'], answer: 0, tip: '1.3²=1.69，再平方≈2.86，记 2.9。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '1.4³ = ?', options: ['2.7', '2.9', '2.5', '3.0'], answer: 0, tip: '1.4²=1.96，再×1.4≈2.74，记 2.7。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '1.4⁴ = ?', options: ['3.8', '3.6', '4.0', '3.5'], answer: 0, tip: '1.4²=1.96，再平方≈3.84，记 3.8。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '1.05⁴ = ?', options: ['1.21', '1.22', '1.2', '1.15'], answer: 0, tip: '1.05²≈1.10，再平方≈1.21，增长 5% 四年常用近似。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '1.1⁴ = ?', options: ['1.46', '1.44', '1.48', '1.5'], answer: 0, tip: '1.1²=1.21，再平方=1.4641，记 1.46。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '1.15⁴ = ?', options: ['1.75', '1.77', '1.73', '1.8'], answer: 0, tip: '1.15²≈1.32，再平方≈1.75，记 1.75。', tag: '幂次估算', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '1.1⁵ = ?', options: ['1.61', '1.63', '1.6', '1.65'], answer: 0, tip: '1.1⁴≈1.46，再×1.1≈1.61，记 1.61。', tag: '幂次估算', fillable: 1 }
 ];
 
 module.exports = QUESTIONS;
