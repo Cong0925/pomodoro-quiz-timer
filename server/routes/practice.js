@@ -73,11 +73,24 @@ router.delete('/banks/:id', asyncHandler(async (req, res) => {
 
 /* ---------- 题目 ---------- */
 
-/* GET /api/practice/banks/:id/questions */
+/* GET /api/practice/banks/:id/questions?page=&pageSize=
+   后端分页：传 page/pageSize 返回 { total, list }，否则返回全量数组（供编辑弹窗使用） */
 router.get('/banks/:id/questions', asyncHandler(async (req, res) => {
+        const bankId = num(req.params.id);
+        const page = num(req.query.page);
+        const pageSize = num(req.query.pageSize);
+        if (page >= 1 && pageSize >= 1) {
+            const [cnt] = await pool.query('SELECT COUNT(*) c FROM questions WHERE bank_id=?', [bankId]);
+            const [rows] = await pool.query(
+                `SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source
+                 FROM questions WHERE bank_id=? ORDER BY id ASC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
+                [bankId]
+            );
+            return res.json({ total: cnt[0].c, list: rows });
+        }
         const [rows] = await pool.query(
             'SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source FROM questions WHERE bank_id=? ORDER BY id ASC',
-            [num(req.params.id)]
+            [bankId]
         );
         res.json(rows);
 }));

@@ -147,7 +147,12 @@ function fmtRecordOpts(opts) {
    管理列表可含停用题，恢复即置 active=1 */
 const MG_TYPES = ['percent', 'compare', 'estimate', 'square'];
 
-/* GET /api/mental/admin/questions?qtype=&tag=&diff=&kw=&inactive=1 */
+/* GET /api/mental/admin/questions?qtype=&tag=&diff=&kw=&inactive=1&page=&pageSize=
+   后端分页：返回 { total, list, groups, allTotal }
+   - total   当前筛选下总条数
+   - list    当前页数据
+   - groups  题型+标签分组计数（随 inactive 过滤，供左侧导航）
+   - allTotal 全库总数（含停用） */
 router.get('/admin/questions', asyncHandler(async (req, res) => {
     const where = ['1=1'];
     const params = [];
@@ -157,19 +162,44 @@ router.get('/admin/questions', asyncHandler(async (req, res) => {
     if (tag) { where.push('tag=?'); params.push(tag); }
     const diff = num(req.query.diff);
     if (diff >= 1 && diff <= 3) { where.push('difficulty=?'); params.push(diff); }
-    if (str(req.query.inactive, 2) !== '1') where.push('active=1');
+    const inactive = str(req.query.inactive, 2) === '1';
+    if (!inactive) where.push('active=1');
     const kw = str(req.query.kw, 100).trim();
     if (kw) { where.push('(stem LIKE ? OR tip LIKE ? OR tag LIKE ?)'); params.push('%' + kw + '%', '%' + kw + '%', '%' + kw + '%'); }
-    const [rows] = await pool.query(
-        `SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active, fillable, updated_at
-         FROM mental_questions WHERE ${where.join(' AND ')} ORDER BY id DESC`,
-        params
-    );
-    res.json(rows.map(r => ({
+    const whereSql = where.join(' AND ');
+    const page = num(req.query.page);
+    const pageSize = num(req.query.pageSize);
+    const mapper = r => ({
         id: r.id, qtype: r.qtype, difficulty: r.difficulty, stem: r.stem,
         options: fmtRecordOpts(r.options), answer: str(r.answer, 50), tip: r.tip || '',
         tag: r.tag || '', active: !!r.active, fillable: !!r.fillable, updatedAt: r.updated_at
-    })));
+    });
+    if (page >= 1 && pageSize >= 1) {
+        const [cnt] = await pool.query(`SELECT COUNT(*) c FROM mental_questions WHERE ${whereSql}`, params);
+        const [rows] = await pool.query(
+            `SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active, fillable, updated_at
+             FROM mental_questions WHERE ${whereSql} ORDER BY id DESC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
+            params
+        );
+        const [all] = await pool.query('SELECT COUNT(*) c FROM mental_questions');
+        const [g] = await pool.query(
+            `SELECT qtype, tag, COUNT(*) c FROM mental_questions WHERE ${inactive ? '1=1' : 'active=1'} GROUP BY qtype, tag`
+        );
+        const groups = {};
+        g.forEach(x => {
+            const grp = groups[x.qtype] || (groups[x.qtype] = { n: 0, tags: {} });
+            grp.n += x.c;
+            grp.tags[x.tag || '无标签'] = (grp.tags[x.tag || '无标签'] || 0) + x.c;
+        });
+        res.json({ total: cnt[0].c, list: rows.map(mapper), groups, allTotal: all[0].c });
+    } else {
+        const [rows] = await pool.query(
+            `SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active, fillable, updated_at
+             FROM mental_questions WHERE ${whereSql} ORDER BY id DESC`,
+            params
+        );
+        res.json({ total: rows.length, list: rows.map(mapper), allTotal: rows.length });
+    }
 }));
 
 /* POST /api/mental/admin/questions { qtype, difficulty, stem, options, answer, tip, tag, fillable }

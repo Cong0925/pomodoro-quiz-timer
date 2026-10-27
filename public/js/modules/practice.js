@@ -409,7 +409,7 @@
         list.querySelectorAll('.p-bank-row').forEach(x => {
             x.addEventListener('click', e => {
                 if (e.target.closest('.p-br-ops')) return;
-                state.curBank = Number(x.dataset.id); renderManage();
+                state.curBank = Number(x.dataset.id); state.mgQPage = 1; renderManage();
             });
         });
         list.querySelectorAll('.p-br-ops button').forEach(s => {
@@ -433,15 +433,19 @@
             el('pManagePath').textContent = '';
             el('pManageStat').textContent = '';
         }
-        const qs = await loadQuestions(state.curBank);
+        /* 后端分页加载当前页题目 */
+        const data = await loadQuestionsPage(state.curBank, state.mgQPage, state.mgQPageSize);
+        const qs = data.list;
+        const total = data.total;
         const diffMap = { 1: ['简单', 'p-diff-1'], 2: ['中等', 'p-diff-2'], 3: ['困难', 'p-diff-3'] };
-        /* 分页切片 */
-        const total = qs.length;
+        /* 删除当前页最后一条后页码越界回退 */
+        if (qs.length === 0 && total > 0 && state.mgQPage > 1) {
+            state.mgQPage--;
+            const data2 = await loadQuestionsPage(state.curBank, state.mgQPage, state.mgQPageSize);
+            qs.length = 0; qs.push(...data2.list);
+        }
         const totalPages = Math.max(1, Math.ceil(total / state.mgQPageSize));
-        if (state.mgQPage > totalPages) state.mgQPage = totalPages;
-        if (state.mgQPage < 1) state.mgQPage = 1;
-        const pageList = qs.slice((state.mgQPage - 1) * state.mgQPageSize, state.mgQPage * state.mgQPageSize);
-        el('pQTbody').innerHTML = pageList.map((q, i) => {
+        el('pQTbody').innerHTML = qs.map((q, i) => {
             const dm = diffMap[q.difficulty] || diffMap[2];
             return `<tr>
                 <td class="p-q-no">${(state.mgQPage - 1) * state.mgQPageSize + i + 1}</td>
@@ -460,8 +464,15 @@
         }));
         const eb = el('pQEmptyAddBtn');
         if (eb) eb.onclick = () => openQModal(0);
-        el('pQEmpty').style.display = qs.length ? 'none' : 'block';
+        el('pQEmpty').style.display = total ? 'none' : 'block';
         renderQPager(total, totalPages);
+    }
+
+    /* 后端分页请求题目：返回 { total, list } */
+    async function loadQuestionsPage(bankId, page, pageSize) {
+        try {
+            return await api.get(`/api/practice/banks/${bankId}/questions?page=${page}&pageSize=${pageSize}`);
+        } catch (e) { U.showToast('题目加载失败：' + e.message, 'error'); return { total: 0, list: [] }; }
     }
 
     /* 题库管理题目列表分页条 */

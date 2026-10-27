@@ -80,7 +80,8 @@
         stats: null,
         timer: null,
         /* 题库管理状态 */
-        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: false, editId: 0, page: 1, pageSize: 20 }
+        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: false, editId: 0, page: 1, pageSize: 20, total: 0, groups: {}, allTotal: 0 },
+        mgKwTimer: null
     };
 
     function el(id) { return document.getElementById(id); }
@@ -573,29 +574,41 @@
     const mgDelSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
     const mgRestoreSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>';
 
+    /* 后端分页加载：按当前筛选 + page/pageSize 请求，返回 { total, list, groups, allTotal } */
     async function loadMgQuestions() {
         try {
-            state.mg.all = await api.get('/api/mental/admin/questions?inactive=1');
-        } catch (e) { U.showToast('题库加载失败：' + e.message, 'error'); state.mg.all = []; }
+            const mg = state.mg;
+            const q = new URLSearchParams();
+            if (mg.typeSel !== 'all') q.set('qtype', mg.typeSel);
+            if (mg.tagSel !== 'all') q.set('tag', mg.tagSel);
+            if (mg.diffSel !== 'all') q.set('diff', mg.diffSel);
+            if (mg.kw.trim()) q.set('kw', mg.kw.trim());
+            if (mg.inactive) q.set('inactive', '1');
+            q.set('page', String(mg.page));
+            q.set('pageSize', String(mg.pageSize));
+            const data = await api.get('/api/mental/admin/questions?' + q.toString());
+            state.mg.all = data.list || [];
+            state.mg.total = data.total || 0;
+            state.mg.groups = data.groups || {};
+            state.mg.allTotal = data.allTotal != null ? data.allTotal : state.mg.all.length;
+        } catch (e) { U.showToast('题库加载失败：' + e.message, 'error'); state.mg.all = []; state.mg.total = 0; }
     }
 
-    /* 左侧：按题型分组 → 按标签聚合（与右侧默认一致：不含停用，除非勾选含停用） */
+    /* 左侧：按题型分组 → 按标签聚合（服务端 groups，随 inactive 过滤） */
     function mgGroupsHtml() {
         const mg = state.mg;
-        const list = mg.inactive ? state.mg.all : state.mg.all.filter(q => q.active);
+        const g = mg.groups || {};
         let html = '';
         MG_TYPES_ORDER.forEach(t => {
-            const qs = list.filter(q => q.qtype === t);
-            if (!qs.length) return;
+            const grp = g[t];
+            if (!grp || !grp.n) return;
             const tn = TYPES[t] ? TYPES[t].n : t;
             html += `<div class="m-mg-type ${mg.typeSel === t ? 'active' : ''}" data-type="${t}">
-                <div class="m-mg-type-head"><span class="m-mg-type-name">${tn}</span><i>${qs.length}</i></div>`;
-            const tagMap = {};
-            qs.forEach(q => { const k = q.tag || '无标签'; (tagMap[k] = tagMap[k] || []).push(q); });
-            const tags = Object.keys(tagMap).sort((a, b) => tagMap[b].length - tagMap[a].length);
+                <div class="m-mg-type-head"><span class="m-mg-type-name">${tn}</span><i>${grp.n}</i></div>`;
+            const tags = Object.keys(grp.tags || {}).sort((a, b) => grp.tags[b] - grp.tags[a]);
             html += tags.map(k => `
                 <div class="m-mg-tag ${mg.typeSel === t && mg.tagSel === k ? 'active' : ''}" data-type="${t}" data-tag="${U.escapeHtml(k)}">
-                    <span>${U.escapeHtml(k)}</span><i>${tagMap[k].length}</i>
+                    <span>${U.escapeHtml(k)}</span><i>${grp.tags[k]}</i>
                 </div>`).join('');
             html += `</div>`;
         });
@@ -605,44 +618,42 @@
     async function renderManage() {
         await loadMgQuestions();
         const mg = state.mg;
+        /* 删除当前页最后一条后页码越界回退 */
+        if (state.mg.all.length === 0 && state.mg.total > 0 && state.mg.page > 1) {
+            state.mg.page--;
+            await loadMgQuestions();
+        }
         /* 左侧分组（事件用 onxxx 覆盖式绑定，避免重复累积） */
         el('mMgGroups').innerHTML = mgGroupsHtml();
-        el('mMgGroups').querySelectorAll('.m-mg-type').forEach(x => { x.onclick = () => { mg.typeSel = x.dataset.type; mg.tagSel = 'all'; renderManage(); }; });
-        el('mMgGroups').querySelectorAll('.m-mg-tag').forEach(x => { x.onclick = () => { mg.typeSel = x.dataset.type; mg.tagSel = x.dataset.tag; renderManage(); }; });
+        el('mMgGroups').querySelectorAll('.m-mg-type').forEach(x => { x.onclick = () => { mg.typeSel = x.dataset.type; mg.tagSel = 'all'; mg.page = 1; renderManage(); }; });
+        el('mMgGroups').querySelectorAll('.m-mg-tag').forEach(x => { x.onclick = () => { mg.typeSel = x.dataset.type; mg.tagSel = x.dataset.tag; mg.page = 1; renderManage(); }; });
         /* 筛选控件 */
         const typeSel = el('mMgTypeSel');
         typeSel.innerHTML = '<option value="all">全部题型</option>' + MG_TYPES_ORDER.map(t =>
             `<option value="${t}" ${mg.typeSel === t ? 'selected' : ''}>${TYPES[t].n}</option>`).join('');
-        typeSel.onchange = () => { mg.typeSel = typeSel.value; mg.tagSel = 'all'; renderManage(); };
+        typeSel.onchange = () => { mg.typeSel = typeSel.value; mg.tagSel = 'all'; mg.page = 1; renderManage(); };
         el('mMgDiffSel').value = mg.diffSel;
-        el('mMgDiffSel').onchange = () => { mg.diffSel = el('mMgDiffSel').value; renderManage(); };
+        el('mMgDiffSel').onchange = () => { mg.diffSel = el('mMgDiffSel').value; mg.page = 1; renderManage(); };
         el('mMgKw').value = mg.kw;
-        el('mMgKw').oninput = () => { mg.kw = el('mMgKw').value; renderManageFilter(); };
+        el('mMgKw').oninput = () => {
+            mg.kw = el('mMgKw').value;
+            clearTimeout(state.mgKwTimer);
+            state.mgKwTimer = setTimeout(() => { mg.page = 1; renderManage(); }, 300);
+        };
         el('mMgInactive').checked = mg.inactive;
-        el('mMgInactive').onchange = () => { mg.inactive = el('mMgInactive').checked; renderManage(); };
+        el('mMgInactive').onchange = () => { mg.inactive = el('mMgInactive').checked; mg.page = 1; renderManage(); };
         renderManageFilter();
     }
 
+    /* 渲染当前页数据（数据已由后端分页返回，这里只负责展示与分页条） */
     function renderManageFilter() {
         const mg = state.mg;
-        let list = state.mg.all;
-        if (mg.typeSel !== 'all') list = list.filter(q => q.qtype === mg.typeSel);
-        if (mg.tagSel !== 'all') list = list.filter(q => (q.tag || '无标签') === mg.tagSel);
-        if (mg.diffSel !== 'all') list = list.filter(q => String(q.difficulty) === mg.diffSel);
-        if (!mg.inactive) list = list.filter(q => q.active);
-        const kw = mg.kw.trim().toLowerCase();
-        if (kw) list = list.filter(q => String(q.stem).toLowerCase().includes(kw) || String(q.tip).toLowerCase().includes(kw) || String(q.tag).toLowerCase().includes(kw));
+        const pageList = state.mg.all;
+        const total = state.mg.total;
 
         el('mMgTitle').textContent = mg.typeSel === 'all' ? '全部题目' : (TYPES[mg.typeSel] ? TYPES[mg.typeSel].n : mg.typeSel);
         el('mMgPath').textContent = mg.tagSel === 'all' ? '' : mg.tagSel;
-        el('mMgStat').textContent = list.length + ' 道题 · 题库共 ' + state.mg.all.length + ' 道';
-
-        /* 分页切片 */
-        const total = list.length;
-        const totalPages = Math.max(1, Math.ceil(total / mg.pageSize));
-        if (mg.page > totalPages) mg.page = totalPages;
-        if (mg.page < 1) mg.page = 1;
-        const pageList = list.slice((mg.page - 1) * mg.pageSize, mg.page * mg.pageSize);
+        el('mMgStat').textContent = total + ' 道题 · 题库共 ' + state.mg.allTotal + ' 道';
 
         const diffMap = { 1: ['简单', 'p-diff-1'], 2: ['中等', 'p-diff-2'], 3: ['困难', 'p-diff-3'] };
         const tbody = el('mMgTbody');
@@ -672,11 +683,11 @@
             else toggleMgQ(id, true);
         }; });
         el('mMgEmpty').style.display = total ? 'none' : 'block';
-        el('mMgEmptyText').textContent = state.mg.all.length === 0 ? '题库暂无题目' : '该筛选下暂无题目';
-        renderMgPager(total, totalPages);
+        el('mMgEmptyText').textContent = state.mg.allTotal === 0 ? '题库暂无题目' : '该筛选下暂无题目';
+        renderMgPager(total, Math.max(1, Math.ceil(total / mg.pageSize)));
     }
 
-    /* 分页条：页大小切换 + 上一页/下一页 */
+    /* 分页条：页大小切换 + 上一页/下一页（均重新向后端请求） */
     function renderMgPager(total, totalPages) {
         const host = el('mMgPager');
         if (!host) return;
@@ -687,10 +698,10 @@
         sizeSel.onchange = () => {
             state.mg.pageSize = Number(sizeSel.value);
             state.mg.page = 1;
-            renderManageFilter();
+            renderManage();
         };
-        el('mMgPrev').onclick = () => { if (state.mg.page > 1) { state.mg.page--; renderManageFilter(); } };
-        el('mMgNext').onclick = () => { if (state.mg.page < totalPages) { state.mg.page++; renderManageFilter(); } };
+        el('mMgPrev').onclick = () => { if (state.mg.page > 1) { state.mg.page--; renderManage(); } };
+        el('mMgNext').onclick = () => { if (state.mg.page < totalPages) { state.mg.page++; renderManage(); } };
     }
 
     /* ---------- 管理弹窗：新增 / 编辑 ---------- */
