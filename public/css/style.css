@@ -2268,6 +2268,26 @@ button:hover {
 
 /* 题库管理 */
 .p-manage-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+/* 速算题库管理：左侧题型/标签分组 */
+.m-mg-groups { max-height: 560px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
+.m-mg-type { border-radius: 10px; cursor: pointer; }
+.m-mg-type.active { background: #eff6ff; }
+.m-mg-type-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; font-weight: 700; color: #374151; }
+.m-mg-type.active .m-mg-type-head { color: #1d4ed8; }
+.m-mg-type-head i { font-style: normal; font-size: 12px; color: #9ca3af; background: #f3f4f6; border-radius: 99px; padding: 1px 8px; }
+.m-mg-tag { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px 7px 28px; font-size: 13px; color: #4b5563; border-radius: 8px; }
+.m-mg-tag:hover { background: #f3f4f6; }
+.m-mg-tag.active { background: #dbeafe; color: #1d4ed8; }
+.m-mg-tag i { font-style: normal; font-size: 12px; color: #9ca3af; }
+.m-mg-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.m-mg-filters select { padding: 6px 8px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; background: #fff; color: #374151; font-family: inherit; }
+.m-mg-filters input[type="search"] { padding: 6px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; width: 180px; font-family: inherit; }
+.m-mg-inactive { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #4b5563; cursor: pointer; user-select: none; }
+.m-q-inactive { opacity: .55; }
+.m-q-inactive td { background: #fafafa; }
+.m-fill-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; cursor: pointer; user-select: none; padding-top: 6px; }
+.m-fill-chk input { width: 15px; height: 15px; accent-color: #2563eb; }
+.m-opt-del { margin-left: 2px; }
 .p-bank-panel { padding: 16px 14px; }
 .p-bank-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .p-bank-filter { display: flex; flex-direction: column; gap: 8px; padding: 2px 0 12px; }

@@ -11,7 +11,7 @@
     const api = PQ.api;
 
     /* ---------- 常量 ---------- */
-    const TABS = { START: 'start', RECORDS: 'records', MANUAL: 'manual' };
+    const TABS = { START: 'start', MANAGE: 'manage', RECORDS: 'records', MANUAL: 'manual' };
     const TYPES = {
         percent: {
             k: 'percent', n: '百化分', d: '百分数与分数互化，除转乘秒出',
@@ -78,7 +78,9 @@
         run: null,            // 运行中会话 { sessionId, qtype, qtypeName, answerMode, questions, idx, ok, ng, skip, answers, startTs, itemStartTs, phase, finished }
         recPage: 1, recTotal: 0,
         stats: null,
-        timer: null
+        timer: null,
+        /* 题库管理状态 */
+        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: false, editId: 0 }
     };
 
     function el(id) { return document.getElementById(id); }
@@ -87,6 +89,7 @@
 
     async function enter() {
         switchTab(state.mtab);
+        if (state.mtab === TABS.MANAGE) await renderManage();
         if (state.mtab === TABS.RECORDS) { renderStatsBar(); renderRecords(true); }
     }
 
@@ -94,6 +97,7 @@
         state.mtab = mtab;
         document.querySelectorAll('#viewMental .practice-tab').forEach(b => b.classList.toggle('active', b.dataset.mtab === mtab));
         el('mPaneStart').hidden = mtab !== TABS.START;
+        el('mPaneManage').hidden = mtab !== TABS.MANAGE;
         el('mPaneManual').hidden = mtab !== TABS.MANUAL;
         el('mPaneRec').hidden = mtab !== TABS.RECORDS;
         if (mtab !== TABS.START) {
@@ -106,6 +110,7 @@
             el('mPaneResult').hidden = ph !== 'result';
         }
         if (mtab === TABS.START) { renderTypes(); renderCounts(); renderDiffs(); renderModeRow(); updateStartBtn(); }
+        if (mtab === TABS.MANAGE) { renderManage(); }
         if (mtab === TABS.MANUAL) renderManual();
         if (mtab === TABS.RECORDS) { renderStatsBar(); renderRecords(true); }
     }
@@ -561,6 +566,257 @@
         card.appendChild(body);
     }
 
+    /* ---------- 题库管理 ---------- */
+
+    const MG_TYPES_ORDER = ['percent', 'compare', 'estimate', 'square'];
+    const mgEditSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+    const mgDelSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    const mgRestoreSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>';
+
+    async function loadMgQuestions() {
+        try {
+            state.mg.all = await api.get('/api/mental/admin/questions?inactive=1');
+        } catch (e) { U.showToast('题库加载失败：' + e.message, 'error'); state.mg.all = []; }
+    }
+
+    /* 左侧：按题型分组 → 按标签聚合（与右侧默认一致：不含停用，除非勾选含停用） */
+    function mgGroupsHtml() {
+        const mg = state.mg;
+        const list = mg.inactive ? state.mg.all : state.mg.all.filter(q => q.active);
+        let html = '';
+        MG_TYPES_ORDER.forEach(t => {
+            const qs = list.filter(q => q.qtype === t);
+            if (!qs.length) return;
+            const tn = TYPES[t] ? TYPES[t].n : t;
+            html += `<div class="m-mg-type ${mg.typeSel === t ? 'active' : ''}" data-type="${t}">
+                <div class="m-mg-type-head"><span class="m-mg-type-name">${tn}</span><i>${qs.length}</i></div>`;
+            const tagMap = {};
+            qs.forEach(q => { const k = q.tag || '无标签'; (tagMap[k] = tagMap[k] || []).push(q); });
+            const tags = Object.keys(tagMap).sort((a, b) => tagMap[b].length - tagMap[a].length);
+            html += tags.map(k => `
+                <div class="m-mg-tag ${mg.typeSel === t && mg.tagSel === k ? 'active' : ''}" data-type="${t}" data-tag="${U.escapeHtml(k)}">
+                    <span>${U.escapeHtml(k)}</span><i>${tagMap[k].length}</i>
+                </div>`).join('');
+            html += `</div>`;
+        });
+        return html;
+    }
+
+    async function renderManage() {
+        await loadMgQuestions();
+        const mg = state.mg;
+        /* 左侧分组（事件用 onxxx 覆盖式绑定，避免重复累积） */
+        el('mMgGroups').innerHTML = mgGroupsHtml();
+        el('mMgGroups').querySelectorAll('.m-mg-type').forEach(x => { x.onclick = () => { mg.typeSel = x.dataset.type; mg.tagSel = 'all'; renderManage(); }; });
+        el('mMgGroups').querySelectorAll('.m-mg-tag').forEach(x => { x.onclick = () => { mg.typeSel = x.dataset.type; mg.tagSel = x.dataset.tag; renderManage(); }; });
+        /* 筛选控件 */
+        const typeSel = el('mMgTypeSel');
+        typeSel.innerHTML = '<option value="all">全部题型</option>' + MG_TYPES_ORDER.map(t =>
+            `<option value="${t}" ${mg.typeSel === t ? 'selected' : ''}>${TYPES[t].n}</option>`).join('');
+        typeSel.onchange = () => { mg.typeSel = typeSel.value; mg.tagSel = 'all'; renderManage(); };
+        el('mMgDiffSel').value = mg.diffSel;
+        el('mMgDiffSel').onchange = () => { mg.diffSel = el('mMgDiffSel').value; renderManage(); };
+        el('mMgKw').value = mg.kw;
+        el('mMgKw').oninput = () => { mg.kw = el('mMgKw').value; renderManageFilter(); };
+        el('mMgInactive').checked = mg.inactive;
+        el('mMgInactive').onchange = () => { mg.inactive = el('mMgInactive').checked; renderManage(); };
+        renderManageFilter();
+    }
+
+    function renderManageFilter() {
+        const mg = state.mg;
+        let list = state.mg.all;
+        if (mg.typeSel !== 'all') list = list.filter(q => q.qtype === mg.typeSel);
+        if (mg.tagSel !== 'all') list = list.filter(q => (q.tag || '无标签') === mg.tagSel);
+        if (mg.diffSel !== 'all') list = list.filter(q => String(q.difficulty) === mg.diffSel);
+        if (!mg.inactive) list = list.filter(q => q.active);
+        const kw = mg.kw.trim().toLowerCase();
+        if (kw) list = list.filter(q => String(q.stem).toLowerCase().includes(kw) || String(q.tip).toLowerCase().includes(kw) || String(q.tag).toLowerCase().includes(kw));
+
+        el('mMgTitle').textContent = mg.typeSel === 'all' ? '全部题目' : (TYPES[mg.typeSel] ? TYPES[mg.typeSel].n : mg.typeSel);
+        el('mMgPath').textContent = mg.tagSel === 'all' ? '' : mg.tagSel;
+        el('mMgStat').textContent = list.length + ' 道题 · 题库共 ' + state.mg.all.length + ' 道';
+
+        const diffMap = { 1: ['简单', 'p-diff-1'], 2: ['中等', 'p-diff-2'], 3: ['困难', 'p-diff-3'] };
+        const tbody = el('mMgTbody');
+        tbody.innerHTML = list.map((q, i) => {
+            const dm = diffMap[q.difficulty] || diffMap[2];
+            const ansTxt = q.fillable ? String(q.options[0] != null ? q.options[0] : q.answer)
+                : (q.options[Number(q.answer)] !== undefined ? String(q.options[Number(q.answer)]) : String(q.answer));
+            return `<tr class="${q.active ? '' : 'm-q-inactive'}">
+                <td class="p-q-no">${i + 1}</td>
+                <td class="p-q-stem-cell" title="${U.escapeHtml(q.stem)}">${U.escapeHtml(q.stem.split('\n')[0])}</td>
+                <td>${TYPES[q.qtype] ? TYPES[q.qtype].n : q.qtype}</td>
+                <td><span class="p-diff ${dm[1]}"><i></i>${dm[0]}</span></td>
+                <td><span class="p-ans-badge">${U.escapeHtml(ansTxt)}</span></td>
+                <td>${q.fillable ? '填空' : '选择'}</td>
+                <td class="p-q-ops">
+                    <button class="p-op-btn" data-act="edit" data-qid="${q.id}" title="编辑题目">${mgEditSvg}</button>
+                    ${q.active
+                        ? `<button class="p-op-btn danger" data-act="del" data-qid="${q.id}" title="停用题目">${mgDelSvg}</button>`
+                        : `<button class="p-op-btn" data-act="restore" data-qid="${q.id}" title="恢复启用">${mgRestoreSvg}</button>`}
+                </td>
+            </tr>`;
+        }).join('');
+        tbody.querySelectorAll('.p-op-btn').forEach(x => { x.onclick = () => {
+            const id = Number(x.dataset.qid);
+            if (x.dataset.act === 'edit') openMgQModal(id);
+            else if (x.dataset.act === 'del') delMgQ(id);
+            else toggleMgQ(id, true);
+        }; });
+        el('mMgEmpty').style.display = list.length ? 'none' : 'block';
+        el('mMgEmptyText').textContent = state.mg.all.length === 0 ? '题库暂无题目' : '该筛选下暂无题目';
+    }
+
+    /* ---------- 管理弹窗：新增 / 编辑 ---------- */
+
+    async function openMgQModal(qid) {
+        const mg = state.mg;
+        mg.editId = qid || 0;
+        el('mQModalTitle').textContent = qid ? '编辑题目' : '新增题目';
+        const q = qid ? (state.mg.all.find(x => x.id === qid) || null) : null;
+
+        const typeSel = el('mFType');
+        typeSel.innerHTML = MG_TYPES_ORDER.map(t =>
+            `<option value="${t}" ${q && q.qtype === t ? 'selected' : ''}>${TYPES[t].n}</option>`).join('');
+        el('mFDiff').value = q ? String(q.difficulty) : '2';
+        el('mFTag').value = q ? (q.tag || '') : (mg.tagSel !== 'all' ? mg.tagSel : '');
+        el('mFStem').value = q ? q.stem : '';
+        el('mFTip').value = q ? (q.tip || '') : '';
+        el('mFFillable').checked = q ? !!q.fillable : (typeSel.value === 'percent' || typeSel.value === 'square');
+
+        if (q) {
+            mg.editOpts = q.fillable
+                ? [String(q.options[0] != null ? q.options[0] : q.answer)]
+                : (Array.isArray(q.options) ? q.options.map(o => String(o)) : ['', '']);
+            mg.editAnswer = q.fillable ? String(q.options[0] != null ? q.options[0] : q.answer) : String(q.answer);
+        } else {
+            mg.editOpts = typeSel.value === 'compare' ? ['', ''] : ['', '', '', ''];
+            mg.editAnswer = '0';
+        }
+
+        typeSel.onchange = () => {
+            mg.editOpts = typeSel.value === 'compare' ? ['', ''] : ['', '', '', ''];
+            mg.editAnswer = '0';
+            el('mFFillable').checked = typeSel.value === 'percent' || typeSel.value === 'square';
+            renderMgOpts();
+            mgFillCtl();
+        };
+        el('mFFillable').onchange = () => { if (el('mFFillable').checked) mg.editAnswer = ''; renderMgOpts(); mgFillCtl(); };
+        el('mFOptAdd').onclick = () => {
+            if (mg.editOpts.length >= 6) { U.showToast('最多 6 个选项', 'warning'); return; }
+            mg.editOpts.push('');
+            renderMgOpts();
+        };
+        el('mFAnswerSel').onchange = () => { mg.editAnswer = String(el('mFAnswerSel').value); };
+        el('mFAnswerTxt').oninput = () => { mg.editAnswer = el('mFAnswerTxt').value; };
+
+        renderMgOpts();
+        mgFillCtl();
+        el('mQModalMask').classList.add('show');
+        el('mFStem').focus();
+    }
+
+    function renderMgOpts() {
+        const box = el('mFOpts');
+        const mg = state.mg;
+        const delSvg = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+        box.innerHTML = mg.editOpts.map((t, j) => `
+            <div class="p-form-row">
+                <span class="p-form-opt-label">${String.fromCharCode(65 + j)}</span>
+                <input type="text" data-oi="${j}" value="${U.escapeHtml(String(t))}" placeholder="选项 ${String.fromCharCode(65 + j)} 内容">
+                <button class="p-op-btn danger m-opt-del" data-i="${j}" type="button" title="删除选项">${delSvg}</button>
+            </div>`).join('');
+        box.querySelectorAll('input').forEach(x => { x.oninput = () => {
+            mg.editOpts[Number(x.dataset.oi)] = x.value;
+            syncMgAnswerSel();
+        }; });
+        box.querySelectorAll('.m-opt-del').forEach(b => { b.onclick = () => {
+            if (mg.editOpts.length <= 2) { U.showToast('至少保留 2 个选项', 'warning'); return; }
+            mg.editOpts.splice(Number(b.dataset.i), 1);
+            renderMgOpts();
+        }; });
+        syncMgAnswerSel();
+    }
+
+    function syncMgAnswerSel() {
+        const sel = el('mFAnswerSel');
+        if (!sel || sel.hidden) return;
+        const cur = Number(state.mg.editAnswer);
+        sel.innerHTML = state.mg.editOpts.map((_, j) => `<option value="${j}">${String.fromCharCode(65 + j)}</option>`).join('');
+        sel.value = state.mg.editOpts[cur] !== undefined ? cur : 0;
+        state.mg.editAnswer = String(sel.value);
+    }
+
+    function mgFillCtl() {
+        const fill = el('mFFillable').checked;
+        el('mFOpts').hidden = fill;
+        el('mFOptAdd').hidden = fill;
+        el('mFAnswerSel').hidden = fill;
+        el('mFAnswerTxt').hidden = !fill;
+        el('mFAnswerHint').hidden = !fill;
+        el('mFOptsLabel').textContent = fill ? '填空答案（规范文本）' : '选项（选择题）';
+        el('mFAnswerLabel').textContent = fill ? '正确答案（规范文本）' : '正确答案';
+        if (fill) el('mFAnswerTxt').value = state.mg.editAnswer || '';
+        else { syncMgAnswerSel(); el('mFAnswerTxt').value = ''; }
+    }
+
+    async function saveMgQ() {
+        const mg = state.mg;
+        const stem = el('mFStem').value.trim();
+        if (!stem) { U.showToast('请填写题干', 'warning'); return; }
+        const qtype = el('mFType').value;
+        const fill = el('mFFillable').checked;
+        let options, answer;
+        if (fill) {
+            answer = el('mFAnswerTxt').value.trim();
+            if (!answer) { U.showToast('请填写规范答案文本（如 1/8、14.3%、169、1.7）', 'warning'); return; }
+            options = [answer];
+        } else {
+            options = mg.editOpts.map(o => String(o).trim());
+            if (options.length < 2 || options.some(o => !o)) { U.showToast('请填写全部选项', 'warning'); return; }
+            answer = String(el('mFAnswerSel').value);
+            if (options[Number(answer)] === undefined) { U.showToast('请选择正确答案', 'warning'); return; }
+        }
+        const body = {
+            qtype, difficulty: Number(el('mFDiff').value), stem, options, answer,
+            tip: el('mFTip').value.trim(), tag: el('mFTag').value.trim(), fillable: fill
+        };
+        try {
+            if (mg.editId) await api.put('/api/mental/admin/questions/' + mg.editId, body);
+            else await api.post('/api/mental/admin/questions', body);
+            el('mQModalMask').classList.remove('show');
+            await renderManage();
+            U.showToast('题目已保存', 'success');
+        } catch (e) { U.showToast(e.message, 'error'); }
+    }
+
+    /* 停用（软删）与恢复 */
+    async function delMgQ(qid) {
+        const ok = await PQ.ui.confirm({ title: '停用题目', message: '停用后练习将不再抽取该题，可随时恢复。确定停用？', confirmText: '停用', danger: true });
+        if (!ok) return;
+        try {
+            await api.del('/api/mental/admin/questions/' + qid);
+            await renderManage();
+            U.showToast('题目已停用', 'success');
+        } catch (e) { U.showToast(e.message, 'error'); }
+    }
+
+    async function toggleMgQ(qid, on) {
+        const q = state.mg.all.find(x => x.id === qid);
+        if (!q) return;
+        try {
+            await api.put('/api/mental/admin/questions/' + qid, {
+                qtype: q.qtype, difficulty: q.difficulty, stem: q.stem,
+                options: q.fillable ? [String(q.options[0] != null ? q.options[0] : q.answer)] : q.options,
+                answer: q.fillable ? String(q.options[0] != null ? q.options[0] : q.answer) : q.answer,
+                tip: q.tip, tag: q.tag, fillable: q.fillable, active: on ? 1 : 0
+            });
+            await renderManage();
+            U.showToast(on ? '题目已恢复' : '题目已停用', 'success');
+        } catch (e) { U.showToast(e.message, 'error'); }
+    }
+
     /* ---------- 技巧手册 ---------- */
 
     function renderManual() {
@@ -640,6 +896,13 @@
         const nb = el('mNextBtn');
         if (nb && !nb.hidden) { e.preventDefault(); nextQ(); }
     });
+
+    /* 题库管理事件 */
+    el('mAddQBtn').addEventListener('click', () => openMgQModal(0));
+    el('mMgEmptyAddBtn').addEventListener('click', () => openMgQModal(0));
+    el('mQCancel').addEventListener('click', () => el('mQModalMask').classList.remove('show'));
+    el('mQSave').addEventListener('click', saveMgQ);
+    el('mQModalMask').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
 
     /* 暴露给 app.js */
     PQ.mental = { enter, switchTab };

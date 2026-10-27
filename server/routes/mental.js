@@ -142,6 +142,106 @@ function fmtRecordOpts(opts) {
     try { const r = JSON.parse(opts); return Array.isArray(r) ? r : []; } catch (e) { return []; }
 }
 
+/* ---------- 速算题库管理（管理界面用） ----------
+   删除为软删除（active=0 停用）：避免内置种子组被删空后重启补回；
+   管理列表可含停用题，恢复即置 active=1 */
+const MG_TYPES = ['percent', 'compare', 'estimate', 'square'];
+
+/* GET /api/mental/admin/questions?qtype=&tag=&diff=&kw=&inactive=1 */
+router.get('/admin/questions', asyncHandler(async (req, res) => {
+    const where = ['1=1'];
+    const params = [];
+    const qtype = str(req.query.qtype, 16);
+    if (qtype && MG_TYPES.includes(qtype)) { where.push('qtype=?'); params.push(qtype); }
+    const tag = str(req.query.tag, 50);
+    if (tag) { where.push('tag=?'); params.push(tag); }
+    const diff = num(req.query.diff);
+    if (diff >= 1 && diff <= 3) { where.push('difficulty=?'); params.push(diff); }
+    if (str(req.query.inactive, 2) !== '1') where.push('active=1');
+    const kw = str(req.query.kw, 100).trim();
+    if (kw) { where.push('(stem LIKE ? OR tip LIKE ? OR tag LIKE ?)'); params.push('%' + kw + '%', '%' + kw + '%', '%' + kw + '%'); }
+    const [rows] = await pool.query(
+        `SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active, fillable, updated_at
+         FROM mental_questions WHERE ${where.join(' AND ')} ORDER BY id DESC`,
+        params
+    );
+    res.json(rows.map(r => ({
+        id: r.id, qtype: r.qtype, difficulty: r.difficulty, stem: r.stem,
+        options: fmtRecordOpts(r.options), answer: str(r.answer, 50), tip: r.tip || '',
+        tag: r.tag || '', active: !!r.active, fillable: !!r.fillable, updatedAt: r.updated_at
+    })));
+}));
+
+/* POST /api/mental/admin/questions { qtype, difficulty, stem, options, answer, tip, tag, fillable }
+   填空题：options 规范为 [答案文本] 且 answer='0'，由 fillMeta 推导方向 */
+router.post('/admin/questions', asyncHandler(async (req, res) => {
+    const qtype = MG_TYPES.includes(req.body && req.body.qtype) ? req.body.qtype : 'percent';
+    const difficulty = Math.min(3, Math.max(1, num(req.body && req.body.difficulty) || 2));
+    const stem = str(req.body && req.body.stem, 20000).trim();
+    if (!stem) return res.status(400).json({ error: '题干不能为空' });
+    const fillable = req.body && req.body.fillable ? 1 : 0;
+    let options = Array.isArray(req.body && req.body.options) ? req.body.options : [];
+    let answer = str(req.body && req.body.answer, 50).trim();
+    if (fillable) {
+        if (!answer) return res.status(400).json({ error: '填空题需填写规范答案文本（如 1/8、14.3%、169、1.7）' });
+        options = [answer];
+        answer = '0';
+    } else {
+        options = options.map(o => str(o, 200));
+        if (!options.length || options.some(o => !o)) return res.status(400).json({ error: '请填写全部选项' });
+        const ai = num(answer);
+        if (options[ai] === undefined) return res.status(400).json({ error: '正确答案需指向一个选项' });
+        answer = String(ai);
+    }
+    const tip = str(req.body && req.body.tip, 20000).trim();
+    const tag = str(req.body && req.body.tag, 50).trim();
+    const [r] = await pool.query(
+        `INSERT INTO mental_questions (qtype, difficulty, stem, options, answer, tip, tag, active, fillable)
+         VALUES (?,?,?,?,?,?,?,1,?)`,
+        [qtype, difficulty, stem, JSON.stringify(options), answer, tip, tag, fillable]
+    );
+    res.status(201).json({ id: r.insertId });
+}));
+
+/* PUT /api/mental/admin/questions/:id（含 active，可恢复停用） */
+router.put('/admin/questions/:id', asyncHandler(async (req, res) => {
+    const id = num(req.params.id);
+    const qtype = MG_TYPES.includes(req.body && req.body.qtype) ? req.body.qtype : 'percent';
+    const difficulty = Math.min(3, Math.max(1, num(req.body && req.body.difficulty) || 2));
+    const stem = str(req.body && req.body.stem, 20000).trim();
+    if (!stem) return res.status(400).json({ error: '题干不能为空' });
+    const fillable = req.body && req.body.fillable ? 1 : 0;
+    let options = Array.isArray(req.body && req.body.options) ? req.body.options : [];
+    let answer = str(req.body && req.body.answer, 50).trim();
+    if (fillable) {
+        if (!answer) return res.status(400).json({ error: '填空题需填写规范答案文本（如 1/8、14.3%、169、1.7）' });
+        options = [answer];
+        answer = '0';
+    } else {
+        options = options.map(o => str(o, 200));
+        if (!options.length || options.some(o => !o)) return res.status(400).json({ error: '请填写全部选项' });
+        const ai = num(answer);
+        if (options[ai] === undefined) return res.status(400).json({ error: '正确答案需指向一个选项' });
+        answer = String(ai);
+    }
+    const tip = str(req.body && req.body.tip, 20000).trim();
+    const tag = str(req.body && req.body.tag, 50).trim();
+    const active = req.body && req.body.active === false ? 0 : 1;
+    const [r] = await pool.query(
+        `UPDATE mental_questions SET qtype=?, difficulty=?, stem=?, options=?, answer=?, tip=?, tag=?, active=?, fillable=? WHERE id=?`,
+        [qtype, difficulty, stem, JSON.stringify(options), answer, tip, tag, active, fillable, id]
+    );
+    if (r.affectedRows === 0) return res.status(404).json({ error: '题目不存在' });
+    res.json({ ok: true });
+}));
+
+/* DELETE /api/mental/admin/questions/:id  软删除（停用，不物理删除） */
+router.delete('/admin/questions/:id', asyncHandler(async (req, res) => {
+    const [r] = await pool.query('UPDATE mental_questions SET active=0 WHERE id=?', [num(req.params.id)]);
+    if (r.affectedRows === 0) return res.status(404).json({ error: '题目不存在' });
+    res.json({ ok: true });
+}));
+
 /* ---------- 练习会话 ---------- */
 
 /* POST /api/mental/start { qtype, difficulty, count, answerMode }
