@@ -183,6 +183,7 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
     const opts = fmtRecordOpts(q[0].options);
     res.json({
         result,
+        correctIndex: num(q[0].answer),
         correctAnswer: opts[num(q[0].answer)] !== undefined ? opts[num(q[0].answer)] : str(q[0].answer, 50),
         tip: q[0].tip || ''
     });
@@ -215,6 +216,7 @@ router.post('/:id/skip', asyncHandler(async (req, res) => {
     const opts = fmtRecordOpts(q[0].options);
     res.json({
         result: 'skip',
+        correctIndex: num(q[0].answer),
         correctAnswer: opts[num(q[0].answer)] !== undefined ? opts[num(q[0].answer)] : str(q[0].answer, 50),
         tip: q[0].tip || ''
     });

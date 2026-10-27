@@ -228,15 +228,15 @@
             const r = await api.post(`/api/mental/${state.run.sessionId}/answer`, {
                 no, questionId: q.id, answer: String(k), ms
             });
-            state.run.answers.push({ my: String(k), correctAnswer: r.correctAnswer, tip: r.tip, result: r.result, q });
+            state.run.answers.push({ my: String(k), correctAnswer: r.correctAnswer, correctIndex: r.correctIndex, tip: r.tip, result: r.result, q });
             if (r.result === 'ok') state.run.ok++; else state.run.ng++;
             updateCounts();
-            renderResult(k, r.correctAnswer, r.tip, r.result);
+            renderResult(k, r.correctAnswer, r.correctIndex, r.tip, r.result);
         } catch (e) {
             U.showToast(e.message, 'error');
             if (String(e.message).includes('已作答')) {
-                state.run.answers.push({ my: String(k), correctAnswer: '', tip: '', result: 'ng', q });
-                renderResult(k, '', '', 'ng');
+                state.run.answers.push({ my: String(k), correctAnswer: '', correctIndex: null, tip: '', result: 'ng', q });
+                renderResult(k, '', null, '', 'ng');
             }
         }
     }
@@ -247,21 +247,21 @@
         const ms = Date.now() - state.run.itemStartTs;
         try {
             const r = await api.post(`/api/mental/${state.run.sessionId}/skip`, { no, questionId: q.id, ms });
-            state.run.answers.push({ my: null, correctAnswer: r.correctAnswer, tip: r.tip, result: 'skip', q });
+            state.run.answers.push({ my: null, correctAnswer: r.correctAnswer, correctIndex: r.correctIndex, tip: r.tip, result: 'skip', q });
             state.run.skip++;
             updateCounts();
-            renderResult(null, r.correctAnswer, r.tip, 'skip');
+            renderResult(null, r.correctAnswer, r.correctIndex, r.tip, 'skip');
         } catch (e) {
             U.showToast(e.message, 'error');
         }
     }
 
-    function renderResult(my, correctAnswer, tip, result) {
+    function renderResult(my, correctAnswer, correctIndex, tip, result) {
         const list = el('mOptList');
         [...list.querySelectorAll('.p-opt-item')].forEach(x => {
             x.disabled = true;
             const k = Number(x.dataset.k);
-            const correctIdx = Number(correctAnswer);
+            const correctIdx = Number(correctIndex);
             if (k === correctIdx && !Number.isNaN(correctIdx)) x.classList.add('correct');
             else if (k === my) x.classList.add('wrong');
             else x.classList.add('dim');
