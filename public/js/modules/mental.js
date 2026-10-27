@@ -564,10 +564,12 @@
         const tbody = el('mManualTbody');
         if (!tbody || tbody.dataset.rendered) return;
         tbody.dataset.rendered = '1';
+        /* 先左后右：先填满左列，再填右列（列优先），而非左右交错 */
         const rows = [];
-        for (let i = 0; i < PERCENT_TABLE.length; i += 2) {
+        const half = Math.ceil(PERCENT_TABLE.length / 2);
+        for (let i = 0; i < half; i++) {
             const a = PERCENT_TABLE[i];
-            const b = PERCENT_TABLE[i + 1];
+            const b = PERCENT_TABLE[i + half];
             rows.push(`
                 <tr>
                     <td>${a[0]}/${a[1]}</td><td>${a[2]}</td>
@@ -580,9 +582,10 @@
         if (!sq || sq.dataset.rendered) return;
         sq.dataset.rendered = '1';
         const sRows = [];
-        for (let i = 0; i < SQUARE_TABLE.length; i += 2) {
+        const sHalf = Math.ceil(SQUARE_TABLE.length / 2);
+        for (let i = 0; i < sHalf; i++) {
             const a = SQUARE_TABLE[i];
-            const b = SQUARE_TABLE[i + 1];
+            const b = SQUARE_TABLE[i + sHalf];
             sRows.push(`
                 <tr>
                     <td>${a[0]}²</td><td>${a[1]}</td>
@@ -595,9 +598,10 @@
         if (!pw || pw.dataset.rendered) return;
         pw.dataset.rendered = '1';
         const pRows = [];
-        for (let i = 0; i < POW_TABLE.length; i += 2) {
+        const pHalf = Math.ceil(POW_TABLE.length / 2);
+        for (let i = 0; i < pHalf; i++) {
             const a = POW_TABLE[i];
-            const b = POW_TABLE[i + 1];
+            const b = POW_TABLE[i + pHalf];
             pRows.push(`
                 <tr>
                     <td>${a[0]}</td><td>${a[1]}</td>
