@@ -114,6 +114,137 @@
             return box;
         },
 
+        /* ---- 可搜索下拉选择（Element Select filterable 风格） ---- */
+        /* combobox({ host, value, options, counts, placeholder, onChange })
+         * 行为：聚焦展开下拉并展示全部候选项；输入实时过滤（包含匹配）；
+         * 点击候选项选中；允许直接输入自定义值（标签可自由命名）。
+         * options：候选字符串数组；counts：可选 { 选项: 数量 }，用于右侧数量徽标。
+         * 返回实例：{ getValue, setValue, setOptions, open, close, destroy } */
+        combobox(o) {
+            const host = o.host;
+            if (!host) return null;
+            let options = Array.isArray(o.options) ? o.options.slice() : [];
+            let counts = o.counts || null;
+            const onChange = typeof o.onChange === 'function' ? o.onChange : null;
+            let hoverIndex = -1;
+            let openFlag = false;
+
+            host.classList.add('pq-combobox');
+            host.innerHTML =
+                '<input class="pq-combobox__input" type="text" autocomplete="off" spellcheck="false" placeholder="' + esc(o.placeholder || '') + '">' +
+                '<span class="pq-combobox__suffix"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>' +
+                '<div class="pq-combobox__dropdown" role="listbox"></div>';
+            const input = host.querySelector('.pq-combobox__input');
+            const dropdown = host.querySelector('.pq-combobox__dropdown');
+
+            /* 渲染下拉（按输入关键字过滤；hits 为过滤后的选项数组） */
+            function render(kw) {
+                const q = String(kw || '').trim().toLowerCase();
+                const hits = q
+                    ? options.filter(x => String(x).toLowerCase().includes(q))
+                    : options.slice();
+                const cur = input.value.trim();
+                if (!hits.length) {
+                    dropdown.innerHTML = '<div class="pq-combobox__empty">无匹配数据</div>';
+                    hoverIndex = -1;
+                    return;
+                }
+                hoverIndex = hits.findIndex(x => String(x) === cur);
+                dropdown.innerHTML = hits.map((x, i) =>
+                    '<div class="pq-combobox__option' + (i === hoverIndex ? ' selected' : '') + '" role="option" data-i="' + i + '">' +
+                    '<span>' + esc(String(x)) + '</span>' +
+                    (counts && counts[x] != null ? '<i>' + counts[x] + '</i>' : '') +
+                    '</div>').join('');
+                dropdown.querySelectorAll('.pq-combobox__option').forEach(opt => {
+                    opt.onmousemove = () => {
+                        dropdown.querySelectorAll('.pq-combobox__option').forEach(x2 => x2.classList.remove('hover'));
+                        opt.classList.add('hover');
+                        hoverIndex = Number(opt.dataset.i);
+                    };
+                    opt.onmousedown = ev => ev.preventDefault(); // 防止 input 失焦导致先收起
+                    opt.onclick = () => {
+                        input.value = String(hits[Number(opt.dataset.i)]);
+                        close();
+                        if (onChange) onChange(input.value.trim());
+                    };
+                });
+            }
+
+            /* 下拉方向：下方空间不足且上方足够时向上展开 */
+            function position() {
+                const r = host.getBoundingClientRect();
+                const ddH = 208;
+                const below = window.innerHeight - r.bottom;
+                const above = r.top;
+                host.classList.toggle('pq-combobox--up', below < ddH + 8 && above > ddH + 8);
+            }
+
+            function open() {
+                if (openFlag) return;
+                openFlag = true;
+                host.classList.add('open');
+                position();
+                render(); // 展开显示全部候选（当前值高亮），输入时才过滤
+            }
+
+            function close() {
+                if (!openFlag) return;
+                openFlag = false;
+                host.classList.remove('open');
+                hoverIndex = -1;
+            }
+
+            const onDocDown = ev => { if (openFlag && !host.contains(ev.target)) close(); };
+            document.addEventListener('mousedown', onDocDown);
+
+            input.addEventListener('focus', open);
+            /* 选择候选后 input 仍保持焦点，再次点击不会触发 focus；补 click 使其可重新展开 */
+            input.addEventListener('click', () => { if (!openFlag) open(); });
+            input.addEventListener('input', () => { if (openFlag) render(input.value); });
+            input.addEventListener('keydown', ev => {
+                const opts = dropdown.querySelectorAll('.pq-combobox__option');
+                if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+                    ev.preventDefault();
+                    if (!openFlag) { open(); return; }
+                    if (!opts.length) return;
+                    const dir = ev.key === 'ArrowDown' ? 1 : -1;
+                    hoverIndex = (hoverIndex < 0 ? (dir === 1 ? -1 : 0) : hoverIndex) + dir;
+                    if (hoverIndex >= opts.length) hoverIndex = opts.length - 1;
+                    if (hoverIndex < 0) hoverIndex = 0;
+                    opts.forEach((x2, j) => x2.classList.toggle('hover', j === hoverIndex));
+                    opts[hoverIndex].scrollIntoView({ block: 'nearest' });
+                } else if (ev.key === 'Enter') {
+                    if (openFlag) {
+                        const hit = opts[hoverIndex];
+                        if (hit) { hit.onclick(); }
+                        else close();
+                        ev.preventDefault();
+                    }
+                } else if (ev.key === 'Escape') {
+                    if (openFlag) { close(); ev.preventDefault(); }
+                } else if (ev.key === 'Tab') {
+                    close();
+                }
+            });
+            input.addEventListener('blur', close);
+
+            /* 初始值 */
+            if (o.value != null && o.value !== '') input.value = String(o.value);
+
+            return {
+                getValue() { return input.value; },
+                setValue(v) { input.value = v == null ? '' : String(v); hoverIndex = -1; if (openFlag) render(); },
+                setOptions(arr, cntMap) { options = (arr || []).slice(); counts = cntMap || null; if (openFlag) render(); },
+                open,
+                close,
+                destroy() {
+                    document.removeEventListener('mousedown', onDocDown);
+                    host.innerHTML = '';
+                    host.classList.remove('pq-combobox', 'open', 'pq-combobox--up');
+                }
+            };
+        },
+
         /* ---- 分页条（Element Pagination 风格） ---- */
         /* pagination({ host, total, page, pageSize, sizes, onChange, onSizeChange }) */
         pagination(o) {

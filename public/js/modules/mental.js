@@ -14,7 +14,7 @@
     const TABS = { START: 'start', MANAGE: 'manage', RECORDS: 'records', MANUAL: 'manual' };
     const TYPES = {
         percent: {
-            k: 'percent', n: '百化分', d: '百分数与分数互化，除转乘秒出',
+            k: 'percent', n: '百化分', d: '分化百分/百分化分：分数↔百分数互化，除转乘秒出',
             icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>'
         },
         compare: {
@@ -26,7 +26,7 @@
             icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>'
         },
         square: {
-            k: 'square', n: '平方数', d: '1-20 平方秒回，反查也练',
+            k: 'square', n: '平方数', d: '10-20 平方秒回 + 幂次估算，资料分析基本功',
             icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="1.5"/><path d="M16 8l5-5M21 3h-5v5M8 16l-5 5M3 21h5v-5"/></svg>'
         },
         mixed: {
@@ -80,7 +80,7 @@
         stats: null,
         timer: null,
         /* 题库管理状态 */
-        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: false, editId: 0, page: 1, pageSize: 10, total: 0, groups: {}, allTotal: 0 },
+        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: true, editId: 0, page: 1, pageSize: 10, total: 0, groups: {}, allTotal: 0, tagBox: null },
         mgKwTimer: null
     };
 
@@ -255,13 +255,14 @@
         list.querySelectorAll('.p-opt-item').forEach(x => x.addEventListener('click', () => answer(Number(x.dataset.k))));
         list.hidden = fillMode;
 
-        /* 填空题：百分数→填分母(1/?)；分数→填百分数数值(?%)，百分号固定；平方数/幂次→直接填数字 */
+        /* 填空题：分化百分→填百分数数值(?%)，百分号固定；百分化分→填分数(1/?)；平方数/幂次→直接填数字 */
         const fillRow = el('mFillRow');
         if (fillMode) {
             const prefix = el('mFillPrefix'), suffix = el('mFillSuffix'), input = el('mFillInput');
             prefix.textContent = q.fillDir === 'den' ? '1/' : '';
             suffix.hidden = q.fillDir !== 'pct';
             input.placeholder = q.fillDir === 'den' ? '填分母（如 12.5% 填 8）'
+                : q.fillDir === 'frac' ? '填分数（如 11.1% 填 1/9）'
                 : q.fillDir === 'val' ? '填数字（如 13² 填 169）'
                 : q.fillDir === 'dec' ? '填数值（如 1.2³ 填 1.7）'
                 : '填百分数数值（如 1/9 填 11.1）';
@@ -279,12 +280,16 @@
         el('mEndBtn').hidden = !state.run.infinite;
     }
 
-    /* 填空题提交：校验数字（整数或 1 位小数），调用统一判题接口 */
+    /* 填空题提交：分化百分/平方数/幂次填数字，百分化分填分数 a/b；统一判题接口 */
     async function answerFill() {
         const input = el('mFillInput');
         const val = String(input.value || '').trim();
-        if (!/^\d+(\.\d+)?$/.test(val)) {
-            U.showToast('请输入数字（如 8 或 11.1）', 'error');
+        const q = state.run.questions[state.run.idx];
+        const fracMode = q && q.fillDir === 'frac';
+        const okNum = /^\d+(\.\d+)?$/.test(val);
+        const okFrac = fracMode && /^\d+\s*\/\s*\d+$/.test(val);
+        if (!okNum && !okFrac) {
+            U.showToast(fracMode ? '请输入分数（如 11.1% 填 1/9）' : '请输入数字（如 8 或 11.1）', 'error');
             input.focus();
             return;
         }
@@ -594,6 +599,21 @@
         } catch (e) { U.showToast('题库加载失败：' + e.message, 'error'); state.mg.all = []; state.mg.total = 0; }
     }
 
+    /* 收集全部标签作为「标签」字段候选：跨题型去重汇总数量，按数量降序（与左侧分组一致） */
+    function mgTagOptions() {
+        const g = state.mg.groups || {};
+        const map = {};
+        MG_TYPES_ORDER.forEach(t => {
+            const grp = g[t];
+            if (!grp || !grp.tags) return;
+            Object.keys(grp.tags).forEach(k => { map[k] = (map[k] || 0) + grp.tags[k]; });
+        });
+        return {
+            list: Object.keys(map).sort((a, b) => map[b] - map[a] || a.localeCompare(b, 'zh')),
+            counts: map
+        };
+    }
+
     /* 左侧：按题型分组 → 按标签聚合（服务端 groups，随 inactive 过滤） */
     function mgGroupsHtml() {
         const mg = state.mg;
@@ -711,7 +731,17 @@
         typeSel.innerHTML = MG_TYPES_ORDER.map(t =>
             `<option value="${t}" ${q && q.qtype === t ? 'selected' : ''}>${TYPES[t].n}</option>`).join('');
         el('mFDiff').value = q ? String(q.difficulty) : '2';
-        el('mFTag').value = q ? (q.tag || '') : (mg.tagSel !== 'all' ? mg.tagSel : '');
+        /* 标签：可搜索下拉选择（候选=现有全部标签，可输入过滤/选择/自定义新标签） */
+        const tagMeta = mgTagOptions();
+        if (!mg.tagBox) {
+            mg.tagBox = PQ.ui.combobox({
+                host: el('mFTag'),
+                placeholder: '选择或输入标签，如 交叉相乘 / 百化分-专项',
+                onChange: () => {}
+            });
+        }
+        mg.tagBox.setOptions(tagMeta.list, tagMeta.counts);
+        mg.tagBox.setValue(q ? (q.tag || '') : (mg.tagSel !== 'all' ? mg.tagSel : ''));
         el('mFStem').value = q ? q.stem : '';
         el('mFTip').value = q ? (q.tip || '') : '';
         el('mFFillable').checked = q ? !!q.fillable : (typeSel.value === 'percent' || typeSel.value === 'square');
@@ -781,6 +811,7 @@
 
     function mgFillCtl() {
         const fill = el('mFFillable').checked;
+        el('mFOptsLabel').hidden = fill; // 填空模式下“填空答案”标签与“正确答案”重复，隐藏
         el('mFOpts').hidden = fill;
         el('mFOptAdd').hidden = fill;
         el('mFAnswerSel').hidden = fill;
@@ -811,7 +842,7 @@
         }
         const body = {
             qtype, difficulty: Number(el('mFDiff').value), stem, options, answer,
-            tip: el('mFTip').value.trim(), tag: el('mFTag').value.trim(), fillable: fill
+            tip: el('mFTip').value.trim(), tag: state.mg.tagBox ? state.mg.tagBox.getValue().trim() : '', fillable: fill
         };
         try {
             if (mg.editId) await api.put('/api/mental/admin/questions/' + mg.editId, body);

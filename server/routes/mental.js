@@ -93,25 +93,38 @@ async function fetchQuestions(ids, fillOnly) {
     if (!ids.length) return [];
     const ph = ids.map(() => '?').join(',');
     const [qs] = await pool.query(
-        `SELECT id, qtype, difficulty, stem, options, answer FROM mental_questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
+        `SELECT id, qtype, difficulty, stem, options, answer, tag FROM mental_questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
         [...ids, ...ids]
     );
     return qs.map(q => ({
         id: q.id, qtype: q.qtype, difficulty: q.difficulty,
-        stem: q.stem, options: fmtRecordOpts(q.options),
+        stem: q.stem, options: fmtRecordOpts(q.options), tag: q.tag || '',
         ...(fillOnly ? fillMeta(q) : {})
     }));
 }
 
+/* 解析分数文本 "a/b" 为数值（容忍空格与等价分数）；无法解析返回 NaN */
+function fracVal(s) {
+    const m = String(s).trim().match(/^(\d+)\s*\/\s*(\d+)$/);
+    if (!m) return NaN;
+    const d = Number(m[2]);
+    return d === 0 ? NaN : Number(m[1]) / d;
+}
+
 /* 填空题元信息：由正确答案文本推导
+   - 百化分题型按标签固定方向：分化百分 → fillDir='pct'（题干分数，填百分数数值，如 1/9 → 11.1）；
+     百分化分 → fillDir='frac'（题干百分数，填分数，如 11.1% → 1/9）
+   - 其余题型按答案文本推导：
    - 答案形如 "1/8" → fillDir='den'（题干是百分数，填分母，如 12.5% → 8）
    - 答案形如 "14.3%" → fillDir='pct'（题干是分数，填百分数数值，如 1/7 → 14.3，百分号固定）
    - 答案形如 "169" → fillDir='val'（平方数等纯整数答案）
    - 答案形如 "1.7" → fillDir='dec'（幂次估算等小数近似答案，如 1.2³ → 1.7）
-   fillExpected 为规范答案字符串（如 "8" / "14.3" / "169" / "1.7"），同时作为 records 快照与判题基准 */
+   fillExpected 为规范答案字符串，同时作为 records 快照与判题基准 */
 function fillMeta(q) {
     const opts = fmtRecordOpts(q.options);
     const ansTxt = opts[num(q.answer)] !== undefined ? String(opts[num(q.answer)]) : String(q.answer || '');
+    if (q.tag === '分化百分') return { fillDir: 'pct', fillExpected: ansTxt.replace('%', '').trim() };
+    if (q.tag === '百分化分') return { fillDir: 'frac', fillExpected: ansTxt.trim() };
     const frac = ansTxt.match(/^1\/(\d+)$/);
     if (frac) return { fillDir: 'den', fillExpected: frac[1] };
     const pct = ansTxt.match(/^([\d.]+)%$/);
@@ -124,11 +137,16 @@ function fillMeta(q) {
 }
 
 /* 填空题判对：四舍五入到 1 位小数一致
+   - frac（填分数）：解析分数值比较到 5 位，容忍等价分数（如 2/18 对 1/9）
    - den（填分母）：整数必须精确
    - val（填数值）：整数必须精确（平方数等纯整数答案）
    - pct（填百分数）/ dec（填小数）：round1(输入) === round1(期望) */
 function fillCheck(input, q) {
     const { fillDir, fillExpected } = fillMeta(q);
+    if (fillDir === 'frac') {
+        const fv = fracVal(input), ev = fracVal(fillExpected);
+        return isFinite(fv) && isFinite(ev) && Math.round(fv * 1e5) / 1e5 === Math.round(ev * 1e5) / 1e5;
+    }
     const n = parseFloat(input);
     if (!isFinite(n)) return false;
     if (fillDir === 'den' || fillDir === 'val') return String(Math.round(n)) === fillExpected;
@@ -344,7 +362,7 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
     if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
 
     const [q] = await pool.query(
-        'SELECT id, qtype, stem, options, answer, tip FROM mental_questions WHERE id=?', [questionId]);
+        'SELECT id, qtype, stem, options, answer, tip, tag FROM mental_questions WHERE id=?', [questionId]);
     if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
 
     const correct = fillMode ? fillCheck(userAnswer, q[0]) : userAnswer === str(q[0].answer, 50);
@@ -391,7 +409,7 @@ router.post('/:id/skip', asyncHandler(async (req, res) => {
     const [sRows] = await pool.query('SELECT id, answer_mode FROM mental_sessions WHERE id=?', [sessionId]);
     const fillMode = sRows.length > 0 && sRows[0].answer_mode === 'fill';
     const [q] = await pool.query(
-        'SELECT id, qtype, stem, options, answer, tip FROM mental_questions WHERE id=?', [questionId]);
+        'SELECT id, qtype, stem, options, answer, tip, tag FROM mental_questions WHERE id=?', [questionId]);
     if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
 
     const recordAnswer = fillMode ? fillMeta(q[0]).fillExpected : str(q[0].answer, 50);

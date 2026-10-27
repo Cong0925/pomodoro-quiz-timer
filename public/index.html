@@ -483,10 +483,10 @@
                                 </div>
                             </div>
                             <table class="p-q-table">
-                                <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:64px">题型</th><th style="width:64px">难度</th><th style="width:130px">答案</th><th style="width:64px">类型</th><th style="width:96px">操作</th></tr></thead>
+                                <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:100px">题型</th><th style="width:64px">难度</th><th style="width:130px">答案</th><th style="width:64px">类型</th><th style="width:96px">操作</th></tr></thead>
                                 <tbody id="mMgTbody"></tbody>
                             </table>
-                            <div class="p-pager" id="mMgPager" hidden>
+                            <div class="p-pager" id="mMgPager">
                                 <span id="mMgPagerInfo"></span>
                                 <select id="mMgPagerSize">
                                     <option value="10" selected>10 条/页</option>
@@ -497,7 +497,7 @@
                                 <button class="df-btn small" id="mMgPrev">上一页</button>
                                 <button class="df-btn small" id="mMgNext">下一页</button>
                             </div>
-                            <div class="p-empty" id="mMgEmpty" hidden>
+                            <div class="p-empty" id="mMgEmpty">
                                 <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h2"/></svg>
                                 <p id="mMgEmptyText">该筛选下暂无题目</p>
                                 <button class="pq-btn pq-btn--primary pq-btn--small" id="mMgEmptyAddBtn">新增题目</button>
@@ -732,7 +732,7 @@
     <!-- 练习模式：题库编辑弹窗 -->
     <div class="modal-mask" id="pBankModalMask">
         <div class="modal-box p-q-modal">
-            <p id="pBankModalTitle">新增题库</p>
+            <p class="p-q-modal-title" id="pBankModalTitle">新增题库</p>
             <label class="p-form-label">题库名称</label>
             <input type="text" id="pFBankName" maxlength="100" placeholder="如：言语理解·成语辨析">
             <div class="p-form-grid">
@@ -757,7 +757,7 @@
     <!-- 练习模式：题目编辑弹窗 -->
     <div class="modal-mask" id="pQModalMask">
         <div class="modal-box p-q-modal">
-            <p id="pQModalTitle">新增题目</p>
+            <p class="p-q-modal-title" id="pQModalTitle">新增题目</p>
             <label class="p-form-label">题干</label>
             <textarea class="pq-textarea" id="pFStem" rows="3" placeholder="输入题目题干"></textarea>
             <label class="p-form-label">选项（单选，正确答案与下方一致）</label>
@@ -788,7 +788,7 @@
     <!-- 速算练习：题目编辑弹窗 -->
     <div class="modal-mask" id="mQModalMask">
         <div class="modal-box p-q-modal">
-            <p id="mQModalTitle">新增题目</p>
+            <p class="p-q-modal-title" id="mQModalTitle">新增题目</p>
             <div class="p-form-grid">
                 <div>
                     <label class="p-form-label">题型</label>
@@ -806,7 +806,7 @@
             <div class="p-form-grid">
                 <div>
                     <label class="p-form-label">标签（技巧分组）</label>
-                    <input type="text" class="pq-input" id="mFTag" maxlength="50" placeholder="如 交叉相乘 / 百化分-专项">
+                    <div id="mFTag"></div>
                 </div>
                 <div>
                     <label class="p-form-label">作答形式</label>
@@ -814,7 +814,7 @@
                 </div>
             </div>
             <label class="p-form-label">题干</label>
-            <textarea class="pq-textarea" id="mFStem" rows="2" placeholder="如：12.5% 与 1/8 谁大；13² 等于？；12.9% × 820 ≈ ？"></textarea>
+            <textarea class="pq-textarea" id="mFStem" rows="1" placeholder="如：12.5% 与 1/8 谁大；13² 等于？；12.9% × 820 ≈ ？"></textarea>
             <label class="p-form-label" id="mFOptsLabel">选项（选择题）</label>
             <div id="mFOpts"></div>
             <button class="pq-btn pq-btn--small" id="mFOptAdd" type="button">+ 添加选项</button>
@@ -823,11 +823,11 @@
                     <label class="p-form-label" id="mFAnswerLabel">正确答案</label>
                     <select class="pq-select" id="mFAnswerSel" hidden></select>
                     <input type="text" class="pq-input" id="mFAnswerTxt" hidden placeholder="规范文本：1/8、14.3%、169、1.7">
-                    <p class="p-hint" id="mFAnswerHint" hidden style="margin:4px 0 0">填空题答案用规范文本，系统自动判断方向：<br>分数↔百分数填对应分母/百分数值，平方数填整数，幂次填小数。</p>
+                    <p class="p-hint" id="mFAnswerHint" hidden style="margin:4px 0 0">填空题答案用规范文本：分化百分填百分数（如 1/9 → 11.1），百分化分填分数（如 11.1% → 1/9），平方数填整数，幂次填小数。</p>
                 </div>
             </div>
             <label class="p-form-label">技巧 / 解析</label>
-            <textarea class="pq-textarea" id="mFTip" rows="3" placeholder="速算技巧提示，如：12.5% = 1/8，820 ÷ 8 ≈ 102.5"></textarea>
+            <textarea class="pq-textarea" id="mFTip" rows="2" placeholder="速算技巧提示，如：12.5% = 1/8，820 ÷ 8 ≈ 102.5"></textarea>
             <div class="modal-buttons">
                 <button class="pq-btn" id="mQCancel">取消</button>
                 <button class="pq-btn pq-btn--primary" id="mQSave">保存题目</button>
