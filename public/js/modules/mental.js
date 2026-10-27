@@ -147,7 +147,10 @@
 
     function renderDiffs() {
         const row = el('mDiffRow');
-        row.innerHTML = DIFFS.map(d => `
+        /* 当前仅开放「不限难度」，简单/中等/困难隐藏（保留定义便于后续恢复） */
+        const diffs = DIFFS.filter(d => d.k === 0);
+        if (!diffs.find(d => d.k === state.diff)) state.diff = 0;
+        row.innerHTML = diffs.map(d => `
             <div class="p-mode-chip ${state.diff === d.k ? 'selected' : ''}" data-k="${d.k}">
                 <b>${d.n}</b><span>${d.d}</span>
             </div>`).join('');
