@@ -2462,13 +2462,13 @@ button:hover {
 /* 技巧手册 */
 .m-manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .m-tip-card { border-top: 3px solid #2563eb; }
-.m-tip-tag { display: inline-block; font-size: 11px; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 20px; margin-bottom: 8px; }
-.m-tip-title { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 6px; }
-.m-tip-body { font-size: 12.5px; line-height: 1.7; color: #4b5563; }
-.m-table-title { font-size: 14.5px; font-weight: 700; color: #1f2937; margin-bottom: 10px; }
+.m-tip-tag { display: inline-block; font-size: 13px; color: #2563eb; background: #eff6ff; padding: 3px 10px; border-radius: 20px; margin-bottom: 8px; }
+.m-tip-title { font-size: 17px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+.m-tip-body { font-size: 15px; line-height: 1.7; color: #4b5563; }
+.m-table-title { font-size: 17px; font-weight: 700; color: #1f2937; margin-bottom: 10px; }
 .m-mtable { margin-top: 0; }
-.m-mtable th { background: #f3f4f6; font-size: 12.5px; }
-.m-mtable td { font-size: 13px; padding: 7px 10px; }
+.m-mtable th { background: #f3f4f6; font-size: 14.5px; }
+.m-mtable td { font-size: 15px; padding: 8px 12px; }
 
 @media (max-width: 900px) {
     .m-type-grid { grid-template-columns: repeat(2, 1fr); }
