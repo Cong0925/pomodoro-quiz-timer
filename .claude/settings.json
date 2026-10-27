@@ -1,0 +1,12 @@
+{
+   "enabledPlugins": {
+    "playwright@claude-plugins-official": true,
+    "claude-hud@claude-hud": true,
+    "document-skills@anthropic-agent-skills": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(rm *)"
+    ]
+  }
+}
