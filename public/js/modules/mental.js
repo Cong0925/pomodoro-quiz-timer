@@ -623,10 +623,10 @@
             state.mg.page--;
             await loadMgQuestions();
         }
-        /* 左侧分组（事件用 onxxx 覆盖式绑定，避免重复累积） */
+        /* 左侧分组（事件用 onxxx 覆盖式绑定；标签点击需阻止冒泡，避免父级题型分组将其重置为全部） */
         el('mMgGroups').innerHTML = mgGroupsHtml();
-        el('mMgGroups').querySelectorAll('.m-mg-type').forEach(x => { x.onclick = () => { mg.typeSel = x.dataset.type; mg.tagSel = 'all'; mg.page = 1; renderManage(); }; });
-        el('mMgGroups').querySelectorAll('.m-mg-tag').forEach(x => { x.onclick = () => { mg.typeSel = x.dataset.type; mg.tagSel = x.dataset.tag; mg.page = 1; renderManage(); }; });
+        el('mMgGroups').querySelectorAll('.m-mg-type').forEach(x => { x.onclick = (ev) => { if (ev.target.closest('.m-mg-tag')) return; mg.typeSel = x.dataset.type; mg.tagSel = 'all'; mg.page = 1; renderManage(); }; });
+        el('mMgGroups').querySelectorAll('.m-mg-tag').forEach(x => { x.onclick = (ev) => { ev.stopPropagation(); mg.typeSel = x.dataset.type; mg.tagSel = x.dataset.tag; mg.page = 1; renderManage(); }; });
         /* 筛选控件 */
         const typeSel = el('mMgTypeSel');
         typeSel.innerHTML = '<option value="all">全部题型</option>' + MG_TYPES_ORDER.map(t =>
