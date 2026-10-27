@@ -27,6 +27,7 @@
         selCat: null, selSub: null, selBank: null, mode: MODES.order.k, count: MIN_COUNT,
         run: null,                // 运行中会话 { sessionId, questions, idx, ok, ng, skip, answers, startTs, review }
         curBank: 1, editIdx: -1, mgCat: 'all', mgSub: 'all',  // 题库管理（两层下拉筛选：大类→二级分类）
+        mgQPage: 1, mgQPageSize: 20,   // 题库管理题目列表分页
         recPage: 1, recTotal: 0,  // 练习记录分页
         stats: null,              // 练习统计
         timer: null
@@ -434,10 +435,16 @@
         }
         const qs = await loadQuestions(state.curBank);
         const diffMap = { 1: ['简单', 'p-diff-1'], 2: ['中等', 'p-diff-2'], 3: ['困难', 'p-diff-3'] };
-        el('pQTbody').innerHTML = qs.map((q, i) => {
+        /* 分页切片 */
+        const total = qs.length;
+        const totalPages = Math.max(1, Math.ceil(total / state.mgQPageSize));
+        if (state.mgQPage > totalPages) state.mgQPage = totalPages;
+        if (state.mgQPage < 1) state.mgQPage = 1;
+        const pageList = qs.slice((state.mgQPage - 1) * state.mgQPageSize, state.mgQPage * state.mgQPageSize);
+        el('pQTbody').innerHTML = pageList.map((q, i) => {
             const dm = diffMap[q.difficulty] || diffMap[2];
             return `<tr>
-                <td class="p-q-no">${i + 1}</td>
+                <td class="p-q-no">${(state.mgQPage - 1) * state.mgQPageSize + i + 1}</td>
                 <td class="p-q-stem-cell" title="${U.escapeHtml(q.stem)}">${U.escapeHtml(q.stem.split('\n')[0])}</td>
                 <td><span class="p-ans-badge">${U.escapeHtml(q.answer)}</span></td>
                 <td><span class="p-diff ${dm[1]}"><i></i>${dm[0]}</span></td>
@@ -454,6 +461,24 @@
         const eb = el('pQEmptyAddBtn');
         if (eb) eb.onclick = () => openQModal(0);
         el('pQEmpty').style.display = qs.length ? 'none' : 'block';
+        renderQPager(total, totalPages);
+    }
+
+    /* 题库管理题目列表分页条 */
+    function renderQPager(total, totalPages) {
+        const host = el('pQPager');
+        if (!host) return;
+        host.style.display = total ? '' : 'none';
+        el('pQPagerInfo').textContent = `共 ${total} 道 · 第 ${state.mgQPage} / ${totalPages} 页`;
+        const sizeSel = el('pQPagerSize');
+        sizeSel.value = String(state.mgQPageSize);
+        sizeSel.onchange = () => {
+            state.mgQPageSize = Number(sizeSel.value);
+            state.mgQPage = 1;
+            renderManage();
+        };
+        el('pQPrev').onclick = () => { if (state.mgQPage > 1) { state.mgQPage--; renderManage(); } };
+        el('pQNext').onclick = () => { if (state.mgQPage < totalPages) { state.mgQPage++; renderManage(); } };
     }
 
     async function loadQuestions(bankId) {

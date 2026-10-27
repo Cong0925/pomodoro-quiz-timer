@@ -386,6 +386,17 @@
                                 <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:70px">答案</th><th style="width:70px">难度</th><th style="width:90px">操作</th></tr></thead>
                                 <tbody id="pQTbody"></tbody>
                             </table>
+                            <div class="p-pager" id="pQPager" hidden>
+                                <span id="pQPagerInfo"></span>
+                                <select id="pQPagerSize">
+                                    <option value="10">10 条/页</option>
+                                    <option value="20" selected>20 条/页</option>
+                                    <option value="50">50 条/页</option>
+                                    <option value="100">100 条/页</option>
+                                </select>
+                                <button class="df-btn small" id="pQPrev">上一页</button>
+                                <button class="df-btn small" id="pQNext">下一页</button>
+                            </div>
                             <div class="p-empty" id="pQEmpty">
                                 <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h2"/></svg>
                                 <p>该题库暂无题目</p>
@@ -475,6 +486,17 @@
                                 <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:64px">题型</th><th style="width:64px">难度</th><th style="width:130px">答案</th><th style="width:64px">类型</th><th style="width:96px">操作</th></tr></thead>
                                 <tbody id="mMgTbody"></tbody>
                             </table>
+                            <div class="p-pager" id="mMgPager" hidden>
+                                <span id="mMgPagerInfo"></span>
+                                <select id="mMgPagerSize">
+                                    <option value="10">10 条/页</option>
+                                    <option value="20" selected>20 条/页</option>
+                                    <option value="50">50 条/页</option>
+                                    <option value="100">100 条/页</option>
+                                </select>
+                                <button class="df-btn small" id="mMgPrev">上一页</button>
+                                <button class="df-btn small" id="mMgNext">下一页</button>
+                            </div>
                             <div class="p-empty" id="mMgEmpty" hidden>
                                 <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h2"/></svg>
                                 <p id="mMgEmptyText">该筛选下暂无题目</p>

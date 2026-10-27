@@ -2289,6 +2289,11 @@ button:hover {
 .m-fill-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; cursor: pointer; user-select: none; padding-top: 6px; }
 .m-fill-chk input { width: 15px; height: 15px; accent-color: #2563eb; }
 .m-opt-del { margin-left: 2px; }
+/* 题库管理分页条 */
+.p-pager { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 12px 4px 0; font-size: 13px; color: #6b7280; flex-wrap: wrap; }
+.p-pager select { padding: 5px 8px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; background: #fff; color: #374151; font-family: inherit; }
+.p-pager .df-btn { padding: 5px 12px; font-size: 13px; }
+.p-pager .df-btn:disabled { opacity: .5; cursor: not-allowed; }
 .p-bank-panel { padding: 16px 14px; }
 .p-bank-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .p-bank-filter { display: flex; flex-direction: column; gap: 8px; padding: 2px 0 12px; }

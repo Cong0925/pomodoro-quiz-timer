@@ -80,7 +80,7 @@
         stats: null,
         timer: null,
         /* 题库管理状态 */
-        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: false, editId: 0 }
+        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: false, editId: 0, page: 1, pageSize: 20 }
     };
 
     function el(id) { return document.getElementById(id); }
@@ -637,14 +637,21 @@
         el('mMgPath').textContent = mg.tagSel === 'all' ? '' : mg.tagSel;
         el('mMgStat').textContent = list.length + ' 道题 · 题库共 ' + state.mg.all.length + ' 道';
 
+        /* 分页切片 */
+        const total = list.length;
+        const totalPages = Math.max(1, Math.ceil(total / mg.pageSize));
+        if (mg.page > totalPages) mg.page = totalPages;
+        if (mg.page < 1) mg.page = 1;
+        const pageList = list.slice((mg.page - 1) * mg.pageSize, mg.page * mg.pageSize);
+
         const diffMap = { 1: ['简单', 'p-diff-1'], 2: ['中等', 'p-diff-2'], 3: ['困难', 'p-diff-3'] };
         const tbody = el('mMgTbody');
-        tbody.innerHTML = list.map((q, i) => {
+        tbody.innerHTML = pageList.map((q, i) => {
             const dm = diffMap[q.difficulty] || diffMap[2];
             const ansTxt = q.fillable ? String(q.options[0] != null ? q.options[0] : q.answer)
                 : (q.options[Number(q.answer)] !== undefined ? String(q.options[Number(q.answer)]) : String(q.answer));
             return `<tr class="${q.active ? '' : 'm-q-inactive'}">
-                <td class="p-q-no">${i + 1}</td>
+                <td class="p-q-no">${(mg.page - 1) * mg.pageSize + i + 1}</td>
                 <td class="p-q-stem-cell" title="${U.escapeHtml(q.stem)}">${U.escapeHtml(q.stem.split('\n')[0])}</td>
                 <td>${TYPES[q.qtype] ? TYPES[q.qtype].n : q.qtype}</td>
                 <td><span class="p-diff ${dm[1]}"><i></i>${dm[0]}</span></td>
@@ -664,8 +671,26 @@
             else if (x.dataset.act === 'del') delMgQ(id);
             else toggleMgQ(id, true);
         }; });
-        el('mMgEmpty').style.display = list.length ? 'none' : 'block';
+        el('mMgEmpty').style.display = total ? 'none' : 'block';
         el('mMgEmptyText').textContent = state.mg.all.length === 0 ? '题库暂无题目' : '该筛选下暂无题目';
+        renderMgPager(total, totalPages);
+    }
+
+    /* 分页条：页大小切换 + 上一页/下一页 */
+    function renderMgPager(total, totalPages) {
+        const host = el('mMgPager');
+        if (!host) return;
+        host.style.display = total ? '' : 'none';
+        el('mMgPagerInfo').textContent = `共 ${total} 道 · 第 ${state.mg.page} / ${totalPages} 页`;
+        const sizeSel = el('mMgPagerSize');
+        sizeSel.value = String(state.mg.pageSize);
+        sizeSel.onchange = () => {
+            state.mg.pageSize = Number(sizeSel.value);
+            state.mg.page = 1;
+            renderManageFilter();
+        };
+        el('mMgPrev').onclick = () => { if (state.mg.page > 1) { state.mg.page--; renderManageFilter(); } };
+        el('mMgNext').onclick = () => { if (state.mg.page < totalPages) { state.mg.page++; renderManageFilter(); } };
     }
 
     /* ---------- 管理弹窗：新增 / 编辑 ---------- */
