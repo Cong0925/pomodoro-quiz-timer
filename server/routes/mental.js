@@ -22,11 +22,11 @@ async function ensureSeed() {
     const vals = [];
     const params = [];
     SEED_QUESTIONS.forEach(q => {
-        vals.push('(?,?,?,?,?,?,?,?)');
-        params.push(q.qtype, q.difficulty, q.stem, JSON.stringify(q.options), String(q.answer), q.tip, q.tag || '', 1);
+        vals.push('(?,?,?,?,?,?,?,?,?)');
+        params.push(q.qtype, q.difficulty, q.stem, JSON.stringify(q.options), String(q.answer), q.tip, q.tag || '', 1, q.fillable ? 1 : 0);
     });
     await pool.query(
-        `INSERT INTO mental_questions (qtype, difficulty, stem, options, answer, tip, tag, active)
+        `INSERT INTO mental_questions (qtype, difficulty, stem, options, answer, tip, tag, active, fillable)
          VALUES ${vals.join(',')}`,
         params
     );
@@ -44,14 +44,16 @@ function shuffle(arr) {
 
 /* 随机抽题：mixed 时三类各取 1/3 轮转，其余按题型抽；
    exclude 传 Set 可排除已出题目（无限流用）；
+   fillOnly=true 仅抽可填空题（fillable=1，百化分常规几分之一型）；
    某题型一轮出尽后，只对该题型循环随机补齐（允许与已出重复），不影响其他题型 */
-async function pickQuestions(qtype, difficulty, count, exclude) {
+async function pickQuestions(qtype, difficulty, count, exclude, fillOnly) {
     const where = ['active=1'];
     const params = [];
     if (difficulty >= 1 && difficulty <= 3) {
         where.push('difficulty=?');
         params.push(difficulty);
     }
+    if (fillOnly) where.push('fillable=1');
     const types = qtype === 'mixed' ? ['percent', 'compare', 'estimate'] : [qtype];
     const per = qtype === 'mixed' ? Math.ceil(count / 3) : count;
     const excl = exclude && exclude.size ? exclude : null;
@@ -76,18 +78,45 @@ async function pickQuestions(qtype, difficulty, count, exclude) {
     return shuffle(ids).slice(0, count);
 }
 
-/* 拉取一批题目详情（保持抽题顺序） */
-async function fetchQuestions(ids) {
+/* 拉取一批题目详情（保持抽题顺序）；fillOnly 时计算填空题方向与期望答案 */
+async function fetchQuestions(ids, fillOnly) {
     if (!ids.length) return [];
     const ph = ids.map(() => '?').join(',');
     const [qs] = await pool.query(
-        `SELECT id, qtype, difficulty, stem, options FROM mental_questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
+        `SELECT id, qtype, difficulty, stem, options, answer FROM mental_questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
         [...ids, ...ids]
     );
     return qs.map(q => ({
         id: q.id, qtype: q.qtype, difficulty: q.difficulty,
-        stem: q.stem, options: fmtRecordOpts(q.options)
+        stem: q.stem, options: fmtRecordOpts(q.options),
+        ...(fillOnly ? fillMeta(q) : {})
     }));
+}
+
+/* 填空题元信息：由正确答案文本推导
+   - 答案形如 "1/8" → fillDir='den'（题干是百分数，填分母，如 12.5% → 8）
+   - 答案形如 "14.3%" → fillDir='pct'（题干是分数，填百分数数值，如 1/7 → 14.3，百分号固定）
+   fillExpected 为规范答案字符串（如 "8" / "14.3"），同时作为 records 快照与判题基准 */
+function fillMeta(q) {
+    const opts = fmtRecordOpts(q.options);
+    const ansTxt = opts[num(q.answer)] !== undefined ? String(opts[num(q.answer)]) : String(q.answer || '');
+    const frac = ansTxt.match(/^1\/(\d+)$/);
+    if (frac) return { fillDir: 'den', fillExpected: frac[1] };
+    const pct = ansTxt.match(/^([\d.]+)%$/);
+    if (pct) return { fillDir: 'pct', fillExpected: pct[1] };
+    return { fillDir: 'pct', fillExpected: ansTxt.replace(/[^\d.]/g, '') || '0' };
+}
+
+/* 填空题判对：四舍五入到 1 位小数一致
+   - den（填分母）：整数必须精确
+   - pct（填百分数）：round1(输入) === round1(期望) */
+function fillCheck(input, q) {
+    const { fillDir, fillExpected } = fillMeta(q);
+    const n = parseFloat(input);
+    if (!isFinite(n)) return false;
+    if (fillDir === 'den') return String(Math.round(n)) === fillExpected;
+    const e = parseFloat(fillExpected);
+    return Math.round(n * 10) / 10 === Math.round(e * 10) / 10;
 }
 
 /* 格式化单题（供历史回看：映射选项下标 → 文本） */
@@ -98,31 +127,35 @@ function fmtRecordOpts(opts) {
 
 /* ---------- 练习会话 ---------- */
 
-/* POST /api/mental/start { qtype, difficulty, count }
+/* POST /api/mental/start { qtype, difficulty, count, answerMode }
    count<=0 表示无限流：total_count=0，首批 10 题，答完通过 /:id/more 循环续题；
-   定量模式 count 1~30。返回题目不含答案与技巧（作答接口才返回） */
+   定量模式 count 1~30。返回题目不含答案与技巧（作答接口才返回）；
+   answerMode=fill 仅对百化分生效：抽常规几分之一型填空题（fillable=1） */
 router.post('/start', asyncHandler(async (req, res) => {
     await ensureSeed();
     const qtype = VALID_TYPES.includes(req.body && req.body.qtype) ? req.body.qtype : 'mixed';
     const difficulty = num(req.body && req.body.difficulty);
     const count = num(req.body && req.body.count);
+    const answerMode = (req.body && req.body.answerMode === 'fill' && qtype === 'percent') ? 'fill' : 'choice';
     const infinite = count <= 0;
     const want = infinite ? 10 : Math.min(30, Math.max(1, count));
+    const fillOnly = answerMode === 'fill';
 
-    const ids = await pickQuestions(qtype, difficulty, want, null);
+    const ids = await pickQuestions(qtype, difficulty, want, null, fillOnly);
     if (ids.length === 0) return res.status(400).json({ error: '该题型暂无题目，请联系开发者补充内置题库' });
 
     const [r] = await pool.query(
-        `INSERT INTO mental_sessions (qtype, qtype_name, difficulty, total_count)
-         VALUES (?,?,?,?)`,
-        [qtype, TYPE_NAMES[qtype], difficulty, infinite ? 0 : ids.length]
+        `INSERT INTO mental_sessions (qtype, qtype_name, difficulty, answer_mode, total_count)
+         VALUES (?,?,?,?,?)`,
+        [qtype, TYPE_NAMES[qtype], difficulty, answerMode, infinite ? 0 : ids.length]
     );
     const sessionId = r.insertId;
-    const questions = await fetchQuestions(ids);
+    const questions = await fetchQuestions(ids, fillOnly);
     res.status(201).json({
         sessionId,
         qtype,
         qtypeName: TYPE_NAMES[qtype],
+        answerMode,
         total: infinite ? 0 : questions.length,
         infinite: !!infinite,
         questions
@@ -139,11 +172,12 @@ router.post('/:id/more', asyncHandler(async (req, res) => {
 
     const [used] = await pool.query('SELECT question_id FROM mental_records WHERE session_id=?', [sessionId]);
     const excl = new Set(used.map(x => Number(x.question_id)));
+    const fillOnly = s[0].answer_mode === 'fill';
     /* 优先出未做过的；某题型轮完后 pickQuestions 内部自动循环补齐 */
-    const ids = await pickQuestions(s[0].qtype, s[0].difficulty, 10, excl);
+    const ids = await pickQuestions(s[0].qtype, s[0].difficulty, 10, excl, fillOnly);
     if (ids.length === 0) return res.status(400).json({ error: '题库暂无题目，请联系开发者补充内置题库' });
 
-    res.json({ questions: await fetchQuestions(ids) });
+    res.json({ questions: await fetchQuestions(ids, fillOnly) });
 }));
 
 /* POST /api/mental/:id/answer { no, questionId, answer, ms }
@@ -156,8 +190,9 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
     const questionId = num(req.body && req.body.questionId);
     if (!no) return res.status(400).json({ error: '缺少题号' });
 
-    const [sRows] = await pool.query('SELECT id FROM mental_sessions WHERE id=?', [sessionId]);
+    const [sRows] = await pool.query('SELECT id, answer_mode FROM mental_sessions WHERE id=?', [sessionId]);
     if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
+    const fillMode = sRows[0].answer_mode === 'fill';
     const [ex] = await pool.query('SELECT id FROM mental_records WHERE session_id=? AND no=?', [sessionId, no]);
     if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
 
@@ -165,15 +200,16 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
         'SELECT id, qtype, stem, options, answer, tip FROM mental_questions WHERE id=?', [questionId]);
     if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
 
-    const correct = userAnswer === str(q[0].answer, 50);
+    const correct = fillMode ? fillCheck(userAnswer, q[0]) : userAnswer === str(q[0].answer, 50);
+    const recordAnswer = fillMode ? fillMeta(q[0]).fillExpected : str(q[0].answer, 50);
     const result = correct ? 'ok' : 'ng';
     const now = nowDateTime();
     await pool.query(
         `INSERT INTO mental_records
             (session_id, question_id, no, qtype, stem, options, answer, tip, user_answer, result, ms, answered_at)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [sessionId, questionId, no, q[0].qtype, q[0].stem, JSON.stringify(q[0].options),
-         str(q[0].answer, 50), q[0].tip || '', userAnswer || null, result, ms, now]
+        [sessionId, questionId, no, q[0].qtype, q[0].stem, JSON.stringify(fillMode ? [] : q[0].options),
+         recordAnswer, q[0].tip || '', userAnswer || null, result, ms, now]
     );
     await pool.query(
         `UPDATE mental_sessions SET done_count = done_count + 1,
@@ -181,7 +217,12 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
          WHERE id=?`, [sessionId]
     );
     const opts = fmtRecordOpts(q[0].options);
-    res.json({
+    res.json(fillMode ? {
+        result,
+        correctIndex: null,
+        correctAnswer: recordAnswer,
+        tip: q[0].tip || ''
+    } : {
         result,
         correctIndex: num(q[0].answer),
         correctAnswer: opts[num(q[0].answer)] !== undefined ? opts[num(q[0].answer)] : str(q[0].answer, 50),
@@ -200,21 +241,29 @@ router.post('/:id/skip', asyncHandler(async (req, res) => {
     const [ex] = await pool.query('SELECT id FROM mental_records WHERE session_id=? AND no=?', [sessionId, no]);
     if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
 
+    const [sRows] = await pool.query('SELECT id, answer_mode FROM mental_sessions WHERE id=?', [sessionId]);
+    const fillMode = sRows.length > 0 && sRows[0].answer_mode === 'fill';
     const [q] = await pool.query(
         'SELECT id, qtype, stem, options, answer, tip FROM mental_questions WHERE id=?', [questionId]);
     if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
 
+    const recordAnswer = fillMode ? fillMeta(q[0]).fillExpected : str(q[0].answer, 50);
     const now = nowDateTime();
     await pool.query(
         `INSERT INTO mental_records
             (session_id, question_id, no, qtype, stem, options, answer, tip, user_answer, result, ms, answered_at)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [sessionId, questionId, no, q[0].qtype, q[0].stem, JSON.stringify(q[0].options),
-         str(q[0].answer, 50), q[0].tip || '', null, 'skip', ms, now]
+        [sessionId, questionId, no, q[0].qtype, q[0].stem, JSON.stringify(fillMode ? [] : q[0].options),
+         recordAnswer, q[0].tip || '', null, 'skip', ms, now]
     );
     await pool.query('UPDATE mental_sessions SET skipped_count = skipped_count + 1 WHERE id=?', [sessionId]);
     const opts = fmtRecordOpts(q[0].options);
-    res.json({
+    res.json(fillMode ? {
+        result: 'skip',
+        correctIndex: null,
+        correctAnswer: recordAnswer,
+        tip: q[0].tip || ''
+    } : {
         result: 'skip',
         correctIndex: num(q[0].answer),
         correctAnswer: opts[num(q[0].answer)] !== undefined ? opts[num(q[0].answer)] : str(q[0].answer, 50),

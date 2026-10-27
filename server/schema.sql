@@ -268,6 +268,7 @@ CREATE TABLE IF NOT EXISTS mental_questions (
     tip         TEXT         NOT NULL COMMENT '速算技巧提示/解析',
     tag         VARCHAR(50)  NOT NULL DEFAULT '' COMMENT '技巧标签（如 百化分-1/7 / 交叉相乘）',
     active      TINYINT(1)   NOT NULL DEFAULT 1 COMMENT '是否启用 1=启用 0=停用',
+    fillable    TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '是否可填空 1=常规几分之一型（仅百化分） 0=仅选择题',
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -286,6 +287,7 @@ CREATE TABLE IF NOT EXISTS mental_sessions (
     qtype         VARCHAR(16)  NOT NULL COMMENT '题型 percent/compare/estimate/mixed',
     qtype_name    VARCHAR(20)  NOT NULL DEFAULT '' COMMENT '题型显示名快照（百化分/分数比大小/估算值/综合练习）',
     difficulty    TINYINT      NOT NULL DEFAULT 0 COMMENT '难度筛选 0不限 1易 2中 3难',
+    answer_mode   VARCHAR(8)   NOT NULL DEFAULT 'choice' COMMENT '做题类型 choice=选择题 fill=填空题',
     total_count   INT          NOT NULL DEFAULT 0 COMMENT '本轮题量',
     done_count    INT          NOT NULL DEFAULT 0 COMMENT '已作答（对+错，不含跳过）',
     correct_count INT          NOT NULL DEFAULT 0 COMMENT '答对题数',
@@ -336,8 +338,13 @@ CREATE TABLE IF NOT EXISTS mental_records (
 -- ============================================================
 
 -- ============================================================
--- 扩展预留说明（后续按需追加，不影响现有表）：
---  · 若要支持"历史软删除"，可给 rounds 增加 deleted_at DATETIME NULL
---  · 若要支持"一天多条备忘"，可把 memos 主键改为自增 id + memo_date 索引
---  · 若要支持用户/多端，可增加 users 表并给业务表加 user_id 外键
+-- 迁移段（幂等）：为已存在的旧表补充新列
+-- 通过 information_schema 检查，列不存在时才 ALTER，可重复执行
 -- ============================================================
+SET @c1 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'mental_questions' AND column_name = 'fillable');
+SET @s1 := IF(@c1 = 0, 'ALTER TABLE mental_questions ADD COLUMN fillable TINYINT(1) NOT NULL DEFAULT 0 COMMENT ''是否可填空 1=常规几分之一型（仅百化分） 0=仅选择题'' AFTER active', 'SELECT 1');
+PREPARE st1 FROM @s1; EXECUTE st1; DEALLOCATE PREPARE st1;
+
+SET @c2 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'mental_sessions' AND column_name = 'answer_mode');
+SET @s2 := IF(@c2 = 0, 'ALTER TABLE mental_sessions ADD COLUMN answer_mode VARCHAR(8) NOT NULL DEFAULT ''choice'' COMMENT ''做题类型 choice=选择题 fill=填空题'' AFTER difficulty', 'SELECT 1');
+PREPARE st2 FROM @s2; EXECUTE st2; DEALLOCATE PREPARE st2;

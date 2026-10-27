@@ -40,6 +40,11 @@
     const INFINITE = 0;
     const BATCH_SIZE = 10;                    // 无限流单批题量
     const DIFF_NAMES = { 0: '不限难度', 1: '简单', 2: '中等', 3: '困难' };
+    /* 做题类型：选择题（四选一） / 填空题（仅百化分，常规几分之一型） */
+    const MODES = [
+        { k: 'choice', n: '选择题', d: '四选一，选项辅助判断' },
+        { k: 'fill', n: '填空题', d: '直接填写：12.5% 填 8，1/9 填 11.1' }
+    ];
 
     /* 百化分速查表（1/2 ~ 1/20，用于技巧手册） */
     const PERCENT_TABLE = [
@@ -55,7 +60,8 @@
         type: 'percent',
         count: COUNT_OPTIONS[0],
         diff: 0,
-        run: null,            // 运行中会话 { sessionId, qtype, qtypeName, questions, idx, ok, ng, skip, answers, startTs, itemStartTs, phase, finished }
+        answerMode: 'choice',
+        run: null,            // 运行中会话 { sessionId, qtype, qtypeName, answerMode, questions, idx, ok, ng, skip, answers, startTs, itemStartTs, phase, finished }
         recPage: 1, recTotal: 0,
         stats: null,
         timer: null
@@ -85,7 +91,7 @@
             el('mPaneRun').hidden = ph !== 'run';
             el('mPaneResult').hidden = ph !== 'result';
         }
-        if (mtab === TABS.START) { renderTypes(); renderCounts(); renderDiffs(); updateStartBtn(); }
+        if (mtab === TABS.START) { renderTypes(); renderCounts(); renderDiffs(); renderModeRow(); updateStartBtn(); }
         if (mtab === TABS.MANUAL) renderManual();
         if (mtab === TABS.RECORDS) { renderStatsBar(); renderRecords(true); }
     }
@@ -104,14 +110,32 @@
             </div>`).join('');
         grid.querySelectorAll('.m-type-card').forEach(x => x.addEventListener('click', () => {
             state.type = x.dataset.k;
-            renderTypes(); updateStartBtn();
+            renderTypes(); renderModeRow(); updateStartBtn();
+        }));
+    }
+
+    /* 做题类型：仅百化分可选（填空题面向常规几分之一型）；其他题型固定选择题 */
+    function renderModeRow() {
+        const title = el('mModeTitle');
+        const row = el('mModeRow');
+        if (!title || !row) return;
+        const visible = state.type === 'percent';
+        title.hidden = !visible;
+        row.hidden = !visible;
+        if (!visible) return;
+        row.innerHTML = MODES.map(m => `
+            <div class="p-mode-chip ${state.answerMode === m.k ? 'selected' : ''}" data-k="${m.k}">
+                <b>${m.n}</b><span>${m.d}</span>
+            </div>`).join('');
+        row.querySelectorAll('.p-mode-chip').forEach(x => x.addEventListener('click', () => {
+            state.answerMode = x.dataset.k; renderModeRow();
         }));
     }
 
     function renderCounts() {
         const row = el('mCountRow');
         if (!COUNT_OPTIONS.includes(state.count)) state.count = COUNT_OPTIONS[0];
-        row.innerHTML = COUNT_OPTIONS.map(c => `<button class="p-count-btn ${state.count === c ? 'selected' : ''}" data-c="${c}">${c === INFINITE ? '∞ 无限' : c}</button>`).join('');
+        row.innerHTML = COUNT_OPTIONS.map(c => `<button class="p-count-btn ${state.count === c ? 'selected' : ''}" data-c="${c}">${c === INFINITE ? '∞' : c}</button>`).join('');
         row.querySelectorAll('.p-count-btn').forEach(x => x.addEventListener('click', () => {
             state.count = Number(x.dataset.c); renderCounts(); updateStartBtn();
         }));
@@ -129,18 +153,20 @@
     }
 
     function updateStartBtn() {
+        const fillNote = (state.type === 'percent' && state.answerMode === 'fill') ? '（填空题：直接填数字）' : '';
         el('mStartTip').textContent = state.count === INFINITE
-            ? `「${TYPES[state.type].n}」不限题量 · 循环随机抽题，答完自动续题，随时可结束`
-            : `将抽取 ${state.count} 道「${TYPES[state.type].n}」题，答完即时判对错并给出技巧`;
+            ? `「${TYPES[state.type].n}」不限题量 · 循环随机抽题，答完自动续题，随时可结束${fillNote}`
+            : `将抽取 ${state.count} 道「${TYPES[state.type].n}」题，答完即时判对错并给出技巧${fillNote}`;
     }
 
     async function startRun() {
         try {
             const r = await api.post('/api/mental/start', {
-                qtype: state.type, difficulty: state.diff, count: state.count
+                qtype: state.type, difficulty: state.diff, count: state.count, answerMode: state.answerMode
             });
             state.run = {
                 sessionId: r.sessionId, qtype: r.qtype, qtypeName: r.qtypeName,
+                answerMode: r.answerMode || 'choice',
                 infinite: !!r.infinite, total: r.total,
                 questions: r.questions, idx: 0, ok: 0, ng: 0, skip: 0,
                 answers: [], startTs: Date.now(), phase: 'run', finished: false
@@ -148,7 +174,7 @@
             el('mPaneStart').hidden = true;
             el('mPaneResult').hidden = true;
             el('mPaneRun').hidden = false;
-            el('mRunTitle').textContent = r.qtypeName;
+            el('mRunTitle').textContent = r.qtypeName + (state.run.answerMode === 'fill' ? ' · 填空题' : '');
             el('mRunMeta').textContent = '速算练习 · ' + (DIFF_NAMES[state.diff] || '不限难度') +
                 (state.run.infinite ? ' · 无限流（循环抽题）' : ' · 共 ' + r.total + ' 题');
             startClock();
@@ -207,17 +233,45 @@
 
         const list = el('mOptList');
         const opts = Array.isArray(q.options) && q.options.length ? q.options : [];
+        const fillMode = state.run.answerMode === 'fill';
         list.innerHTML = opts.map((t, i) => {
             const label = String.fromCharCode(65 + i);
             return `<div class="p-opt-item" data-k="${i}"><span class="p-opt-label">${label}</span><span class="p-opt-text">${U.escapeHtml(String(t))}</span></div>`;
         }).join('');
         list.querySelectorAll('.p-opt-item').forEach(x => x.addEventListener('click', () => answer(Number(x.dataset.k))));
+        list.hidden = fillMode;
+
+        /* 填空题：百分数→填分母(1/?)；分数→填百分数数值(?%)，百分号固定 */
+        const fillRow = el('mFillRow');
+        if (fillMode) {
+            const prefix = el('mFillPrefix'), suffix = el('mFillSuffix'), input = el('mFillInput');
+            prefix.textContent = q.fillDir === 'den' ? '1/' : '';
+            suffix.hidden = q.fillDir !== 'pct';
+            input.placeholder = q.fillDir === 'den' ? '填分母（如 12.5% 填 8）' : '填百分数数值（如 1/9 填 11.1）';
+            input.value = '';
+            fillRow.hidden = false;
+            input.focus();
+        } else {
+            fillRow.hidden = true;
+        }
 
         state.run.itemStartTs = Date.now();
         el('mAnalysis').hidden = true;
         el('mSkipBtn').hidden = false;
         el('mNextBtn').hidden = true;
         el('mEndBtn').hidden = !state.run.infinite;
+    }
+
+    /* 填空题提交：校验数字（整数或 1 位小数），调用统一判题接口 */
+    async function answerFill() {
+        const input = el('mFillInput');
+        const val = String(input.value || '').trim();
+        if (!/^\d+(\.\d+)?$/.test(val)) {
+            U.showToast('请输入数字（如 8 或 11.1）', 'error');
+            input.focus();
+            return;
+        }
+        await answer(val);
     }
 
     async function answer(k) {
@@ -258,19 +312,24 @@
 
     function renderResult(my, correctAnswer, correctIndex, tip, result) {
         const list = el('mOptList');
-        [...list.querySelectorAll('.p-opt-item')].forEach(x => {
-            x.disabled = true;
-            const k = Number(x.dataset.k);
-            const correctIdx = Number(correctIndex);
-            if (k === correctIdx && !Number.isNaN(correctIdx)) x.classList.add('correct');
-            else if (k === my) x.classList.add('wrong');
-            else x.classList.add('dim');
-        });
+        const fillMode = state.run.answerMode === 'fill';
+        if (!fillMode) {
+            [...list.querySelectorAll('.p-opt-item')].forEach(x => {
+                x.disabled = true;
+                const k = Number(x.dataset.k);
+                const correctIdx = Number(correctIndex);
+                if (k === correctIdx && !Number.isNaN(correctIdx)) x.classList.add('correct');
+                else if (k === my) x.classList.add('wrong');
+                else x.classList.add('dim');
+            });
+        }
+        el('mFillRow').hidden = true;
         const ab = el('mAnalysis');
         ab.hidden = false;
         const head = result === 'ok' ? '回答正确' : result === 'skip' ? '本题跳过' : '回答错误';
+        const myHtml = fillMode ? `你填：<b>${U.escapeHtml(my == null ? '—' : my)}</b> · ` : '';
         const tipHtml = tip ? `<div class="p-analysis-body" style="margin-top:4px">技巧：${U.escapeHtml(tip)}</div>` : '';
-        ab.innerHTML = `<div class="p-analysis-title">${head} · 正确答案：${U.escapeHtml(correctAnswer || '—')}</div>${tipHtml}`;
+        ab.innerHTML = `<div class="p-analysis-title">${head} · ${myHtml}正确答案：${U.escapeHtml(correctAnswer || '—')}</div>${tipHtml}`;
         el('mSkipBtn').hidden = true;
         el('mNextBtn').hidden = false;
     }
@@ -371,7 +430,7 @@
         el('mPaneResult').hidden = true;
         el('mPaneRun').hidden = true;
         el('mPaneStart').hidden = false;
-        renderTypes(); renderCounts(); renderDiffs(); updateStartBtn();
+        renderTypes(); renderCounts(); renderDiffs(); renderModeRow(); updateStartBtn();
     }
 
     /* ---------- 练习记录 ---------- */
@@ -408,7 +467,7 @@
         inner.innerHTML = data.list.map(r => `
             <div class="m-session-item" data-id="${r.id}">
                 <div class="m-si-main">
-                    <div class="m-si-title">${U.escapeHtml(r.qtype_name)}<span class="p-rec-sub"> · ${DIFF_NAMES[r.difficulty] || '不限难度'} · ${r.started_at || ''}</span></div>
+                    <div class="m-si-title">${U.escapeHtml(r.qtype_name)}${r.answer_mode === 'fill' ? ' · 填空题' : ''}<span class="p-rec-sub"> · ${DIFF_NAMES[r.difficulty] || '不限难度'} · ${r.started_at || ''}</span></div>
                     <div class="m-si-meta">${r.total_count === 0 ? '∞ 无限流' : '共 ' + r.total_count + ' 题'} · 对 ${r.correct_count} · 错 ${r.wrong_count} · 跳 ${r.skipped_count} · 用时 ${U.formatMs(r.total_ms)}</div>
                 </div>
                 <span class="m-si-rate ${r.rate < 60 ? 'low' : ''}">${r.rate}%</span>
@@ -447,13 +506,16 @@
             r = await api.get('/api/mental/history/' + id);
         } catch (e) { U.showToast('明细加载失败：' + e.message, 'error'); return; }
         const s = r.session;
+        const fillSess = s.answer_mode === 'fill';
         const body = document.createElement('div');
         body.className = 'm-rec-detail';
         body.innerHTML = `
-            <div class="p-rec-summary">${s.total_count === 0 ? '∞ 无限流' : '共 ' + s.total_count + ' 题'} · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 正确率 ${s.rate}% · 用时 ${U.formatMs(s.total_ms)}</div>
+            <div class="p-rec-summary">${s.total_count === 0 ? '∞ 无限流' : '共 ' + s.total_count + ' 题'} · ${fillSess ? '填空题' : '选择题'} · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 正确率 ${s.rate}% · 用时 ${U.formatMs(s.total_ms)}</div>
             <div class="m-rec-grid">
             ${r.records.map(d => {
-                const ca = d.answer != null && d.options[d.answer] != null ? d.options[d.answer] : '—';
+                const ca = fillSess
+                    ? (d.answer != null ? String(d.answer) : '—')
+                    : (d.answer != null && d.options[d.answer] != null ? d.options[d.answer] : '—');
                 const tipHtml = d.tip ? `<div class="m-rc-tip">技巧：${U.escapeHtml(d.tip)}</div>` : '';
                 return `
                 <div class="m-rec-cell p-rd-${d.result}">
@@ -499,6 +561,10 @@
     el('mEndBtn').addEventListener('click', endRun);
     el('mReplayBtn').addEventListener('click', () => { el('mPaneResult').hidden = true; startRun(); });
     el('mBackBtn').addEventListener('click', backToStart);
+    el('mFillBtn').addEventListener('click', answerFill);
+    el('mFillInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); answerFill(); }
+    });
 
     /* 暴露给 app.js */
     PQ.mental = { enter, switchTab };

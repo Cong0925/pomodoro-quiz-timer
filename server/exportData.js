@@ -80,13 +80,13 @@ async function exportAll(conn) {
 
     /* 速算练习数据 */
     const [mq] = await conn.query(
-        'SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active FROM mental_questions ORDER BY id');
+        'SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active, fillable FROM mental_questions ORDER BY id');
     const mentalQuestions = mq.map(x => ({
         id: x.id, qtype: x.qtype, difficulty: x.difficulty, stem: x.stem,
-        options: x.options, answer: x.answer, tip: x.tip, tag: x.tag, active: !!x.active
+        options: x.options, answer: x.answer, tip: x.tip, tag: x.tag, active: !!x.active, fillable: !!x.fillable
     }));
     const [ms] = await conn.query(
-        `SELECT id, qtype, qtype_name, difficulty, total_count, done_count, correct_count,
+        `SELECT id, qtype, qtype_name, difficulty, answer_mode, total_count, done_count, correct_count,
                 wrong_count, skipped_count, rate, total_ms, started_at, finished_at
          FROM mental_sessions ORDER BY id`);
     const [mr] = await conn.query(
@@ -99,6 +99,7 @@ async function exportAll(conn) {
     mr.forEach(r => { mrMap[r.session_id] = parseJsonArray(r.recs); });
     const mentalSessions = ms.map(x => ({
         id: x.id, qtype: x.qtype, qtypeName: x.qtype_name, difficulty: x.difficulty,
+        answerMode: x.answer_mode,
         totalCount: x.total_count, doneCount: x.done_count, correctCount: x.correct_count,
         wrongCount: x.wrong_count, skippedCount: x.skipped_count, rate: x.rate, totalMs: x.total_ms,
         startedAt: x.started_at, finishedAt: x.finished_at, records: mrMap[x.id] || []

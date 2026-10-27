@@ -260,14 +260,15 @@ async function importData(conn, data) {
                 const chunk = mqs.slice(i, i + BATCH);
                 const vals = [], params = [];
                 chunk.forEach(q => {
-                    vals.push('(?,?,?,?,?,?,?,?,?)');
+                    vals.push('(?,?,?,?,?,?,?,?,?,?)');
                     params.push(num(q.id) || 0, str(q.qtype, 16) || 'percent',
                         Math.min(3, Math.max(1, num(q.difficulty) || 2)),
                         str(q.stem, 20000), JSON.stringify(q.options || []), str(q.answer, 50),
-                        str(q.tip, 20000), str(q.tag, 50), q.active === false ? 0 : 1);
+                        str(q.tip, 20000), str(q.tag, 50), q.active === false ? 0 : 1,
+                        q.fillable ? 1 : 0);
                 });
                 await conn.query(
-                    `INSERT INTO mental_questions (id, qtype, difficulty, stem, options, answer, tip, tag, active)
+                    `INSERT INTO mental_questions (id, qtype, difficulty, stem, options, answer, tip, tag, active, fillable)
                      VALUES ` + vals.join(','), params);
             }
             mQuestions = mqs.length;
@@ -278,15 +279,16 @@ async function importData(conn, data) {
             const chunk = sessions.slice(i, i + BATCH);
             const vals = [], params = [];
             chunk.forEach(s => {
-                vals.push('(?,?,?,?,?,?,?,?,?,?,?,?,?)');
+                vals.push('(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
                 params.push(num(s.id) || 0, str(s.qtype, 16) || 'mixed',
                     str(s.qtypeName, 20) || '', Math.min(3, Math.max(0, num(s.difficulty))),
+                    s.answerMode === 'fill' ? 'fill' : 'choice',
                     num(s.totalCount), num(s.doneCount), num(s.correctCount),
                     num(s.wrongCount), num(s.skippedCount), num(s.rate), num(s.totalMs),
                     s.startedAt || '1970-01-01 00:00:00', s.finishedAt || null);
             });
             await conn.query(
-                `INSERT INTO mental_sessions (id, qtype, qtype_name, difficulty, total_count,
+                `INSERT INTO mental_sessions (id, qtype, qtype_name, difficulty, answer_mode, total_count,
                     done_count, correct_count, wrong_count, skipped_count, rate, total_ms,
                     started_at, finished_at)
                  VALUES ` + vals.join(','), params);

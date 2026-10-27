@@ -7,21 +7,21 @@
  * ============================================================ */
 
 const QUESTIONS = [
-    /* ---------- 百化分（分数 ↔ 百分数互化） ---------- */
-    { qtype: 'percent', difficulty: 1, stem: '1/5 ≈ ?', options: ['20%', '25%', '16.7%', '12.5%'], answer: 0, tip: '1/5 = 20%。÷20% 即 ×5。', tag: '百化分-基础' },
-    { qtype: 'percent', difficulty: 1, stem: '1/4 ≈ ?', options: ['25%', '20%', '33.3%', '12.5%'], answer: 0, tip: '1/4 = 25%。÷25% 即 ×4。', tag: '百化分-基础' },
-    { qtype: 'percent', difficulty: 1, stem: '1/6 ≈ ?', options: ['16.7%', '14.3%', '15.4%', '17.6%'], answer: 0, tip: '1/6 ≈ 16.7%。记住 6 的倒数 16.7%。', tag: '百化分-常用' },
-    { qtype: 'percent', difficulty: 1, stem: '12.5% ≈ ?', options: ['1/8', '1/7', '1/6', '1/9'], answer: 0, tip: '12.5% = 1/8。÷12.5% 即 ×8。', tag: '百化分-常用' },
-    { qtype: 'percent', difficulty: 2, stem: '1/7 ≈ ?', options: ['14.3%', '12.5%', '16.7%', '11.1%'], answer: 0, tip: '1/7 ≈ 14.3%。÷14.3% 即 ×7。', tag: '百化分-常用' },
-    { qtype: 'percent', difficulty: 2, stem: '33.3% ≈ ?', options: ['1/3', '1/4', '1/5', '1/6'], answer: 0, tip: '33.3% = 1/3。×33.3% 即 ÷3。', tag: '百化分-常用' },
-    { qtype: 'percent', difficulty: 2, stem: '1/9 ≈ ?', options: ['11.1%', '10.9%', '12.5%', '9.1%'], answer: 0, tip: '1/9 ≈ 11.1%。÷11.1% 即 ×9。', tag: '百化分-常用' },
-    { qtype: 'percent', difficulty: 2, stem: '1/11 ≈ ?', options: ['9.1%', '9.9%', '8.8%', '10.1%'], answer: 0, tip: '1/11 ≈ 9.1%。9 的倍数特征辅助记忆。', tag: '百化分-常用' },
-    { qtype: 'percent', difficulty: 2, stem: '1/12 ≈ ?', options: ['8.3%', '9.1%', '7.7%', '8.8%'], answer: 0, tip: '1/12 ≈ 8.3%。×8.3% 即 ÷12。', tag: '百化分-常用' },
-    { qtype: 'percent', difficulty: 2, stem: '62.5% ≈ ?', options: ['5/8', '3/5', '5/7', '2/3'], answer: 0, tip: '62.5% = 5/8（62.5 × 8 = 500）。', tag: '百化分-进阶' },
-    { qtype: 'percent', difficulty: 2, stem: '16.7% ≈ ?', options: ['1/6', '1/5', '1/7', '1/8'], answer: 0, tip: '16.7% = 1/6。与 1/6、33.3%、66.7% 一组记忆。', tag: '百化分-常用' },
-    { qtype: 'percent', difficulty: 2, stem: '1/13 ≈ ?', options: ['7.7%', '7.1%', '6.9%', '8.3%'], answer: 0, tip: '1/13 ≈ 7.7%。7.7 × 13 ≈ 100。', tag: '百化分-进阶' },
-    { qtype: 'percent', difficulty: 3, stem: '87.5% ≈ ?', options: ['7/8', '5/6', '6/7', '4/5'], answer: 0, tip: '87.5% = 7/8。12.5% 的 7 倍。', tag: '百化分-进阶' },
-    { qtype: 'percent', difficulty: 3, stem: '1/17 ≈ ?', options: ['5.9%', '5.3%', '6.7%', '6.25%'], answer: 0, tip: '1/17 ≈ 5.9%。17 的倒数 ≈ 5.9%。', tag: '百化分-进阶' },
+    /* ---------- 百化分（分数 ↔ 百分数互化）；fillable=1 表示常规几分之一型，可进入填空题模式 ---------- */
+    { qtype: 'percent', difficulty: 1, stem: '1/5 ≈ ?', options: ['20%', '25%', '16.7%', '12.5%'], answer: 0, tip: '1/5 = 20%。÷20% 即 ×5。', tag: '百化分-基础', fillable: 1 },
+    { qtype: 'percent', difficulty: 1, stem: '1/4 ≈ ?', options: ['25%', '20%', '33.3%', '12.5%'], answer: 0, tip: '1/4 = 25%。÷25% 即 ×4。', tag: '百化分-基础', fillable: 1 },
+    { qtype: 'percent', difficulty: 1, stem: '1/6 ≈ ?', options: ['16.7%', '14.3%', '15.4%', '17.6%'], answer: 0, tip: '1/6 ≈ 16.7%。记住 6 的倒数 16.7%。', tag: '百化分-常用', fillable: 1 },
+    { qtype: 'percent', difficulty: 1, stem: '12.5% ≈ ?', options: ['1/8', '1/7', '1/6', '1/9'], answer: 0, tip: '12.5% = 1/8。÷12.5% 即 ×8。', tag: '百化分-常用', fillable: 1 },
+    { qtype: 'percent', difficulty: 2, stem: '1/7 ≈ ?', options: ['14.3%', '12.5%', '16.7%', '11.1%'], answer: 0, tip: '1/7 ≈ 14.3%。÷14.3% 即 ×7。', tag: '百化分-常用', fillable: 1 },
+    { qtype: 'percent', difficulty: 2, stem: '33.3% ≈ ?', options: ['1/3', '1/4', '1/5', '1/6'], answer: 0, tip: '33.3% = 1/3。×33.3% 即 ÷3。', tag: '百化分-常用', fillable: 1 },
+    { qtype: 'percent', difficulty: 2, stem: '1/9 ≈ ?', options: ['11.1%', '10.9%', '12.5%', '9.1%'], answer: 0, tip: '1/9 ≈ 11.1%。÷11.1% 即 ×9。', tag: '百化分-常用', fillable: 1 },
+    { qtype: 'percent', difficulty: 2, stem: '1/11 ≈ ?', options: ['9.1%', '9.9%', '8.8%', '10.1%'], answer: 0, tip: '1/11 ≈ 9.1%。9 的倍数特征辅助记忆。', tag: '百化分-常用', fillable: 1 },
+    { qtype: 'percent', difficulty: 2, stem: '1/12 ≈ ?', options: ['8.3%', '9.1%', '7.7%', '8.8%'], answer: 0, tip: '1/12 ≈ 8.3%。×8.3% 即 ÷12。', tag: '百化分-常用', fillable: 1 },
+    { qtype: 'percent', difficulty: 2, stem: '62.5% ≈ ?', options: ['5/8', '3/5', '5/7', '2/3'], answer: 0, tip: '62.5% = 5/8（62.5 × 8 = 500）。', tag: '百化分-进阶', fillable: 0 },
+    { qtype: 'percent', difficulty: 2, stem: '16.7% ≈ ?', options: ['1/6', '1/5', '1/7', '1/8'], answer: 0, tip: '16.7% = 1/6。与 1/6、33.3%、66.7% 一组记忆。', tag: '百化分-常用', fillable: 1 },
+    { qtype: 'percent', difficulty: 2, stem: '1/13 ≈ ?', options: ['7.7%', '7.1%', '6.9%', '8.3%'], answer: 0, tip: '1/13 ≈ 7.7%。7.7 × 13 ≈ 100。', tag: '百化分-进阶', fillable: 1 },
+    { qtype: 'percent', difficulty: 3, stem: '87.5% ≈ ?', options: ['7/8', '5/6', '6/7', '4/5'], answer: 0, tip: '87.5% = 7/8。12.5% 的 7 倍。', tag: '百化分-进阶', fillable: 0 },
+    { qtype: 'percent', difficulty: 3, stem: '1/17 ≈ ?', options: ['5.9%', '5.3%', '6.7%', '6.25%'], answer: 0, tip: '1/17 ≈ 5.9%。17 的倒数 ≈ 5.9%。', tag: '百化分-进阶', fillable: 1 },
 
     /* ---------- 分数比大小（交叉相乘） ---------- */
     { qtype: 'compare', difficulty: 1, stem: '3/8 与 2/5', options: ['3/8 更大', '2/5 更大'], answer: 1, tip: '交叉相乘：3×5=15，2×8=16，15<16，故 2/5 更大。', tag: '交叉相乘' },

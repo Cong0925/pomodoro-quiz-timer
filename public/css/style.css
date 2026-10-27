@@ -2219,6 +2219,15 @@ button:hover {
 .p-q-no { font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
 .p-q-stem { font-size: 14.5px; line-height: 1.8; margin-bottom: 14px; white-space: pre-wrap; word-break: break-word; }
 .p-opt-list { display: flex; flex-direction: column; gap: 9px; }
+.p-opt-list[hidden] { display: none; }
+.m-fill-row[hidden] { display: none; }
+.m-compare-row[hidden] { display: none; }
+/* 填空题作答行：前缀/输入框/后缀/确定按钮 */
+.m-fill-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.m-fill-prefix { font-size: 20px; font-weight: 700; color: #111827; font-family: Georgia, 'Times New Roman', serif; }
+.m-fill-suffix { font-size: 20px; font-weight: 700; color: #111827; }
+#mFillInput { width: 160px; height: 42px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 18px; font-weight: 700; color: #111827; text-align: center; padding: 0 10px; outline: none; font-family: inherit; }
+#mFillInput:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
 .p-opt-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border: 1.5px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-size: 13.5px; line-height: 1.6; transition: border-color .15s, background .15s; }
 .p-opt-item:hover:not(:disabled) { border-color: #93c5fd; }
 .p-opt-item:disabled { cursor: default; }

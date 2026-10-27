@@ -428,6 +428,8 @@
                         <div class="p-mode-row" id="mDiffRow"></div>
                         <div class="p-section-title" style="margin-top:18px">题量</div>
                         <div class="p-mode-row" id="mCountRow"></div>
+                        <div class="p-section-title" style="margin-top:18px" id="mModeTitle" hidden>做题类型</div>
+                        <div class="p-mode-row" id="mModeRow" hidden></div>
                         <div class="p-start-bar">
                             <span class="p-hint" id="mStartTip">答完即时判对错，并给出速算技巧提示</span>
                             <button class="df-btn primary" id="mStartBtn">开始练习</button>
@@ -455,6 +457,12 @@
                         <div class="p-q-stem m-stem" id="mQStem"></div>
                         <div class="m-compare-row" id="mCompareRow" hidden></div>
                         <div class="p-opt-list" id="mOptList"></div>
+                        <div class="m-fill-row" id="mFillRow" hidden>
+                            <span class="m-fill-prefix" id="mFillPrefix"></span>
+                            <input type="text" id="mFillInput" inputmode="decimal" autocomplete="off" placeholder="填写答案">
+                            <span class="m-fill-suffix" id="mFillSuffix">%</span>
+                            <button class="df-btn primary" id="mFillBtn">确定</button>
+                        </div>
                         <div class="p-analysis" id="mAnalysis" hidden></div>
                         <div class="p-q-actions">
                             <button class="df-btn" id="mEndBtn" hidden>结束练习</button>
