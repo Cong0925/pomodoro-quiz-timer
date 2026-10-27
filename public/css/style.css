@@ -2244,6 +2244,9 @@ button:hover {
 /* 速算答题反馈区：判题标题 20px、技巧正文 18px（仅速算练习生效） */
 #viewMental .p-analysis-title { font-size: 20px; }
 #viewMental .p-analysis-body { font-size: 18px; }
+#viewMental .m-ok-ans { color: #16a34a; font-weight: 700; }
+#viewMental .m-skip-tag { color: #6b7280; font-weight: 400; }
+#viewMental .m-my-ans-line { font-size: 12px; font-weight: 400; color: #dc2626; margin-bottom: 2px; }
 .p-q-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 .p-skip-btn { background: #fef3c7; color: #b45309; }
 .p-skip-btn:hover { background: #fde68a; }

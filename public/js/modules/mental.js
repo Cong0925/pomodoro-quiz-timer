@@ -326,9 +326,25 @@
         el('mFillRow').hidden = true;
         const ab = el('mAnalysis');
         ab.hidden = false;
-        const head = result === 'ok' ? '回答正确' : result === 'skip' ? '本题跳过' : '回答错误';
         const tipHtml = tip ? `<div class="p-analysis-body" style="margin-top:4px">技巧：${U.escapeHtml(tip)}</div>` : '';
-        ab.innerHTML = `<div class="p-analysis-title">${head} · 正确答案：${U.escapeHtml(correctAnswer || '—')}</div>${tipHtml}`;
+        const greenAns = `<span class="m-ok-ans">正确答案：${U.escapeHtml(correctAnswer || '—')}</span>`;
+        if (result === 'ok') {
+            /* 答对：只显示绿色正确答案 */
+            ab.innerHTML = `<div class="p-analysis-title">${greenAns}</div>${tipHtml}`;
+        } else if (result === 'skip') {
+            /* 跳过：无用户答案，直接绿色正确答案 */
+            ab.innerHTML = `<div class="p-analysis-title"><span class="m-skip-tag">本题跳过</span> · ${greenAns}</div>${tipHtml}`;
+        } else {
+            /* 答错：上一行红色小号字用户答案，下一行绿色正确答案 */
+            let myTxt = my == null ? '—' : String(my);
+            if (!fillMode) {
+                const q = state.run.questions[state.run.idx];
+                const k = Number(my);
+                if (q && q.options && q.options[k] !== undefined) myTxt = String(q.options[k]);
+            }
+            ab.innerHTML = `<div class="p-analysis-title m-my-ans-line">你的答案：${U.escapeHtml(myTxt)}</div>` +
+                `<div class="p-analysis-title">${greenAns}</div>${tipHtml}`;
+        }
         el('mSkipBtn').hidden = true;
         el('mNextBtn').hidden = false;
     }
