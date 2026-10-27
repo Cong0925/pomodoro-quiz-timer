@@ -33,6 +33,7 @@ app.use('/api/stats', require('./routes/stats'));
 app.use('/api/study-daily', require('./routes/study'));
 app.use('/api/memos', require('./routes/memos'));
 app.use('/api/practice', require('./routes/practice'));
+app.use('/api/mental', require('./routes/mental'));
 app.use('/api', require('./routes/data')); // /api/export  /api/import
 
 /* ---- 前端静态文件 ---- */

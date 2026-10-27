@@ -43,11 +43,15 @@ async function importData(conn, data) {
         const chunk = rounds.slice(i, i + BATCH);
         const vals = [], params = [];
         chunk.forEach((h, k) => {
+            /* 模式白名单：single/batch/practice/mental 原样保留，其余回退 single */
+            const mode = ['single', 'batch', 'practice', 'mental'].includes(h.mode) ? h.mode : 'single';
+            const modeName = str(h.modeName, 20) ||
+                ({ single: '单题模式', batch: '整组模式', practice: '练习模式', mental: '速算练习' }[mode] || '');
             vals.push('(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
             params.push(
                 num(h.id) || Date.now() + i + k,
-                h.mode === 'batch' ? 'batch' : 'single',
-                str(h.modeName, 20) || (h.mode === 'batch' ? '整组模式' : '单题模式'),
+                mode,
+                modeName,
                 str(h.title, 100),
                 str(h.desc, 255),
                 h.date || '1970-01-01 00:00:00',
@@ -243,13 +247,84 @@ async function importData(conn, data) {
         }
     }
 
+    /* 6. 速算练习数据（文件为准替换会话/明细；题目表仅当文件含题目时替换） */
+    let mQuestions = 0, mSessions = 0;
+    if (data.mental && typeof data.mental === 'object') {
+        await conn.query('DELETE FROM mental_records');
+        await conn.query('DELETE FROM mental_sessions');
+
+        const mqs = Array.isArray(data.mental.mentalQuestions) ? data.mental.mentalQuestions : [];
+        if (mqs.length) {
+            await conn.query('DELETE FROM mental_questions');
+            for (let i = 0; i < mqs.length; i += BATCH) {
+                const chunk = mqs.slice(i, i + BATCH);
+                const vals = [], params = [];
+                chunk.forEach(q => {
+                    vals.push('(?,?,?,?,?,?,?,?,?)');
+                    params.push(num(q.id) || 0, str(q.qtype, 16) || 'percent',
+                        Math.min(3, Math.max(1, num(q.difficulty) || 2)),
+                        str(q.stem, 20000), JSON.stringify(q.options || []), str(q.answer, 50),
+                        str(q.tip, 20000), str(q.tag, 50), q.active === false ? 0 : 1);
+                });
+                await conn.query(
+                    `INSERT INTO mental_questions (id, qtype, difficulty, stem, options, answer, tip, tag, active)
+                     VALUES ` + vals.join(','), params);
+            }
+            mQuestions = mqs.length;
+        }
+
+        const sessions = Array.isArray(data.mental.mentalSessions) ? data.mental.mentalSessions : [];
+        for (let i = 0; i < sessions.length; i += BATCH) {
+            const chunk = sessions.slice(i, i + BATCH);
+            const vals = [], params = [];
+            chunk.forEach(s => {
+                vals.push('(?,?,?,?,?,?,?,?,?,?,?,?,?)');
+                params.push(num(s.id) || 0, str(s.qtype, 16) || 'mixed',
+                    str(s.qtypeName, 20) || '', Math.min(3, Math.max(0, num(s.difficulty))),
+                    num(s.totalCount), num(s.doneCount), num(s.correctCount),
+                    num(s.wrongCount), num(s.skippedCount), num(s.rate), num(s.totalMs),
+                    s.startedAt || '1970-01-01 00:00:00', s.finishedAt || null);
+            });
+            await conn.query(
+                `INSERT INTO mental_sessions (id, qtype, qtype_name, difficulty, total_count,
+                    done_count, correct_count, wrong_count, skipped_count, rate, total_ms,
+                    started_at, finished_at)
+                 VALUES ` + vals.join(','), params);
+        }
+        mSessions = sessions.length;
+
+        /* mental_records：按会话插入（自增 id，题目快照照搬） */
+        for (const s of sessions) {
+            const recs = Array.isArray(s.records) ? s.records : [];
+            const sid = num(s.id) || 0;
+            for (let j = 0; j < recs.length; j += BATCH) {
+                const chunk = recs.slice(j, j + BATCH);
+                const vals = [], params = [];
+                chunk.forEach(r => {
+                    vals.push('(?,?,?,?,?,?,?,?,?,?,?,?)');
+                    const res = r.result === 'ok' || r.result === 'ng' || r.result === 'skip' ? r.result : 'ok';
+                    params.push(sid, num(r.questionId) || 0, num(r.no) || 0,
+                        str(r.qtype, 16) || '', str(r.stem, 20000), JSON.stringify(r.options || []),
+                        str(r.answer, 50), str(r.tip, 20000),
+                        r.userAnswer == null || r.userAnswer === '' ? null : str(r.userAnswer, 50),
+                        res, num(r.ms), null);
+                });
+                await conn.query(
+                    `INSERT INTO mental_records (session_id, question_id, no, qtype, stem, options,
+                        answer, tip, user_answer, result, ms, answered_at)
+                     VALUES ` + vals.join(','), params);
+            }
+        }
+    }
+
     return {
         h: rounds.length,
         f: favs.length,
         hasCats: Array.isArray(data.categories) && data.categories.length > 0,
         hasStudy: !!(data.studyDaily && typeof data.studyDaily === 'object'),
         hasMemos: !!(data.memos && typeof data.memos === 'object'),
-        practice: { banks: pBanks, questions: pQuestions, sessions: pSessions }
+        practice: { banks: pBanks, questions: pQuestions, sessions: pSessions },
+        mental: { questions: mQuestions, sessions: mSessions }
     };
 }
 

@@ -2351,3 +2351,73 @@ button:hover {
     .p-start-bar { flex-direction: column; align-items: flex-start; }
     .p-run-top { align-items: flex-start; }
 }
+
+/* ============================================================
+ * 速算练习（viewMental）
+ * 与题库练习共用 p-opt-item / p-run-* / p-result-* 等组件样式，
+ * 以下为速算专用：题型卡片、分数卡、错题回顾、技巧手册
+ * ============================================================ */
+
+/* 开始页：题型四选一（百化分 / 分数比大小 / 估算值 / 综合练习） */
+.m-type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.m-type-card {
+    border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 16px 14px; cursor: pointer;
+    transition: border-color .15s, background .15s, box-shadow .15s; user-select: none;
+}
+.m-type-card .m-tc-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; background: #eff6ff; color: #2563eb; }
+.m-type-card .m-tc-name { font-size: 14.5px; font-weight: 700; color: #1f2937; }
+.m-type-card .m-tc-desc { font-size: 12px; color: #6b7280; margin-top: 4px; line-height: 1.5; }
+.m-type-card:hover { border-color: #93c5fd; }
+.m-type-card.active { border-color: #2563eb; background: #eff6ff; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+.m-type-card.active .m-tc-name { color: #2563eb; }
+
+/* 答题页：题干大字 + 比大小分数卡 */
+.m-stem { font-size: 21px; font-weight: 800; color: #111827; letter-spacing: .5px; }
+.m-compare-row { display: flex; justify-content: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.m-frac-box {
+    flex: 1; max-width: 260px; min-width: 150px; text-align: center;
+    border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 14px 10px; background: #f9fafb;
+}
+.m-frac-num { font-size: 30px; font-weight: 800; color: #2563eb; line-height: 1.2; }
+.m-frac-line { height: 2px; background: #d1d5db; margin: 8px auto; width: 62%; border-radius: 2px; }
+.m-frac-den { font-size: 22px; font-weight: 700; color: #374151; line-height: 1.2; }
+.m-compare-label { font-size: 11px; color: #9ca3af; margin-top: 8px; letter-spacing: 1px; }
+
+/* 结算页：错题回顾（含技巧提示） */
+.m-review-title { margin: 22px 0 10px; font-size: 14px; font-weight: 700; text-align: center; color: #374151; }
+.m-review-list { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.m-review-item { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.7; }
+.m-review-item .m-ri-q { font-weight: 600; color: #111827; }
+.m-review-item .m-ri-ans { color: #16a34a; margin-top: 3px; }
+.m-review-item .m-ri-tip { color: #2563eb; margin-top: 3px; }
+
+/* 练习记录：统计 + 会话卡片 */
+.m-rec-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.m-rec-stat { flex: 1; min-width: 120px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; }
+.m-rec-stat b { display: block; font-size: 18px; color: #2563eb; }
+.m-rec-stat span { font-size: 11.5px; color: #6b7280; }
+.m-session-item {
+    border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.m-session-item .m-si-main { flex: 1; min-width: 200px; }
+.m-session-item .m-si-title { font-size: 14px; font-weight: 700; color: #1f2937; }
+.m-session-item .m-si-meta { font-size: 12px; color: #6b7280; margin-top: 3px; }
+.m-si-rate { font-size: 17px; font-weight: 800; color: #2563eb; min-width: 64px; text-align: right; }
+
+/* 技巧手册 */
+.m-manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.m-tip-card { border-top: 3px solid #2563eb; }
+.m-tip-tag { display: inline-block; font-size: 11px; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 20px; margin-bottom: 8px; }
+.m-tip-title { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+.m-tip-body { font-size: 12.5px; line-height: 1.7; color: #4b5563; }
+.m-table-title { font-size: 14.5px; font-weight: 700; color: #1f2937; margin-bottom: 10px; }
+.m-mtable { margin-top: 0; }
+.m-mtable th { background: #f3f4f6; font-size: 12.5px; }
+.m-mtable td { font-size: 13px; padding: 7px 10px; }
+
+@media (max-width: 900px) {
+    .m-type-grid { grid-template-columns: repeat(2, 1fr); }
+    .m-manual-grid { grid-template-columns: 1fr; }
+    .m-si-rate { text-align: left; }
+}

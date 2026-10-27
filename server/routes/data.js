@@ -121,6 +121,35 @@ async function exportPractice() {
     return { questionBanks, questions, practiceSessions };
 }
 
+/* ---- 速算练习数据 ---- */
+async function exportMental() {
+    const [mq] = await pool.query(
+        'SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active FROM mental_questions ORDER BY id');
+    const mentalQuestions = mq.map(x => ({
+        id: x.id, qtype: x.qtype, difficulty: x.difficulty, stem: x.stem,
+        options: x.options, answer: x.answer, tip: x.tip, tag: x.tag, active: !!x.active
+    }));
+    const [ms] = await pool.query(
+        `SELECT id, qtype, qtype_name, difficulty, total_count, done_count, correct_count,
+                wrong_count, skipped_count, rate, total_ms, started_at, finished_at
+         FROM mental_sessions ORDER BY id`);
+    const [mr] = await pool.query(
+        `SELECT session_id, JSON_ARRAYAGG(JSON_OBJECT(
+            'no', no, 'questionId', question_id, 'qtype', qtype, 'stem', stem,
+            'options', options, 'answer', answer, 'tip', tip, 'userAnswer', user_answer,
+            'result', result, 'ms', ms)) AS recs
+         FROM mental_records GROUP BY session_id`);
+    const mrMap = {};
+    (mr || []).forEach(x => { mrMap[x.session_id] = parseJsonArray(x.recs); });
+    const mentalSessions = ms.map(x => ({
+        id: x.id, qtype: x.qtype, qtypeName: x.qtype_name, difficulty: x.difficulty,
+        totalCount: x.total_count, doneCount: x.done_count, correctCount: x.correct_count,
+        wrongCount: x.wrong_count, skippedCount: x.skipped_count, rate: x.rate, totalMs: x.total_ms,
+        startedAt: x.started_at, finishedAt: x.finished_at, records: mrMap[x.id] || []
+    }));
+    return { mentalQuestions, mentalSessions };
+}
+
 /* GET /api/export 导出全部数据（旧版 v2 JSON 格式） */
 router.get('/export', asyncHandler(async (req, res) => {
         res.json({
@@ -130,7 +159,8 @@ router.get('/export', asyncHandler(async (req, res) => {
             favorites: await exportFavorites(),
             studyDaily: await exportStudyDaily(),
             memos: await exportMemos(),
-            practice: await exportPractice()
+            practice: await exportPractice(),
+            mental: await exportMental()
         });
 }));
 
@@ -147,6 +177,9 @@ router.get('/info', asyncHandler(async (req, res) => {
         const [pq] = await pool.query('SELECT COUNT(*) n FROM questions');
         const [ps] = await pool.query('SELECT COUNT(*) n FROM practice_sessions');
         const [pp] = await pool.query('SELECT COUNT(*) n FROM practice_records');
+        const [mq] = await pool.query('SELECT COUNT(*) n FROM mental_questions');
+        const [ms] = await pool.query('SELECT COUNT(*) n FROM mental_sessions');
+        const [mrp] = await pool.query('SELECT COUNT(*) n FROM mental_records');
         res.json({
             dbName: process.env.DB_NAME || 'pomodoro-quiz-timer',
             host: (process.env.DB_HOST || 'localhost') + ':' + (process.env.DB_PORT || 3306),
@@ -161,7 +194,10 @@ router.get('/info', asyncHandler(async (req, res) => {
             questionBanks: pb[0].n,
             questions: pq[0].n,
             practiceSessions: ps[0].n,
-            practiceRecords: pp[0].n
+            practiceRecords: pp[0].n,
+            mentalQuestions: mq[0].n,
+            mentalSessions: ms[0].n,
+            mentalRecords: mrp[0].n
         });
 }));
 

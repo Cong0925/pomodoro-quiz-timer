@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>速算练习 - 界面 Demo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Ctext x='16' y='23' font-size='18' font-weight='bold' text-anchor='middle' fill='%23fff' font-family='sans-serif'%3E速%3C/text%3E%3C/svg%3E">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif; }
+body { background:#f5f7fa; color:#1f2329; }
+button { font-family:inherit; }
+
+/* ===== 布局 ===== */
+.layout { display:flex; min-height:100vh; }
+.sidebar { width:230px; flex-shrink:0; background:#fff; border-right:1px solid #e5e7eb; padding:20px 14px; position:sticky; top:0; height:100vh; overflow-y:auto; }
+.brand { display:flex; align-items:center; gap:10px; padding:4px 8px 18px; border-bottom:1px solid #eef0f3; margin-bottom:14px; }
+.brand-icon { width:36px; height:36px; border-radius:9px; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; }
+.brand-name { font-size:15px; font-weight:700; }
+.brand-sub { font-size:11px; color:#8a919f; margin-top:2px; }
+.menu-group { padding:8px 0; }
+.menu-group-title { font-size:11px; color:#9ca3af; padding:0 10px 6px; letter-spacing:.5px; }
+.menu-item { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px; font-size:13.5px; color:#3f4756; cursor:pointer; text-decoration:none; transition:background .12s; }
+.menu-item:hover { background:#f1f5f9; }
+.menu-item.active { background:#eff6ff; color:#1d4ed8; font-weight:600; }
+.menu-item .micon { width:17px; height:17px; flex-shrink:0; }
+.menu-item .badge { margin-left:auto; background:#ef4444; color:#fff; font-size:10.5px; border-radius:9px; padding:1px 6px; }
+.menu-item .new-badge { margin-left:auto; background:#2563eb; color:#fff; font-size:10px; border-radius:6px; padding:1px 5px; }
+.side-foot { margin-top:18px; padding:12px 10px; border-top:1px solid #eef0f3; font-size:11.5px; color:#8a919f; line-height:1.7; }
+
+.content { flex:1; min-width:0; padding:32px 24px 48px; }
+.view { max-width:1040px; margin:0 auto; }
+
+/* ===== 顶部 ===== */
+.view-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+.view-header h2 { font-size:22px; font-weight:700; }
+.mode-desc { font-size:13px; color:#8a919f; margin-top:4px; }
+
+/* ===== 页签 ===== */
+.tabs { display:flex; gap:8px; margin-bottom:18px; }
+.tab { padding:8px 22px; font-size:14px; font-weight:600; border-radius:8px; background:#fff; border:1px solid #d1d5db; color:#4b5563; cursor:pointer; }
+.tab.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+
+/* ===== 开始练习 ===== */
+.section-title { font-size:13.5px; font-weight:700; color:#374151; margin:20px 0 10px; }
+.section-title:first-child { margin-top:0; }
+.type-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.type-card { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px; padding:16px 14px; cursor:pointer; transition:border-color .15s, box-shadow .15s; }
+.type-card:hover { border-color:#93c5fd; }
+.type-card.selected { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+.type-card .tc-name { font-size:15px; font-weight:700; display:flex; align-items:center; gap:7px; }
+.type-card .tc-name .tick { margin-left:auto; width:18px; height:18px; border-radius:50%; border:1.5px solid #d1d5db; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+.type-card .tc-name .tick svg { width:11px; height:11px; }
+.type-card.selected .tc-name .tick { background:#2563eb; border-color:#2563eb; }
+.type-card .tc-desc { font-size:12px; color:#6b7280; line-height:1.6; margin-top:7px; }
+.type-card .tc-ex { margin-top:9px; padding:7px 9px; background:#f8fafc; border-radius:7px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; }
+
+.opt-row { display:flex; flex-wrap:wrap; gap:8px; }
+.opt-btn { padding:7px 18px; font-size:13.5px; font-weight:600; border-radius:8px; background:#fff; border:1.5px solid #d1d5db; color:#4b5563; cursor:pointer; transition:all .12s; }
+.opt-btn:hover { border-color:#2563eb; color:#2563eb; }
+.opt-btn.selected { background:#2563eb; border-color:#2563eb; color:#fff; }
+
+.start-actions { margin-top:26px; display:flex; align-items:center; gap:14px; }
+.btn-primary { padding:11px 42px; font-size:15px; font-weight:700; border-radius:10px; background:#2563eb; border:none; color:#fff; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,.25); }
+.btn-primary:hover { background:#1d4ed8; }
+.btn-ghost { padding:9px 20px; font-size:14px; font-weight:600; border-radius:9px; background:#fff; border:1px solid #d1d5db; color:#4b5563; cursor:pointer; }
+.btn-ghost:hover { border-color:#9ca3af; color:#1f2329; }
+.hint { font-size:12.5px; color:#8a919f; }
+
+/* ===== 答题 ===== */
+.run-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:24px 28px; }
+.run-top { display:flex; align-items:center; gap:16px; margin-bottom:14px; }
+.run-progress-text { font-size:13px; font-weight:700; color:#374151; }
+.run-timer { font-size:13px; font-weight:700; color:#2563eb; font-variant-numeric:tabular-nums; }
+.run-type-tag { font-size:12px; font-weight:600; background:#eff6ff; color:#1d4ed8; border-radius:6px; padding:3px 10px; }
+.run-exit { margin-left:auto; font-size:13px; color:#8a919f; cursor:pointer; background:none; border:none; }
+.run-exit:hover { color:#ef4444; }
+.progress-bar { height:6px; background:#e5e7eb; border-radius:4px; overflow:hidden; margin-bottom:22px; }
+.progress-bar .fill { height:100%; background:#2563eb; border-radius:4px; transition:width .25s; }
+
+.stem { font-size:22px; font-weight:700; text-align:center; padding:14px 10px 6px; line-height:1.5; }
+.stem-math { font-size:28px; letter-spacing:2px; font-variant-numeric:tabular-nums; }
+.compare-row { display:flex; justify-content:center; align-items:center; gap:26px; padding:16px 0 10px; }
+.frac-box { display:flex; flex-direction:column; align-items:center; width:96px; padding:14px 8px; border:1.5px solid #e5e7eb; border-radius:12px; background:#fafbfc; }
+.frac-box .fb-label { font-size:11px; color:#8a919f; margin-bottom:4px; font-weight:600; }
+.frac { display:inline-flex; flex-direction:column; align-items:center; line-height:1.15; }
+.frac i { font-style:normal; border-bottom:1.5px solid #374151; padding:0 4px 1px; font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; }
+.frac b { font-weight:700; padding:1px 4px 0; font-size:30px; font-variant-numeric:tabular-nums; }
+.compare-vs { font-size:20px; font-weight:700; color:#9ca3af; }
+
+.options { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:20px 0 4px; }
+.opt-item { display:flex; align-items:center; gap:10px; padding:13px 16px; border:1.5px solid #e5e7eb; border-radius:10px; background:#fff; cursor:pointer; font-size:15px; transition:all .13s; }
+.opt-item:hover { border-color:#93c5fd; }
+.opt-item .oi-key { width:26px; height:26px; flex-shrink:0; border-radius:50%; background:#f1f5f9; color:#475569; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.opt-item.correct { border-color:#16a34a; background:#f0fdf4; }
+.opt-item.correct .oi-key { background:#16a34a; color:#fff; }
+.opt-item.wrong { border-color:#dc2626; background:#fef2f2; }
+.opt-item.wrong .oi-key { background:#dc2626; color:#fff; }
+.opt-item.locked { cursor:default; }
+
+.feedback { margin-top:14px; padding:12px 16px; border-radius:10px; font-size:13.5px; line-height:1.7; }
+.feedback.ok { background:#f0fdf4; border:1px solid #bbf7d0; }
+.feedback.no { background:#fef2f2; border:1px solid #fecaca; }
+.feedback .fb-line { font-weight:700; margin-bottom:2px; }
+.feedback .tip { color:#374151; margin-top:5px; }
+.feedback .tip b { color:#b45309; }
+.run-actions { display:flex; justify-content:center; gap:12px; margin-top:16px; }
+.run-actions .btn-primary { box-shadow:none; }
+.skip-btn { padding:9px 24px; font-size:14px; border-radius:9px; background:#fff; border:1px solid #d1d5db; color:#4b5563; cursor:pointer; }
+.skip-btn:hover { border-color:#9ca3af; }
+
+/* ===== 结果 ===== */
+.result-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px; }
+.stat-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; text-align:center; }
+.stat-card .sc-num { font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; }
+.stat-card .sc-label { font-size:12px; color:#8a919f; margin-top:4px; }
+.stat-card.accent { background:#eff6ff; border-color:#bfdbfe; }
+.stat-card.accent .sc-num { color:#1d4ed8; }
+.stat-card.good .sc-num { color:#16a34a; }
+.stat-card.bad .sc-num { color:#dc2626; }
+
+.review-title { font-size:14px; font-weight:700; color:#374151; margin-bottom:10px; }
+.review-list { display:flex; flex-direction:column; gap:8px; }
+.review-item { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:13px 16px; font-size:13px; }
+.review-item .ri-stem { font-weight:600; color:#1f2329; margin-bottom:5px; }
+.review-item .ri-ans { color:#dc2626; }
+.review-item .ri-ans.ok { color:#16a34a; }
+.review-item .ri-tip { color:#b45309; margin-top:4px; }
+
+/* ===== 练习记录 ===== */
+.rec-list { display:flex; flex-direction:column; gap:10px; }
+.rec-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.rec-card .rc-main { flex:1; min-width:200px; }
+.rec-card .rc-title { font-size:14px; font-weight:700; }
+.rec-card .rc-meta { font-size:12px; color:#8a919f; margin-top:3px; }
+.rec-card .rc-stat { text-align:right; }
+.rec-card .rc-rate { font-size:18px; font-weight:700; color:#1d4ed8; }
+.rec-card .rc-sub { font-size:11.5px; color:#8a919f; }
+
+/* ===== 技巧手册 ===== */
+.manual-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+.tip-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; }
+.tip-card .tc-tag { display:inline-block; font-size:11px; font-weight:700; color:#1d4ed8; background:#eff6ff; border-radius:5px; padding:2px 8px; margin-bottom:8px; }
+.tip-card .tc-title { font-size:14.5px; font-weight:700; margin-bottom:6px; }
+.tip-card .tc-body { font-size:12.5px; color:#475569; line-height:1.75; }
+.tip-card .tc-body .ex { color:#2563eb; font-weight:600; }
+.table-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:18px; overflow-x:auto; }
+.table-card h4 { font-size:14px; font-weight:700; margin-bottom:12px; }
+.mm-table { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
+.mm-table th { background:#f8fafc; color:#6b7280; font-weight:600; padding:9px 8px; border-bottom:1px solid #e5e7eb; text-align:left; }
+.mm-table td { padding:8px; border-bottom:1px solid #f1f3f5; color:#374151; font-variant-numeric:tabular-nums; }
+.mm-table tr:last-child td { border-bottom:none; }
+
+/* ===== 空态 ===== */
+.empty { text-align:center; padding:56px 20px; color:#8a919f; background:#fff; border:1px solid #e5e7eb; border-radius:12px; font-size:13px; line-height:1.8; }
+.empty b { color:#374151; }
+
+/* ===== 响应式 ===== */
+@media (max-width:900px) {
+  .sidebar { display:none; }
+  .type-grid { grid-template-columns:repeat(2,1fr); }
+  .result-grid { grid-template-columns:repeat(2,1fr); }
+  .manual-grid { grid-template-columns:1fr; }
+}
+@media (max-width:520px) {
+  .content { padding:20px 14px 40px; }
+  .options { grid-template-columns:1fr; }
+  .stem { font-size:18px; }
+  .frac i, .frac b { font-size:24px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ===== 左侧导航 ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">刷</div>
+      <div>
+        <div class="brand-name">刷题计时器</div>
+        <div class="brand-sub">计时 · 统计 · 留痕</div>
+      </div>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-title">计时模式</div>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：单题模式')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg>
+        单题模式
+      </a>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：整组模式')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        整组模式
+      </a>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-title">练习</div>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：题库练习')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        题库练习
+      </a>
+      <a class="menu-item active" href="javascript:void(0)" onclick="switchDemoView('mental')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        速算练习
+        <span class="new-badge">新</span>
+      </a>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-title">数据</div>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：历史记录')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 3"/></svg>
+        历史记录
+        <span class="badge">98</span>
+      </a>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：错题收藏')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5 4.6 15a5 5 0 0 1 1.2-8.2 5 5 0 0 1 6.2.9l1 1 1-1a5 5 0 0 1 6.2-.9A5 5 0 0 1 19.4 15z"/></svg>
+        错题收藏
+        <span class="badge">2</span>
+      </a>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：学习统计')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg>
+        学习统计
+      </a>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：分类管理')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5h18M3 12h18M3 19h18"/></svg>
+        分类管理
+      </a>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-title">备忘</div>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：日历备忘')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+        日历备忘
+      </a>
+    </div>
+
+    <div class="menu-group">
+      <div class="menu-group-title">系统</div>
+      <a class="menu-item" href="javascript:void(0)" onclick="toast('Demo：设置')">
+        <svg class="micon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        设置
+      </a>
+    </div>
+
+    <div class="side-foot">
+      存储: MySQL 数据库<br>备份 / 迁移 → 设置本地化保存
+    </div>
+  </aside>
+
+  <!-- ===== 右侧内容 ===== -->
+  <main class="content">
+    <div class="view">
+
+      <!-- 速算练习视图 -->
+      <div class="view-header">
+        <div>
+          <h2>速算练习</h2>
+          <p class="mode-desc">资料分析专项技巧训练：百化分 · 分数比大小 · 估算值，答完即时给技巧提示 · 数据自动入统计</p>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="start" onclick="switchTab('start')">开始练习</button>
+        <button class="tab" data-tab="records" onclick="switchTab('records')">练习记录</button>
+        <button class="tab" data-tab="manual" onclick="switchTab('manual')">技巧手册</button>
+      </div>
+
+      <!-- ===== 开始练习 ===== -->
+      <div id="paneStart">
+        <div class="section-title">选择题型</div>
+        <div class="type-grid" id="typeGrid"></div>
+
+        <div class="section-title">题量</div>
+        <div class="opt-row" id="countRow"></div>
+
+        <div class="section-title">难度</div>
+        <div class="opt-row" id="diffRow"></div>
+
+        <div class="start-actions">
+          <button class="btn-primary" onclick="startRun()">开始练习</button>
+          <span class="hint">答完即时判对错，并给出速算技巧提示</span>
+        </div>
+      </div>
+
+      <!-- ===== 答题 ===== -->
+      <div id="paneRun" style="display:none">
+        <div class="run-card">
+          <div class="run-top">
+            <span class="run-progress-text" id="runProgress">1 / 10</span>
+            <span class="run-type-tag" id="runTypeTag">百化分</span>
+            <span class="run-timer" id="runTimer">00:00.00</span>
+            <button class="run-exit" onclick="exitRun()">退出本次练习</button>
+          </div>
+          <div class="progress-bar"><div class="fill" id="runBar" style="width:10%"></div></div>
+          <div id="stemArea"></div>
+          <div class="options" id="optArea"></div>
+          <div id="fbArea"></div>
+          <div class="run-actions" id="runActions"></div>
+        </div>
+      </div>
+
+      <!-- ===== 结果 ===== -->
+      <div id="paneResult" style="display:none">
+        <div class="result-grid" id="resultGrid"></div>
+        <div class="review-title" id="reviewTitle"></div>
+        <div class="review-list" id="reviewList"></div>
+        <div class="start-actions">
+          <button class="btn-primary" onclick="startRun()">再练一组</button>
+          <button class="btn-ghost" onclick="backToStart()">返回开始</button>
+        </div>
+      </div>
+
+      <!-- ===== 练习记录 ===== -->
+      <div id="paneRecords" style="display:none">
+        <div class="rec-list">
+          <div class="rec-card">
+            <div class="rc-main"><div class="rc-title">综合练习</div><div class="rc-meta">2026-10-27 14:32 · 20 题 · 难度不限</div></div>
+            <div class="rc-stat"><div class="rc-rate">85.0%</div><div class="rc-sub">对 17 · 错 3 · 6 分 12 秒</div></div>
+          </div>
+          <div class="rec-card">
+            <div class="rc-main"><div class="rc-title">百化分</div><div class="rc-meta">2026-10-26 21:05 · 15 题 · 难度中</div></div>
+            <div class="rc-stat"><div class="rc-rate">93.3%</div><div class="rc-sub">对 14 · 错 1 · 4 分 48 秒</div></div>
+          </div>
+          <div class="rec-card">
+            <div class="rc-main"><div class="rc-title">分数比大小</div><div class="rc-meta">2026-10-25 09:41 · 10 题 · 难度易</div></div>
+            <div class="rc-stat"><div class="rc-rate">100%</div><div class="rc-sub">对 10 · 错 0 · 2 分 20 秒</div></div>
+          </div>
+        </div>
+        <div style="height:14px"></div>
+        <div class="hint">练习记录完整可回看每题作答与技巧提示；每场练习结束后自动归档一条历史记录（与题库练习一致）</div>
+      </div>
+
+      <!-- ===== 技巧手册 ===== -->
+      <div id="paneManual" style="display:none">
+        <div class="manual-grid">
+          <div class="tip-card">
+            <span class="tc-tag">百化分</span>
+            <div class="tc-title">百分数化分数，除转乘</div>
+            <div class="tc-body">资料分析里遇到 <span class="ex">÷12.5%</span>，先想 <span class="ex">12.5% = 1/8</span>，直接 <span class="ex">×8</span>。记熟 1/2 ~ 1/20 的互化，计算量减半。</div>
+          </div>
+          <div class="tip-card">
+            <span class="tc-tag">分数比大小</span>
+            <div class="tc-title">交叉相乘，秒判大小</div>
+            <div class="tc-body">比较 <span class="ex">3/7 与 4/9</span>：3×9 = 27，4×7 = 28，27 &lt; 28，所以 <span class="ex">4/9 更大</span>。分子×对方分母，谁大谁对应分数大。</div>
+          </div>
+          <div class="tip-card">
+            <span class="tc-tag">估算值</span>
+            <div class="tc-title">取整估算，锁定选项</div>
+            <div class="tc-body">如 <span class="ex">601 × 799</span>，取 <span class="ex">600 × 800 = 48 万</span>。四选一中只有一个数量级接近，先估数量级再微调。</div>
+          </div>
+        </div>
+        <div class="table-card">
+          <h4>百化分速查表（资料分析高频）</h4>
+          <table class="mm-table">
+            <colgroup><col style="width:25%"><col style="width:25%"><col style="width:25%"><col style="width:25%"></colgroup>
+            <thead><tr><th>分数</th><th>百分数</th><th>分数</th><th>百分数</th></tr></thead>
+            <tbody id="mmTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast" style="position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#1f2329;color:#fff;font-size:13px;padding:10px 18px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:99;"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== 题目数据（真实速算题） ==================== */
+  var QUESTIONS = {
+    percent: [
+      { stem: '1/7 ≈ ?', opts: ['14.3%','12.5%','16.7%','11.1%'], ans: 0, tip: '1/7 ≈ 14.3%。资料分析中 ÷14.3% 即 ×7。' },
+      { stem: '33.3% ≈ ?', opts: ['1/3','1/4','1/5','1/6'], ans: 0, tip: '33.3% = 1/3。×33.3% 即 ÷3。' },
+      { stem: '1/12 ≈ ?', opts: ['8.3%','9.1%','7.7%','8.8%'], ans: 0, tip: '1/12 ≈ 8.3%。×8.3% 即 ÷12。' },
+      { stem: '62.5% ≈ ?', opts: ['5/8','3/5','5/7','2/3'], ans: 0, tip: '62.5% = 5/8（62.5 × 8 = 500）。' },
+      { stem: '1/9 ≈ ?', opts: ['11.1%','10.9%','12.5%','9.1%'], ans: 0, tip: '1/9 ≈ 11.1%。÷11.1% 即 ×9。' },
+      { stem: '16.7% ≈ ?', opts: ['1/6','1/5','1/7','1/8'], ans: 0, tip: '16.7% = 1/6。记住 6 的倒数 16.7%。' }
+    ],
+    compare: [
+      { stem: '3/7 与 4/9', opts: ['3/7 更大','4/9 更大'], ans: 1, tip: '交叉相乘：3×9=27，4×7=28，27<28，故 4/9 更大。' },
+      { stem: '5/8 与 3/5', opts: ['5/8 更大','3/5 更大'], ans: 0, tip: '交叉相乘：5×5=25，3×8=24，25>24，故 5/8 更大。' },
+      { stem: '7/12 与 5/9', opts: ['7/12 更大','5/9 更大'], ans: 0, tip: '交叉相乘：7×9=63，5×12=60，63>60，故 7/12 更大。' },
+      { stem: '2/5 与 3/7', opts: ['2/5 更大','3/7 更大'], ans: 1, tip: '交叉相乘：2×7=14，3×5=15，14<15，故 3/7 更大。' }
+    ],
+    estimate: [
+      { stem: '29.8 × 5.1 ≈ ?', opts: ['150','160','140','130'], ans: 0, tip: '取整：30 × 5 = 150。' },
+      { stem: '601 × 799 ≈ ?', opts: ['48 万','50 万','46 万','52 万'], ans: 0, tip: '取整：600 × 800 = 48 万。' },
+      { stem: '9876 ÷ 49 ≈ ?', opts: ['200','220','180','240'], ans: 0, tip: '取整：10000 ÷ 50 = 200。' },
+      { stem: '12.9% × 820 ≈ ?', opts: ['105','95','110','90'], ans: 0, tip: '12.9% ≈ 12.5% = 1/8，820 ÷ 8 ≈ 102.5，最接近 105。' },
+      { stem: '5.02 × 39.8 ≈ ?', opts: ['200','195','205','190'], ans: 0, tip: '取整：5 × 40 = 200。' }
+    ]
+  };
+
+  var TYPE_META = {
+    percent: { name: '百化分', desc: '分数与百分数快速互化，除法转乘法', ex: '1/7 ≈ 14.3%', icon: '%' },
+    compare: { name: '分数比大小', desc: '两分数比大小，交叉相乘秒判', ex: '3/7 vs 4/9', icon: '≌' },
+    estimate:{ name: '估算值', desc: '大数乘除快速估算，锁定选项', ex: '601 × 799 ≈ 48 万', icon: '≈' },
+    mixed:   { name: '综合练习', desc: '三类题型混合随机出题', ex: '全题型混练', icon: '混' }
+  };
+  var COUNT_OPTS = [10, 15, 20];
+  var DIFF_OPTS = [ {k:0,n:'不限'}, {k:1,n:'易'}, {k:2,n:'中'}, {k:3,n:'难'} ];
+
+  var state = {
+    tab: 'start',
+    type: 'mixed',
+    count: 10,
+    diff: 0,
+    run: null   // { list, idx, correct, wrong, skip, answers, startTs, timer, finished }
+  };
+
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtTime(ms) {
+    var totalSec = ms / 1000;
+    var m = String(Math.floor(totalSec / 60)).padStart(2,'0');
+    var s = (totalSec % 60).toFixed(2).padStart(5,'0');
+    return m + ':' + s;
+  }
+
+  /* ==================== 页签切换 ==================== */
+  function switchTab(t) {
+    state.tab = t;
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === t);
+    });
+    el('paneStart').style.display = t === 'start' ? '' : 'none';
+    el('paneRun').style.display = 'none';
+    el('paneResult').style.display = 'none';
+    el('paneRecords').style.display = t === 'records' ? '' : 'none';
+    el('paneManual').style.display = t === 'manual' ? '' : 'none';
+    if (t === 'start') renderStart();
+    if (t === 'manual') renderManual();
+  }
+
+  /* ==================== 开始页 ==================== */
+  function renderStart() {
+    var tg = el('typeGrid');
+    tg.innerHTML = Object.keys(TYPE_META).map(function (k) {
+      var m = TYPE_META[k];
+      var sel = state.type === k ? ' selected' : '';
+      return '<div class="type-card' + sel + '" data-type="' + k + '">' +
+        '<div class="tc-name"><span>' + m.name + '</span><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></div>' +
+        '<div class="tc-desc">' + m.desc + '</div>' +
+        '<div class="tc-ex">例：' + m.ex + '</div></div>';
+    }).join('');
+    tg.querySelectorAll('.type-card').forEach(function (c) {
+      c.addEventListener('click', function () {
+        state.type = c.dataset.type;
+        renderStart();
+      });
+    });
+
+    el('countRow').innerHTML = COUNT_OPTS.map(function (n) {
+      return '<button class="opt-btn' + (state.count === n ? ' selected' : '') + '" data-n="' + n + '">' + n + ' 题</button>';
+    }).join('');
+    el('countRow').querySelectorAll('.opt-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.count = Number(b.dataset.n);
+        renderStart();
+      });
+    });
+
+    el('diffRow').innerHTML = DIFF_OPTS.map(function (d) {
+      return '<button class="opt-btn' + (state.diff === d.k ? ' selected' : '') + '" data-k="' + d.k + '">' + d.n + '</button>';
+    }).join('');
+    el('diffRow').querySelectorAll('.opt-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.diff = Number(b.dataset.k);
+        renderStart();
+      });
+    });
+  }
+
+  /* ==================== 抽题与答题 ==================== */
+  function pickQuestions() {
+    var diff = state.diff;
+    var pool = [];
+    var keys = state.type === 'mixed' ? ['percent','compare','estimate'] : [state.type];
+    keys.forEach(function (k) {
+      var arr = QUESTIONS[k].map(function (q, i) {
+        return { q: q, t: k, oi: i };
+      }).filter(function (x) { return diff === 0 || x.q.diff === undefined || x.q.diff === diff; });
+      pool = pool.concat(arr);
+    });
+    // 简单洗牌
+    for (var i = pool.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+    var need = Math.min(state.count, pool.length);
+    return pool.slice(0, need);
+  }
+
+  function startRun() {
+    var picked = pickQuestions();
+    if (!picked.length) { toast('该题型暂无题目'); return; }
+    state.run = {
+      list: picked, idx: 0, correct: 0, wrong: 0, skip: 0,
+      answers: [], startTs: Date.now(), timer: null, finished: false
+    };
+    /* 切换到答题面板 */
+    el('paneStart').style.display = 'none';
+    el('paneRecords').style.display = 'none';
+    el('paneManual').style.display = 'none';
+    el('paneResult').style.display = 'none';
+    el('paneRun').style.display = '';
+    renderRun();
+    state.run.timer = setInterval(function () {
+      el('runTimer').textContent = fmtTime(Date.now() - state.run.startTs);
+    }, 30);
+  }
+
+  function fracHTML(a, b, label) {
+    return '<div class="frac-box"><div class="fb-label">' + label + '</div>' +
+      '<span class="frac"><i>' + a + '</i><b>' + b + '</b></span></div>';
+  }
+
+  function renderRun() {
+    var r = state.run;
+    var item = r.list[r.idx];
+    var total = r.list.length;
+    var no = r.idx + 1;
+
+    el('runProgress').textContent = no + ' / ' + total;
+    el('runTypeTag').textContent = TYPE_META[item.t].name;
+    el('runBar').style.width = (no / total * 100) + '%';
+
+    var stemArea = el('stemArea');
+    if (item.t === 'compare') {
+      var parts = item.q.stem.split(' 与 ');
+      var fs = parts[0].split('/'), ss = parts[1].split('/');
+      stemArea.innerHTML = '<div class="compare-row">' +
+        fracHTML(fs[0], fs[1], 'A') +
+        '<span class="compare-vs">VS</span>' +
+        fracHTML(ss[0], ss[1], 'B') +
+        '</div><div class="stem">哪个分数更大？</div>';
+    } else {
+      stemArea.innerHTML = '<div class="stem">' + esc(item.q.stem) + '</div>';
+    }
+
+    var opts = item.q.opts.map(function (o, i) {
+      return '<div class="opt-item" data-i="' + i + '"><span class="oi-key">' + String.fromCharCode(65 + i) + '</span><span>' + esc(o) + '</span></div>';
+    }).join('');
+    el('optArea').innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:#8a919f;text-align:center;padding-bottom:2px;">' +
+      (opts === undefined ? '' : (item.q.opts.length === 2 ? '点击选择你认为更大的一个' : '点击选择正确答案')) + '</div>' + opts;
+
+    el('optArea').querySelectorAll('.opt-item').forEach(function (it) {
+      it.addEventListener('click', function () {
+        if (r.finished) return;
+        var ansIdx = Number(it.dataset.i);
+        answer(item, ansIdx);
+      });
+    });
+
+    el('fbArea').innerHTML = '';
+    el('runActions').innerHTML =
+      '<button class="skip-btn" onclick="skipQ()">跳过这题</button>';
+  }
+
+  function answer(item, ansIdx) {
+    var r = state.run;
+    if (r.finished || r.answers[r.idx] !== undefined) return;
+    var isOk = ansIdx === item.q.ans;
+    r.answers[r.idx] = { i: ansIdx, ok: isOk };
+    if (isOk) r.correct++; else r.wrong++;
+
+    var opts = el('optArea').children;
+    for (var i = 1; i < opts.length; i++) {
+      var idx = Number(opts[i].dataset.i);
+      opts[i].classList.add('locked');
+      if (idx === item.q.ans) opts[i].classList.add('correct');
+      else if (idx === ansIdx) opts[i].classList.add('wrong');
+    }
+
+    el('fbArea').innerHTML =
+      '<div class="feedback ' + (isOk ? 'ok' : 'no') + '">' +
+        '<div class="fb-line">' + (isOk ? '答对了' : '答错了，正确答案是 ' + item.q.opts[item.q.ans]) + '</div>' +
+        '<div class="tip"><b>技巧提示</b>　' + esc(item.q.tip) + '</div>' +
+      '</div>';
+    el('runActions').innerHTML = '<button class="btn-primary" onclick="nextQ()">' +
+      (r.idx === r.list.length - 1 ? '查看结果' : '下一题') + '</button>';
+  }
+
+  function skipQ() {
+    var r = state.run;
+    if (r.finished || r.answers[r.idx] !== undefined) return;
+    r.answers[r.idx] = { i: null, ok: false };
+    r.skip++;
+    var item = r.list[r.idx];
+    el('fbArea').innerHTML =
+      '<div class="feedback no"><div class="fb-line">已跳过，正确答案是 ' + item.q.opts[item.q.ans] + '</div>' +
+      '<div class="tip"><b>技巧提示</b>　' + esc(item.q.tip) + '</div></div>';
+    el('runActions').innerHTML = '<button class="btn-primary" onclick="nextQ()">' +
+      (r.idx === r.list.length - 1 ? '查看结果' : '下一题') + '</button>';
+  }
+
+  function nextQ() {
+    var r = state.run;
+    r.idx++;
+    if (r.idx >= r.list.length) finishRun();
+    else renderRun();
+  }
+
+  function finishRun() {
+    var r = state.run;
+    r.finished = true;
+    clearInterval(r.timer);
+    r.totalMs = Date.now() - r.startTs;
+    renderResult();
+  }
+
+  function exitRun() {
+    var r = state.run;
+    if (r && !r.finished) clearInterval(r.timer);
+    state.run = null;
+    switchTab('start');
+    toast('已退出本次练习');
+  }
+
+  /* ==================== 结果页 ==================== */
+  function renderResult() {
+    var r = state.run;
+    var total = r.list.length;
+    var rate = total ? (r.correct / total * 100).toFixed(1) : 0;
+    var wrongs = r.answers.map(function (a, i) { return { a: a, i: i }; })
+      .filter(function (x) { return x.a.i !== null && !x.a.ok; });
+
+    el('resultGrid').innerHTML =
+      '<div class="stat-card accent"><div class="sc-num">' + rate + '%</div><div class="sc-label">正确率</div></div>' +
+      '<div class="stat-card good"><div class="sc-num">' + r.correct + '</div><div class="sc-label">答对</div></div>' +
+      '<div class="stat-card bad"><div class="sc-num">' + r.wrong + '</div><div class="sc-label">答错</div></div>' +
+      '<div class="stat-card"><div class="sc-num">' + r.skip + '</div><div class="sc-label">跳过</div></div>';
+
+    el('reviewTitle').textContent = wrongs.length ? '错题回顾（' + wrongs.length + ' 题）' : '全部答对，太棒了';
+    el('reviewList').innerHTML = wrongs.length ? wrongs.map(function (w) {
+      var item = r.list[w.i];
+      return '<div class="review-item">' +
+        '<div class="ri-stem">' + (w.i + 1) + '. ' + esc(item.q.stem) + '</div>' +
+        '<div class="ri-ans">你的答案：' + (w.a.i === null ? '（跳过）' : esc(item.q.opts[w.a.i])) + '　·　正确答案：' + esc(item.q.opts[item.q.ans]) + '</div>' +
+        '<div class="ri-tip">技巧：' + esc(item.q.tip) + '</div></div>';
+    }).join('') : '';
+
+    el('paneStart').style.display = 'none';
+    el('paneRun').style.display = 'none';
+    el('paneResult').style.display = '';
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === 'records');
+    });
+  }
+
+  function backToStart() {
+    state.run = null;
+    switchTab('start');
+  }
+
+  /* ==================== 技巧手册 ==================== */
+  function renderManual() {
+    var data = [
+      ['1/2','50%','1/11','9.1%'], ['1/3','33.3%','1/12','8.3%'],
+      ['1/4','25%','1/13','7.7%'], ['1/5','20%','1/14','7.1%'],
+      ['1/6','16.7%','1/15','6.7%'], ['1/7','14.3%','1/16','6.25%'],
+      ['1/8','12.5%','1/17','5.9%'], ['1/9','11.1%','1/18','5.6%'],
+      ['1/10','10%','1/19','5.3%'], ['1/20','5%','','']
+    ];
+    el('mmTbody').innerHTML = data.map(function (row) {
+      return '<tr><td>' + row[0] + '</td><td>' + row[1] + '</td><td>' + row[2] + '</td><td>' + row[3] + '</td></tr>';
+    }).join('');
+  }
+
+  /* ==================== 通用 ==================== */
+  var toastTimer = null;
+  function toast(msg) {
+    var t = el('toast');
+    t.textContent = msg;
+    t.style.opacity = 1;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.style.opacity = 0; }, 1600);
+  }
+
+  function switchDemoView(v) {
+    if (v === 'mental') { switchTab('start'); }
+    else { toast('Demo：' + v); }
+  }
+
+  /* 地址栏 hash 直达答题界面：#run / #run-percent / #run-compare / #run-estimate */
+  function autoStartFromHash() {
+    var m = location.hash.match(/^#run(?:-(percent|compare|estimate))?$/);
+    if (!m) return;
+    if (m[1]) state.type = m[1];
+    switchTab('start');
+    startRun();
+  }
+
+  /* 暴露给 onclick */
+  window.switchTab = switchTab;
+  window.startRun = startRun;
+  window.nextQ = nextQ;
+  window.skipQ = skipQ;
+  window.exitRun = exitRun;
+  window.backToStart = backToStart;
+  window.switchDemoView = switchDemoView;
+  window.toast = toast;
+
+  renderStart();
+  renderManual();
+  autoStartFromHash();
+  window.addEventListener('hashchange', autoStartFromHash);
+})();
+</script>
+</body>
+</html>

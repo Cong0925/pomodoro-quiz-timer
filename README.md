@@ -47,7 +47,7 @@ PORT=3000
 3. **获取代码**：从 GitHub 下载或 `git clone` 本项目到新电脑。
 4. **配置数据库**：复制 `.env.example` 为 `.env`，把 `DB_USER` / `DB_PASSWORD` 改成新电脑 MySQL 的账号密码（库名保持 `pomodoro-quiz-timer` 即可，脚本会自动创建）。
 5. **安装依赖**：`npm install`。
-6. **建库建表**：`npm run init-db`（自动创建数据库和 11 张表，可重复执行）。
+6. **建库建表**：`npm run init-db`（自动创建数据库和 14 张表，可重复执行）。
 7. **恢复数据**：把备份文件放进项目 `data/` 目录，执行 `npm run restore data/backup-日期.json`。
 8. **启动**：双击 `启动.bat`，浏览器打开 http://localhost:3000，数据全部就位。
 
@@ -79,7 +79,7 @@ npm run migrate 旧data.json路径 -- --force
 ```
 ├─ server/              后端（Node + Express + MySQL）
 │  ├─ index.js          服务入口（挂载全部路由 + 全局错误兜底）
-│  ├─ schema.sql        建表 SQL（11 张表：主模式 7 + 练习模式 4）
+│  ├─ schema.sql        建表 SQL（14 张表：主模式 7 + 练习模式 4 + 速算练习 3）
 │  ├─ init-db.js        初始化建库建表脚本
 │  ├─ backup.js         一键备份脚本
 │  ├─ restore.js        一键恢复脚本
@@ -97,6 +97,8 @@ npm run migrate 旧data.json路径 -- --force
 │     ├─ study.js       学习时长上报
 │     ├─ memos.js       日历备忘
 │     ├─ practice.js    练习模式（题库/题目/会话/历史/统计）
+│     ├─ mental.js      速算练习（内置题库/会话/作答/历史/统计）
+│     ├─ mentalQuestions.js 速算题目种子（百化分/比大小/估算 34 题）
 │     └─ data.js        数据导入导出（备份文件格式）
 ├─ public/              前端（纯 HTML/CSS/JS，浏览器直接运行）
 │  ├─ index.html        单页入口（各视图容器 + 组件容器）
@@ -117,6 +119,7 @@ npm run migrate 旧data.json路径 -- --force
 │     │  ├─ stats.js    学习统计
 │     │  ├─ calendar.js 日历备忘
 │     │  ├─ practice.js 题库练习（开始/管理/记录三页签）
+│     │  ├─ mental.js   速算练习（开始/记录/技巧手册三页签，即答即判+技巧提示）
 │     │  ├─ categories.js 分类管理
 │     │  ├─ settings.js 设置
 │     │  └─ studyFloat.js 悬浮计时

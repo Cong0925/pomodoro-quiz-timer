@@ -250,6 +250,84 @@ CREATE TABLE IF NOT EXISTS practice_records (
     CONSTRAINT fk_pr_session FOREIGN KEY (session_id) REFERENCES practice_sessions (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='练习明细';
 
+-- ------------------------------------------------------------
+-- 12. mental_questions 速算题目（系统内置题库）
+--    qtype: percent=百化分 compare=分数比大小 estimate=估算值
+--    options 存 JSON 数组 [{text:"..."}]：比大小 2 项，其余 4 项
+--    answer 存正确选项下标（0/1/2/3）
+--    tip 为速算技巧提示（答题即时反馈的核心内容）
+--    题目由系统预置（mentalQuestions.js 种子），用户不自行录入
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS mental_questions (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '题目ID',
+    qtype       VARCHAR(16)  NOT NULL COMMENT '题型 percent=百化分 compare=分数比大小 estimate=估算值',
+    difficulty  TINYINT      NOT NULL DEFAULT 2 COMMENT '难度 1易 2中 3难',
+    stem        TEXT         NOT NULL COMMENT '题干（分数/百分数/算式文本）',
+    options     JSON         NOT NULL COMMENT '选项JSON [{text:"..."}]',
+    answer      VARCHAR(50)  NOT NULL COMMENT '正确选项下标(0/1/2/3)',
+    tip         TEXT         NOT NULL COMMENT '速算技巧提示/解析',
+    tag         VARCHAR(50)  NOT NULL DEFAULT '' COMMENT '技巧标签（如 百化分-1/7 / 交叉相乘）',
+    active      TINYINT(1)   NOT NULL DEFAULT 1 COMMENT '是否启用 1=启用 0=停用',
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_qtype (qtype),
+    KEY idx_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='速算题目（系统内置）';
+
+-- ------------------------------------------------------------
+-- 13. mental_sessions 速算练习会话
+--    qtype: percent/compare/estimate/mixed（mixed=综合混练）
+--    rate 口径与练习模式一致：答对 / 全部题数，跳过计错
+--    difficulty 记录本次难度筛选（0=不限）
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS mental_sessions (
+    id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+    qtype         VARCHAR(16)  NOT NULL COMMENT '题型 percent/compare/estimate/mixed',
+    qtype_name    VARCHAR(20)  NOT NULL DEFAULT '' COMMENT '题型显示名快照（百化分/分数比大小/估算值/综合练习）',
+    difficulty    TINYINT      NOT NULL DEFAULT 0 COMMENT '难度筛选 0不限 1易 2中 3难',
+    total_count   INT          NOT NULL DEFAULT 0 COMMENT '本轮题量',
+    done_count    INT          NOT NULL DEFAULT 0 COMMENT '已作答（对+错，不含跳过）',
+    correct_count INT          NOT NULL DEFAULT 0 COMMENT '答对题数',
+    wrong_count   INT          NOT NULL DEFAULT 0 COMMENT '答错题数',
+    skipped_count INT          NOT NULL DEFAULT 0 COMMENT '跳过题数',
+    rate          DECIMAL(5,1) NOT NULL DEFAULT 0 COMMENT '正确率（%，1位小数）',
+    total_ms      BIGINT       NOT NULL DEFAULT 0 COMMENT '总用时（毫秒）',
+    started_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
+    finished_at   DATETIME     NULL COMMENT '结束时间',
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_qtype (qtype),
+    KEY idx_finished (finished_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='速算练习会话';
+
+-- ------------------------------------------------------------
+-- 14. mental_records 速算练习明细（带题目快照）
+--    快照 stem/options/answer/tip：题目后续调整/删除不影响历史回看
+--    result: ok=对 ng=错 skip=跳过；user_answer 存选项下标，NULL=跳过
+--    会话删除时级联删除明细
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS mental_records (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    session_id  BIGINT       NOT NULL COMMENT '所属会话ID',
+    question_id BIGINT       NOT NULL COMMENT '题目ID（不设外键，保留历史）',
+    no          INT          NOT NULL COMMENT '题号（从1开始）',
+    qtype       VARCHAR(16)  NOT NULL DEFAULT '' COMMENT '题型快照',
+    stem        TEXT         NOT NULL COMMENT '题干快照',
+    options     JSON         NOT NULL COMMENT '选项快照',
+    answer      VARCHAR(50)  NOT NULL DEFAULT '' COMMENT '正确答案下标快照',
+    tip         TEXT         NOT NULL COMMENT '技巧提示快照',
+    user_answer VARCHAR(50)  NULL COMMENT '用户作答下标（NULL=跳过）',
+    result      VARCHAR(4)   NOT NULL DEFAULT 'ok' COMMENT 'ok=对 ng=错 skip=跳过',
+    ms          BIGINT       NOT NULL DEFAULT 0 COMMENT '本题用时（毫秒）',
+    answered_at DATETIME     NULL COMMENT '作答时间',
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_session_no (session_id, no),
+    CONSTRAINT fk_mrec_session FOREIGN KEY (session_id) REFERENCES mental_sessions (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='速算练习明细（题目快照）';
+
 -- ============================================================
 -- 扩展预留说明（后续按需追加，不影响现有表）：
 --  · 若要支持"历史软删除"，可给 rounds 增加 deleted_at DATETIME NULL

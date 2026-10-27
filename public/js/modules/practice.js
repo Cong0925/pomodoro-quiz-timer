@@ -674,7 +674,7 @@
 
     /* ---------- 事件绑定 ---------- */
 
-    document.querySelectorAll('.practice-tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.ptab)));
+    document.querySelectorAll('#viewPractice .practice-tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.ptab)));
     el('pStartBtn').addEventListener('click', startPractice);
     el('pSkipBtn').addEventListener('click', skipQ);
     el('pNextBtn').addEventListener('click', nextQ);
