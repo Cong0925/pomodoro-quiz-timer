@@ -412,8 +412,9 @@
                     <div class="m-si-meta">${r.total_count === 0 ? '∞ 无限流' : '共 ' + r.total_count + ' 题'} · 对 ${r.correct_count} · 错 ${r.wrong_count} · 跳 ${r.skipped_count} · 用时 ${U.formatMs(r.total_ms)}</div>
                 </div>
                 <span class="m-si-rate ${r.rate < 60 ? 'low' : ''}">${r.rate}%</span>
+                <svg class="p-rec-toggle" viewBox="0 0 24 24" width="18" height="18"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>`).join('');
-        inner.querySelectorAll('.m-session-item').forEach(x => x.addEventListener('click', () => loadRecDetail(x)));
+        inner.querySelectorAll('.m-session-item').forEach(x => x.addEventListener('click', () => toggleRecDetail(x)));
         if (data.total > page * 20) {
             const more = document.createElement('div');
             more.className = 'p-rec-more';
@@ -421,6 +422,18 @@
             more.querySelector('button').addEventListener('click', () => { state.recPage++; renderRecords(false); });
             inner.appendChild(more);
         }
+    }
+
+    /* 会话卡：点击展开明细，再次点击收起 */
+    async function toggleRecDetail(card) {
+        const old = card.querySelector('.m-rec-detail');
+        if (old) {
+            old.remove();
+            card.classList.remove('open');
+            return;
+        }
+        await loadRecDetail(card);
+        card.classList.add('open');
     }
 
     async function loadRecDetail(card) {
