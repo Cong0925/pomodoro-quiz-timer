@@ -9,11 +9,22 @@
     const U = PQ.utils;
     const api = PQ.api;
 
+    /* ---------- 常量（魔法值集中管理，便于扩展） ---------- */
+    const TABS = { START: 'start', MANAGE: 'manage', RECORDS: 'records' };
+    const MODES = {
+        order: { k: 'order', n: '顺序练习', d: '按题库顺序逐题作答' },
+        random: { k: 'random', n: '随机抽题', d: '打乱顺序随机抽取' },
+        review: { k: 'review', n: '错题重练', d: '抽取练习历史中的错题' }
+    };
+    const MODE_NAMES = { order: '顺序', random: '随机', review: '错题重练' }; // 记录/历史列表里的短名
+    const COUNT_OPTIONS = [5, 10, 15, 20, 25, 30];  // 固定题量档位（仅显示所选题库能满足的）
+    const MIN_COUNT = COUNT_OPTIONS[0];
+
     const state = {
-        ptab: 'start',            // start / manage / records
+        ptab: TABS.START,         // TABS.START / MANAGE / RECORDS
         cats: [],                 // 分类树（来自 PQ.data）
         banks: [],                // 题库列表
-        selCat: null, selSub: null, selBank: null, mode: 'order', count: 5,
+        selCat: null, selSub: null, selBank: null, mode: MODES.order.k, count: MIN_COUNT,
         run: null,                // 运行中会话 { sessionId, questions, idx, ok, ng, skip, answers, startTs, review }
         curBank: 1, editIdx: -1, mgCat: 'all', mgSub: 'all',  // 题库管理（两层下拉筛选：大类→二级分类）
         recPage: 1, recTotal: 0,  // 练习记录分页
@@ -24,17 +35,6 @@
     /* ---------- 基础 ---------- */
 
     function el(id) { return document.getElementById(id); }
-
-    function fmtMs(ms) {
-        const s = Math.floor((ms || 0) / 1000);
-        return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
-    }
-
-    function todayStr() {
-        const d = new Date();
-        const p = n => String(n).padStart(2, '0');
-        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
-    }
 
     /* 进入练习视图：优先使用已缓存的分类，避免重复请求 */
     async function enter() {
@@ -61,10 +61,10 @@
     function switchTab(ptab) {
         state.ptab = ptab;
         document.querySelectorAll('.practice-tab').forEach(b => b.classList.toggle('active', b.dataset.ptab === ptab));
-        el('pPaneStart').hidden = ptab !== 'start';
-        el('pPaneManage').hidden = ptab !== 'manage';
-        el('pPaneRec').hidden = ptab !== 'records';
-        if (ptab !== 'start') {
+        el('pPaneStart').hidden = ptab !== TABS.START;
+        el('pPaneManage').hidden = ptab !== TABS.MANAGE;
+        el('pPaneRec').hidden = ptab !== TABS.RECORDS;
+        if (ptab !== TABS.START) {
             el('pPaneRun').hidden = true;
             el('pPaneResult').hidden = true;
         } else {
@@ -136,18 +136,14 @@
 
     function renderModes() {
         const row = el('pModeRow');
-        const modes = [
-            { k: 'order', n: '顺序练习', d: '按题库顺序逐题作答' },
-            { k: 'random', n: '随机抽题', d: '打乱顺序随机抽取' },
-            { k: 'review', n: '错题重练', d: '抽取练习历史中的错题' }
-        ];
+        const modes = Object.values(MODES);
         row.innerHTML = modes.map(m => `
             <div class="p-mode-chip ${state.mode === m.k ? 'selected' : ''}" data-k="${m.k}">
                 <b>${m.n}</b><span>${m.d}</span>
             </div>`).join('');
         row.querySelectorAll('.p-mode-chip').forEach(x => x.addEventListener('click', () => {
             state.mode = x.dataset.k;
-            if (state.mode === 'review') state.count = Math.min(state.count, 5);
+            if (state.mode === MODES.review.k) state.count = Math.min(state.count, MIN_COUNT);
             renderModes(); renderCounts(); updateStartBtn();
         }));
     }
@@ -156,7 +152,7 @@
         const row = el('pCountRow');
         const bank = state.banks.find(b => b.id === state.selBank);
         const max = bank ? Math.max(bank.count, 1) : 5;
-        const counts = [5, 10, 15, 20, 25, 30].filter(c => c <= max);
+        const counts = COUNT_OPTIONS.filter(c => c <= max);
         if (counts.length === 0) counts.push(Math.max(1, max));
         if (!counts.includes(state.count)) state.count = counts[0];
         row.innerHTML = counts.map(c => `<button class="p-count-btn ${state.count === c ? 'selected' : ''}" data-c="${c}">${c}</button>`).join('');
@@ -174,7 +170,7 @@
         if (!state.selSub) { btn.classList.add('muted'); tip.textContent = '请先选择二级分类'; return; }
         if (!state.selBank) { btn.classList.add('muted'); tip.textContent = '请选择题库'; return; }
         btn.classList.remove('muted');
-        tip.textContent = state.mode === 'review' ? '将从练习历史中抽取错题，不足部分补随机题' : `将抽取 ${state.count} 道题`;
+        tip.textContent = state.mode === MODES.review.k ? '将从练习历史中抽取错题，不足部分补随机题' : `将抽取 ${state.count} 道题`;
     }
 
     async function startPractice() {
@@ -196,7 +192,7 @@
             el('pPaneRun').hidden = false;
             el('pRunTitle').textContent = r.bank.name;
             el('pRunMeta').textContent = (r.bank.catName || '') + (r.bank.subName ? ' / ' + r.bank.subName : '') + ' · ' +
-                (r.mode === 'order' ? '顺序' : r.mode === 'random' ? '随机' : '错题重练');
+                (MODE_NAMES[r.mode] || r.mode);
             startClock();
             renderQ();
         } catch (e) {
@@ -207,7 +203,7 @@
     function startClock() {
         if (state.timer) clearInterval(state.timer);
         state.timer = setInterval(() => {
-            if (state.run && !state.run.finished) el('pRunTime').textContent = fmtMs(Date.now() - state.run.startTs);
+            if (state.run && !state.run.finished) el('pRunTime').textContent = U.formatMs(Date.now() - state.run.startTs);
         }, 500);
     }
 
@@ -313,14 +309,14 @@
         try {
             const r = await api.post(`/api/practice/${state.run.sessionId}/finish`, { ms });
             // 练习时长并入今日学习时长
-            try { await api.post('/api/study-daily', { date: todayStr(), addMs: ms }); } catch (e) { /* 不阻塞结算 */ }
+            try { await api.post('/api/study-daily', { date: U.todayKey(new Date()), addMs: ms }); } catch (e) { /* 不阻塞结算 */ }
             el('pPaneRun').hidden = true;
             el('pPaneResult').hidden = false;
             el('pScore').textContent = r.rate + '%';
             el('pResOk').textContent = r.correct;
             el('pResNg').textContent = r.wrong;
             el('pResSkip').textContent = r.skipped;
-            el('pResTime').textContent = fmtMs(r.totalMs);
+            el('pResTime').textContent = U.formatMs(r.totalMs);
         } catch (e) {
             U.showToast('结束练习失败：' + e.message, 'error');
         }
@@ -632,7 +628,7 @@
         inner.innerHTML = data.list.map(r => `
             <div class="p-rec-card" data-id="${r.id}">
                 <div class="p-rec-head">
-                    <div class="p-rec-title">${U.escapeHtml(r.bank_name)}<span class="p-rec-sub">${r.mode === 'order' ? '顺序' : r.mode === 'random' ? '随机' : '错题重练'} · ${r.cat_name || ''}${r.sub_name ? ' / ' + r.sub_name : ''} · ${r.started_at || ''}</span></div>
+                    <div class="p-rec-title">${U.escapeHtml(r.bank_name)}<span class="p-rec-sub">${MODE_NAMES[r.mode] || r.mode} · ${r.cat_name || ''}${r.sub_name ? ' / ' + r.sub_name : ''} · ${r.started_at || ''}</span></div>
                     <span class="p-rec-rate ${r.rate < 60 ? 'low' : ''}">${r.rate}%</span>
                     <svg class="p-rec-toggle" viewBox="0 0 24 24" width="18" height="18"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
@@ -664,7 +660,7 @@
             const r = await api.get('/api/practice/history/' + id);
             const s = r.session;
             body.innerHTML = `
-                <div class="p-rec-summary">共 ${s.total_count} 题 · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 用时 ${fmtMs(s.total_ms)}</div>
+                <div class="p-rec-summary">共 ${s.total_count} 题 · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 用时 ${U.formatMs(s.total_ms)}</div>
                 ${r.records.map(d => `
                     <div class="p-rec-row">
                         <span class="p-rd-no p-rd-${d.result}">${d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗'}</span>

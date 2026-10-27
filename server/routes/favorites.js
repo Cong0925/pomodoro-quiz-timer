@@ -4,7 +4,7 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { str, num } = require('../utils');
+const { str, num, asyncHandler } = require('../utils');
 
 const router = express.Router();
 
@@ -24,8 +24,7 @@ const rowToFav = r => ({
 });
 
 /* GET /api/favorites?mode=&catId=&subId=&page=&limit= */
-router.get('/', async (req, res) => {
-    try {
+router.get('/', asyncHandler(async (req, res) => {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
         const where = [];
@@ -54,16 +53,12 @@ router.get('/', async (req, res) => {
             limit,
             totalPages: Math.max(1, Math.ceil(total / limit))
         });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* POST /api/favorites 收藏错题
    body: { roundId, no, title, mode, modeName, timeStr,
            catId, catName, subId, subName } */
-router.post('/', async (req, res) => {
-    try {
+router.post('/', asyncHandler(async (req, res) => {
         const b = req.body || {};
         const roundId = num(b.roundId);
         const no = num(b.no);
@@ -117,15 +112,11 @@ router.post('/', async (req, res) => {
             }
         }
         res.status(201).json({ ok: true, id });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* PUT /api/favorites/:id 修改收藏分类
    body: { catId, catName, subId, subName } */
-router.put('/:id', async (req, res) => {
-    try {
+router.put('/:id', asyncHandler(async (req, res) => {
         const b = req.body || {};
         const [r] = await pool.query(
             `UPDATE favorites SET cat_id=?, cat_name=?, sub_id=?, sub_name=? WHERE id=?`,
@@ -139,30 +130,19 @@ router.put('/:id', async (req, res) => {
         );
         if (r.affectedRows === 0) return res.status(404).json({ error: '收藏不存在' });
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* DELETE /api/favorites/:id 取消收藏 */
-router.delete('/:id', async (req, res) => {
-    try {
+router.delete('/:id', asyncHandler(async (req, res) => {
         const [r] = await pool.query('DELETE FROM favorites WHERE id=?', [req.params.id]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '收藏不存在' });
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* DELETE /api/favorites 清空全部收藏 */
-router.delete('/', async (req, res) => {
-    try {
+router.delete('/', asyncHandler(async (req, res) => {
         await pool.query('DELETE FROM favorites');
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 module.exports = router;

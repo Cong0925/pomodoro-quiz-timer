@@ -1,6 +1,6 @@
 # 刷题计时器（MySQL 版）
 
-双模式刷题计时 + 历史记录 + 错题收藏 + 学习统计 + 日历备忘。数据全部存储在本地 MySQL 数据库，前端通过 Node 后端接口读写，数据再多也不卡顿。
+双模式刷题计时 + 历史记录 + 错题收藏 + 学习统计 + 日历备忘 + **题库练习**（题库/题目管理、顺序/随机/错题重练、答题即判、练习记录归档）。数据全部存储在本地 MySQL 数据库，前端通过 Node 后端接口读写，数据再多也不卡顿。
 
 ## 一、怎么启动（日常使用）
 
@@ -47,7 +47,7 @@ PORT=3000
 3. **获取代码**：从 GitHub 下载或 `git clone` 本项目到新电脑。
 4. **配置数据库**：复制 `.env.example` 为 `.env`，把 `DB_USER` / `DB_PASSWORD` 改成新电脑 MySQL 的账号密码（库名保持 `pomodoro-quiz-timer` 即可，脚本会自动创建）。
 5. **安装依赖**：`npm install`。
-6. **建库建表**：`npm run init-db`（自动创建数据库和 7 张表，可重复执行）。
+6. **建库建表**：`npm run init-db`（自动创建数据库和 11 张表，可重复执行）。
 7. **恢复数据**：把备份文件放进项目 `data/` 目录，执行 `npm run restore data/backup-日期.json`。
 8. **启动**：双击 `启动.bat`，浏览器打开 http://localhost:3000，数据全部就位。
 
@@ -78,21 +78,49 @@ npm run migrate 旧data.json路径 -- --force
 
 ```
 ├─ server/              后端（Node + Express + MySQL）
-│  ├─ index.js          服务入口
-│  ├─ schema.sql        建表 SQL（7 张表）
+│  ├─ index.js          服务入口（挂载全部路由 + 全局错误兜底）
+│  ├─ schema.sql        建表 SQL（11 张表：主模式 7 + 练习模式 4）
 │  ├─ init-db.js        初始化建库建表脚本
 │  ├─ backup.js         一键备份脚本
 │  ├─ restore.js        一键恢复脚本
 │  ├─ migrate.js        旧数据迁移脚本
 │  ├─ exportData.js     数据导出公共模块
 │  ├─ importData.js     数据导入核心逻辑
-│  └─ routes/           API 路由（分类/历史/收藏/统计/备忘/导出导入）
+│  ├─ defaultCategories.js  内置分类（公务员考试等）
+│  ├─ utils.js          服务端公共工具（uid/nowDateTime/num/str/asyncHandler…）
+│  ├─ db.js             数据库连接池
+│  └─ routes/           API 路由（按资源拆分，统一用 asyncHandler 包错误处理）
+│     ├─ categories.js  分类管理（大类/小类）
+│     ├─ history.js     历史记录（分页/归档/编辑/删除）
+│     ├─ favorites.js   错题收藏
+│     ├─ stats.js       学习统计（日/周/月，日期连续性补零）
+│     ├─ study.js       学习时长上报
+│     ├─ memos.js       日历备忘
+│     ├─ practice.js    练习模式（题库/题目/会话/历史/统计）
+│     └─ data.js        数据导入导出（备份文件格式）
 ├─ public/              前端（纯 HTML/CSS/JS，浏览器直接运行）
-│  ├─ index.html
-│  ├─ css/style.css
+│  ├─ index.html        单页入口（各视图容器 + 组件容器）
+│  ├─ css/
+│  │  ├─ style.css      全局样式（按功能区块注释组织）
+│  │  └─ components.css 组件样式（toast / confirm 等）
 │  └─ js/
-│     ├─ core/          工具、API 封装、数据层
-│     └─ modules/       分类/计时/历史/收藏/统计/日历/设置/悬浮窗模块
+│     ├─ core/          基础层
+│     │  ├─ utils.js    通用工具（formatTime/formatMs/escapeHtml/todayKey…）
+│     │  ├─ api.js      fetch 统一封装（get/post/put/del）
+│     │  ├─ ui.js       组件库（PQ.ui：showToast / confirm）
+│     │  ├─ dataModel.js 数据层（加载/归档/收藏/学习时长上报）
+│     │  └─ storage.js
+│     ├─ modules/       业务模块（一个模块 = 一个菜单视图）
+│     │  ├─ timer.js    计时（单题/整组）
+│     │  ├─ history.js  历史记录
+│     │  ├─ favorites.js 错题收藏
+│     │  ├─ stats.js    学习统计
+│     │  ├─ calendar.js 日历备忘
+│     │  ├─ practice.js 题库练习（开始/管理/记录三页签）
+│     │  ├─ categories.js 分类管理
+│     │  ├─ settings.js 设置
+│     │  └─ studyFloat.js 悬浮计时
+│     └─ app.js         入口：初始化 + 视图切换 + 菜单
 ├─ .env                 数据库配置（改这里；已被 gitignore，不会上传）
 ├─ .env.example         配置模板（新电脑复制为 .env）
 ├─ .gitignore           已排除 .env / node_modules / data（数据与密码不上传）
@@ -100,7 +128,27 @@ npm run migrate 旧data.json路径 -- --force
 └─ 停止服务.bat         一键停止
 ```
 
-## 八、常见问题
+## 八、如何新增一个功能模块（扩展约定）
+
+按以下 5 步即可新增一个菜单页，无需改动其他模块：
+
+1. **建前端模块**：新建 `public/js/modules/你的模块.js`，结构仿照 `practice.js`——
+   `(function(){ 'use strict'; ... })()`，内部持有状态对象 `state`，暴露 `enter()` 等挂到 `PQ.模块名`。
+2. **挂视图容器**：在 `public/index.html` 里新增一个 `<div class="view" id="viewXxx">` 视图块，
+   并在底部按顺序引入你的 JS（`core` 层在前，模块在后，`app.js` 最后）。
+3. **挂菜单与切换**：在 `public/index.html` 菜单区加 `<div class="menu-item" data-view="xxx">`；
+   在 `public/js/app.js` 的 `switchView()` 里加一行视图显隐 + 一行进入回调（如 `if (view === 'xxx') PQ.xxx.enter();`）。
+4. **写后端 API**：需要接口时新建 `server/routes/你的模块.js`，
+   路由处理函数统一写成 `router.get('/...', asyncHandler(async (req, res) => { ... }))`，
+   在 `server/index.js` 挂载 `app.use('/api/你的模块', require('./routes/你的模块'))`。
+5. **加表**：涉及新表时在 `server/schema.sql` 追加 `CREATE TABLE IF NOT EXISTS`，
+   新电脑/现有库执行 `npm run init-db` 建表（幂等）。
+
+公共约定：时间统一用 `YYYY-MM-DD HH:mm:ss`（服务端 `nowDateTime()` / 前端 `formatDate()`）；
+危险操作（删除等）必须用 `PQ.ui.confirm()` 二次确认；提示统一用 `PQ.ui.showToast()`；
+魔法值（枚举/档位/文案）抽到文件顶部常量块。
+
+## 九、常见问题
 
 - **页面提示"连接后端失败"**：服务没启动，双击「启动.bat」。
 - **改过 MySQL 密码后连不上**：把新密码填到 `.env` 的 `DB_PASSWORD`，然后重启服务。

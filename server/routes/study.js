@@ -6,13 +6,12 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { num } = require('../utils');
+const { num, asyncHandler } = require('../utils');
 
 const router = express.Router();
 
 /* POST /api/study-daily { date: 'YYYY-MM-DD', addMs: 毫秒 } 累加某日学习时长 */
-router.post('/', async (req, res) => {
-    try {
+router.post('/', asyncHandler(async (req, res) => {
         const date = req.body && req.body.date;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: '日期格式应为 YYYY-MM-DD' });
         const addMs = num(req.body.addMs);
@@ -24,21 +23,14 @@ router.post('/', async (req, res) => {
             [date, addMs]
         );
         res.json({ ok: true, added: addMs });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* GET /api/study-daily?date=YYYY-MM-DD 查询某日学习时长 */
-router.get('/', async (req, res) => {
-    try {
+router.get('/', asyncHandler(async (req, res) => {
         const date = req.query.date;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: '日期格式应为 YYYY-MM-DD' });
         const [rows] = await pool.query('SELECT ms FROM study_daily WHERE study_date=?', [date]);
         res.json({ date, ms: rows.length ? rows[0].ms : 0 });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 module.exports = router;

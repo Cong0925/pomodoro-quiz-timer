@@ -4,15 +4,14 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { str } = require('../utils');
+const { str, asyncHandler } = require('../utils');
 
 const router = express.Router();
 
 const VALID_TYPES = new Set(['exam', 'meeting', 'study', 'sport', 'birthday', 'travel', 'other']);
 
 /* GET /api/memos?month=YYYY-MM 某月全部备忘 */
-router.get('/', async (req, res) => {
-    try {
+router.get('/', asyncHandler(async (req, res) => {
         const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : null;
         let rows;
         if (month) {
@@ -24,27 +23,19 @@ router.get('/', async (req, res) => {
             [rows] = await pool.query('SELECT DATE_FORMAT(memo_date,"%Y-%m-%d") AS date, type, title, content FROM memos ORDER BY memo_date');
         }
         res.json(rows);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* GET /api/memos/:date 某日备忘 */
-router.get('/:date', async (req, res) => {
-    try {
+router.get('/:date', asyncHandler(async (req, res) => {
         const [rows] = await pool.query(
             'SELECT DATE_FORMAT(memo_date,"%Y-%m-%d") AS date, type, title, content FROM memos WHERE memo_date=?',
             [req.params.date]
         );
         res.json(rows.length ? rows[0] : null);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* PUT /api/memos/:date 保存备忘 { type, title, content }（upsert；content 空则视为删除） */
-router.put('/:date', async (req, res) => {
-    try {
+router.put('/:date', asyncHandler(async (req, res) => {
         const date = req.params.date;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: '日期格式应为 YYYY-MM-DD' });
         const b = req.body || {};
@@ -64,19 +55,12 @@ router.put('/:date', async (req, res) => {
             [date, type, title, content]
         );
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* DELETE /api/memos/:date 清空某日备忘 */
-router.delete('/:date', async (req, res) => {
-    try {
+router.delete('/:date', asyncHandler(async (req, res) => {
         await pool.query('DELETE FROM memos WHERE memo_date=?', [req.params.date]);
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 module.exports = router;

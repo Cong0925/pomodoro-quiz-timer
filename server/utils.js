@@ -39,4 +39,11 @@ function parseJsonArray(v) {
     return [];
 }
 
-module.exports = { uid, nowDateTime, num, str, parseJsonArray };
+/* async 路由包装器：async handler 抛出的错误统一交给
+   Express 全局错误中间件（server/index.js）兜底，
+   消除各路由重复的 try/catch + res.status(500)。 */
+function asyncHandler(fn) {
+    return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+}
+
+module.exports = { uid, nowDateTime, num, str, parseJsonArray, asyncHandler };

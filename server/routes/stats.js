@@ -4,6 +4,7 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
+const { asyncHandler } = require('../utils');
 
 const router = express.Router();
 
@@ -60,8 +61,7 @@ function buildKeys(gran, start, end) {
 
 /* GET /api/stats?gran=day|week|month
    返回 { today: {...}, list: [{key,label,rounds,questions,correct,rate,workMs,studyMs}] } */
-router.get('/', async (req, res) => {
-    try {
+router.get('/', asyncHandler(async (req, res) => {
         const gran = ['day', 'week', 'month'].includes(req.query.gran) ? req.query.gran : 'day';
 
         /* 今日情况（rounds 与 records 分开聚合，避免 JOIN 重复计算 correct/total_ms） */
@@ -147,9 +147,6 @@ router.get('/', async (req, res) => {
         });
 
         res.json({ today, list });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 module.exports = router;

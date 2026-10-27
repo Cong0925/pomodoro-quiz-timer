@@ -16,6 +16,12 @@
         return `${minutes}:${seconds}`;
     }
 
+    /* mm:ss（整数秒，练习/计时短用时展示） */
+    function formatMs(ms) {
+        const s = Math.floor((ms || 0) / 1000);
+        return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    }
+
     /* YYYY-MM-DD HH:mm:ss */
     function formatDate(ts) {
         const d = new Date(ts);
@@ -77,7 +83,7 @@
 
     window.PQ = window.PQ || {};
     PQ.utils = {
-        showToast, formatTime, formatDate, escapeHtml, pad2, todayKey,
+        showToast, formatTime, formatMs, formatDate, escapeHtml, pad2, todayKey,
         parseDateStr, mondayOf, formatDuration, normCalTitle, uid
     };
 })();

@@ -5,15 +5,7 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { num, str } = require('../utils')
-
-/* 本地时间 YYYY-MM-DD HH:mm:ss（与主模式归档一致，避免 UTC 时差） */
-const localNow = () => {
-    const d = new Date();
-    const p = n => String(n).padStart(2, '0');
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' +
-        p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
-};;
+const { asyncHandler, num, str, nowDateTime } = require('../utils');
 
 const router = express.Router();
 
@@ -38,15 +30,12 @@ async function listBanks() {
 }
 
 /* GET /api/practice/banks */
-router.get('/banks', async (req, res) => {
-    try {
+router.get('/banks', asyncHandler(async (req, res) => {
         res.json(await listBanks());
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* POST /api/practice/banks { name, catId, subId, description } */
-router.post('/banks', async (req, res) => {
-    try {
+router.post('/banks', asyncHandler(async (req, res) => {
         const name = str(req.body && req.body.name, 100).trim();
         if (!name) return res.status(400).json({ error: '题库名称不能为空' });
         const catId = str(req.body.catId, 32) || null;
@@ -57,12 +46,10 @@ router.post('/banks', async (req, res) => {
             [name, catId, subId, description]
         );
         res.status(201).json({ id: r.insertId, name, catId, subId, description });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* PUT /api/practice/banks/:id */
-router.put('/banks/:id', async (req, res) => {
-    try {
+router.put('/banks/:id', asyncHandler(async (req, res) => {
         const id = num(req.params.id);
         const name = str(req.body && req.body.name, 100).trim();
         if (!name) return res.status(400).json({ error: '题库名称不能为空' });
@@ -75,34 +62,28 @@ router.put('/banks/:id', async (req, res) => {
         );
         if (r.affectedRows === 0) return res.status(404).json({ error: '题库不存在' });
         res.json({ ok: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* DELETE /api/practice/banks/:id（级联删除题目） */
-router.delete('/banks/:id', async (req, res) => {
-    try {
+router.delete('/banks/:id', asyncHandler(async (req, res) => {
         const [r] = await pool.query('DELETE FROM question_banks WHERE id=?', [num(req.params.id)]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '题库不存在' });
         res.json({ ok: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* ---------- 题目 ---------- */
 
 /* GET /api/practice/banks/:id/questions */
-router.get('/banks/:id/questions', async (req, res) => {
-    try {
+router.get('/banks/:id/questions', asyncHandler(async (req, res) => {
         const [rows] = await pool.query(
             'SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source FROM questions WHERE bank_id=? ORDER BY id ASC',
             [num(req.params.id)]
         );
         res.json(rows);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* POST /api/practice/questions { bankId, type, stem, options, answer, analysis, difficulty, source } */
-router.post('/questions', async (req, res) => {
-    try {
+router.post('/questions', asyncHandler(async (req, res) => {
         const bankId = num(req.body && req.body.bankId);
         const stem = str(req.body && req.body.stem, 20000).trim();
         if (!bankId) return res.status(400).json({ error: '缺少题库ID' });
@@ -119,12 +100,10 @@ router.post('/questions', async (req, res) => {
             [bankId, type, stem, options, answer, analysis, difficulty, source]
         );
         res.status(201).json({ id: r.insertId });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* PUT /api/practice/questions/:id */
-router.put('/questions/:id', async (req, res) => {
-    try {
+router.put('/questions/:id', asyncHandler(async (req, res) => {
         const id = num(req.params.id);
         const stem = str(req.body && req.body.stem, 20000).trim();
         if (!stem) return res.status(400).json({ error: '题干不能为空' });
@@ -141,17 +120,14 @@ router.put('/questions/:id', async (req, res) => {
         );
         if (r.affectedRows === 0) return res.status(404).json({ error: '题目不存在' });
         res.json({ ok: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* DELETE /api/practice/questions/:id */
-router.delete('/questions/:id', async (req, res) => {
-    try {
+router.delete('/questions/:id', asyncHandler(async (req, res) => {
         const [r] = await pool.query('DELETE FROM questions WHERE id=?', [num(req.params.id)]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '题目不存在' });
         res.json({ ok: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* ---------- 练习会话 ---------- */
 
@@ -185,8 +161,7 @@ async function pickQuestions(bankId, mode, count) {
 }
 
 /* POST /api/practice/start { bankId, mode, count } */
-router.post('/start', async (req, res) => {
-    try {
+router.post('/start', asyncHandler(async (req, res) => {
         const bankId = num(req.body && req.body.bankId);
         const mode = ['order', 'random', 'review'].includes(req.body && req.body.mode) ? req.body.mode : 'order';
         const count = num(req.body && req.body.count) || 10;
@@ -220,12 +195,10 @@ router.post('/start', async (req, res) => {
             questions: qs.map(q => ({ id: q.id, type: q.type, stem: q.stem, options: q.options, difficulty: q.difficulty })),
             total: qs.length
         });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* POST /api/practice/:id/answer { no, answer, ms } */
-router.post('/:id/answer', async (req, res) => {
-    try {
+router.post('/:id/answer', asyncHandler(async (req, res) => {
         const sessionId = num(req.params.id);
         const no = num(req.body && req.body.no);
         const userAnswer = str(req.body && req.body.answer, 50).trim();
@@ -244,7 +217,7 @@ router.post('/:id/answer', async (req, res) => {
 
         const correct = userAnswer === str(q[0].answer, 50);
         const result = correct ? 'ok' : 'ng';
-        const now = localNow();
+        const now = nowDateTime();
         await pool.query(
             'INSERT INTO practice_records (session_id, question_id, no, user_answer, result, ms, answered_at) VALUES (?,?,?,?,?,?,?)',
             [sessionId, questionId, no, userAnswer || null, result, ms, now]
@@ -255,12 +228,10 @@ router.post('/:id/answer', async (req, res) => {
              WHERE id=?`, [sessionId]
         );
         res.json({ result, correctAnswer: str(q[0].answer, 50), analysis: q[0].analysis, stem: q[0].stem, options: q[0].options });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* POST /api/practice/:id/skip { no, ms } */
-router.post('/:id/skip', async (req, res) => {
-    try {
+router.post('/:id/skip', asyncHandler(async (req, res) => {
         const sessionId = num(req.params.id);
         const no = num(req.body && req.body.no);
         const ms = num(req.body && req.body.ms);
@@ -270,25 +241,24 @@ router.post('/:id/skip', async (req, res) => {
         const questionId = num(req.body && req.body.questionId);
         const [q] = await pool.query('SELECT id, answer, analysis FROM questions WHERE id=?', [questionId]);
         if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
-        const now = localNow();
+        const now = nowDateTime();
         await pool.query(
             'INSERT INTO practice_records (session_id, question_id, no, user_answer, result, ms, answered_at) VALUES (?,?,?,?,?,?,?)',
             [sessionId, questionId, no, null, 'skip', ms, now]
         );
         await pool.query('UPDATE practice_sessions SET skipped_count = skipped_count + 1 WHERE id=?', [sessionId]);
         res.json({ result: 'skip', correctAnswer: str(q[0].answer, 50), analysis: q[0].analysis });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* POST /api/practice/:id/finish { ms }
    结算练习会话：更新汇总，并把本轮练习归档为一条历史记录
    （rounds + records 同主模式格式；note 留空，历史页可编辑/收藏/删除） */
-router.post('/:id/finish', async (req, res) => {
+router.post('/:id/finish', asyncHandler(async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const sessionId = num(req.params.id);
         const ms = num(req.body && req.body.ms);
-        const now = localNow();
+        const now = nowDateTime();
         await conn.beginTransaction();
         const [s] = await conn.query(
             `UPDATE practice_sessions SET total_ms = ?, finished_at = ?,
@@ -345,17 +315,16 @@ router.post('/:id/finish', async (req, res) => {
         });
     } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        throw e;
     } finally {
         conn.release();
     }
-});
+}));
 
 /* ---------- 历史 / 统计 ---------- */
 
 /* GET /api/practice/history?page=1&limit=20 */
-router.get('/history', async (req, res) => {
-    try {
+router.get('/history', asyncHandler(async (req, res) => {
         const page = Math.max(1, num(req.query.page) || 1);
         const limit = Math.min(50, Math.max(1, num(req.query.limit) || 20));
         const offset = (page - 1) * limit;
@@ -366,12 +335,10 @@ router.get('/history', async (req, res) => {
              FROM practice_sessions ORDER BY id DESC LIMIT ? OFFSET ?`, [limit, offset]
         );
         res.json({ total, page, limit, list: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* GET /api/practice/history/:id（含每题明细；题目被删时题干显示占位） */
-router.get('/history/:id', async (req, res) => {
-    try {
+router.get('/history/:id', asyncHandler(async (req, res) => {
         const id = num(req.params.id);
         const [s] = await pool.query('SELECT * FROM practice_sessions WHERE id=?', [id]);
         if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
@@ -386,12 +353,10 @@ router.get('/history/:id', async (req, res) => {
             stem: r.stem || '（题目已删除）', correctAnswer: r.correct_answer || '', analysis: r.analysis || '',
             options: r.options
         })) });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 /* GET /api/practice/stats（累计 + 今日概况） */
-router.get('/stats', async (req, res) => {
-    try {
+router.get('/stats', asyncHandler(async (req, res) => {
         const [[all]] = await pool.query(`
             SELECT COUNT(*) AS sessions,
                    COALESCE(SUM(total_count),0) AS total_q,
@@ -414,7 +379,6 @@ router.get('/stats', async (req, res) => {
             all: { sessions: all.sessions, totalQ: all.total_q, correctQ: all.correct_q, wrongQ: all.wrong_q, skipQ: all.skip_q, totalMs: all.total_ms, rate },
             today: { sessions: today.sessions, totalQ: today.total_q, correctQ: today.correct_q, wrongQ: today.wrong_q, skipQ: today.skip_q, totalMs: today.total_ms }
         });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}));
 
 module.exports = router;

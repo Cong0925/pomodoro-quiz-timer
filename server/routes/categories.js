@@ -4,7 +4,7 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { uid, str } = require('../utils');
+const { uid, str, asyncHandler } = require('../utils');
 const DEFAULT_CATEGORIES = require('../defaultCategories');
 
 const router = express.Router();
@@ -27,17 +27,12 @@ async function getCategoryTree() {
 }
 
 /* GET /api/categories 全部分类 */
-router.get('/', async (req, res) => {
-    try {
+router.get('/', asyncHandler(async (req, res) => {
         res.json(await getCategoryTree());
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* POST /api/categories 新建大类 { name } */
-router.post('/', async (req, res) => {
-    try {
+router.post('/', asyncHandler(async (req, res) => {
         const name = str(req.body && req.body.name, 100).trim();
         if (!name) return res.status(400).json({ error: '大类名称不能为空' });
         const id = uid('c');
@@ -47,38 +42,26 @@ router.post('/', async (req, res) => {
             [id, name, r[0].n]
         );
         res.status(201).json({ id, name, builtin: false, subs: [] });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* PUT /api/categories/:id 重命名大类 { name } */
-router.put('/:id', async (req, res) => {
-    try {
+router.put('/:id', asyncHandler(async (req, res) => {
         const name = str(req.body && req.body.name, 100).trim();
         if (!name) return res.status(400).json({ error: '大类名称不能为空' });
         const [r] = await pool.query('UPDATE categories SET name=? WHERE id=?', [name, req.params.id]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '分类不存在' });
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* DELETE /api/categories/:id 删除大类（小类级联删除；历史/收藏中的名称快照不受影响） */
-router.delete('/:id', async (req, res) => {
-    try {
+router.delete('/:id', asyncHandler(async (req, res) => {
         const [r] = await pool.query('DELETE FROM categories WHERE id=?', [req.params.id]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '分类不存在' });
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* POST /api/categories/:id/subs 新建小类 { name } */
-router.post('/:id/subs', async (req, res) => {
-    try {
+router.post('/:id/subs', asyncHandler(async (req, res) => {
         const name = str(req.body && req.body.name, 100).trim();
         if (!name) return res.status(400).json({ error: '小类名称不能为空' });
         const subId = req.params.id + '-' + uid('s').slice(2);
@@ -88,38 +71,26 @@ router.post('/:id/subs', async (req, res) => {
             [subId, req.params.id, name, r[0].n]
         );
         res.status(201).json({ id: subId, name });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* PUT /api/categories/:id/subs/:subId 重命名小类 { name } */
-router.put('/:id/subs/:subId', async (req, res) => {
-    try {
+router.put('/:id/subs/:subId', asyncHandler(async (req, res) => {
         const name = str(req.body && req.body.name, 100).trim();
         if (!name) return res.status(400).json({ error: '小类名称不能为空' });
         const [r] = await pool.query('UPDATE category_subs SET name=? WHERE id=? AND cat_id=?', [name, req.params.subId, req.params.id]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '小类不存在' });
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* DELETE /api/categories/:id/subs/:subId 删除小类 */
-router.delete('/:id/subs/:subId', async (req, res) => {
-    try {
+router.delete('/:id/subs/:subId', asyncHandler(async (req, res) => {
         const [r] = await pool.query('DELETE FROM category_subs WHERE id=? AND cat_id=?', [req.params.subId, req.params.id]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '小类不存在' });
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* POST /api/categories/restore 恢复缺失的内置分类（幂等） */
-router.post('/restore', async (req, res) => {
-    try {
+router.post('/restore', asyncHandler(async (req, res) => {
         const [rows] = await pool.query('SELECT id FROM categories');
         const existIds = new Set(rows.map(r => r.id));
         let added = 0;
@@ -138,9 +109,6 @@ router.post('/restore', async (req, res) => {
             added++;
         }
         res.json({ ok: true, added });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 module.exports = router;

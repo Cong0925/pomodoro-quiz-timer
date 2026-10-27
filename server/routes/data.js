@@ -5,7 +5,7 @@
 const express = require('express');
 const pool = require('../db');
 const importData = require('../importData');
-const { parseJsonArray } = require('../utils');
+const { asyncHandler, parseJsonArray } = require('../utils');
 
 const router = express.Router();
 
@@ -122,8 +122,7 @@ async function exportPractice() {
 }
 
 /* GET /api/export 导出全部数据（旧版 v2 JSON 格式） */
-router.get('/export', async (req, res) => {
-    try {
+router.get('/export', asyncHandler(async (req, res) => {
         res.json({
             version: 2,
             categories: await exportCategories(),
@@ -133,14 +132,10 @@ router.get('/export', async (req, res) => {
             memos: await exportMemos(),
             practice: await exportPractice()
         });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* GET /api/info 数据库信息（设置页展示用） */
-router.get('/info', async (req, res) => {
-    try {
+router.get('/info', asyncHandler(async (req, res) => {
         const [cats] = await pool.query('SELECT COUNT(*) n FROM categories');
         const [subs] = await pool.query('SELECT COUNT(*) n FROM category_subs');
         const [rounds] = await pool.query('SELECT COUNT(*) n FROM rounds');
@@ -168,10 +163,7 @@ router.get('/info', async (req, res) => {
             practiceSessions: ps[0].n,
             practiceRecords: pp[0].n
         });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* POST /api/import 导入合并数据（兼容旧版 v2 JSON）
    规则（与旧版一致）：
@@ -179,7 +171,7 @@ router.get('/info', async (req, res) => {
    - categories 以文件为准更新/新增，本地有而文件没有的保留
    - studyDaily 按日取较大值合并
    - memos 按日 upsert */
-router.post('/import', async (req, res) => {
+router.post('/import', asyncHandler(async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const data = req.body || {};
@@ -191,10 +183,10 @@ router.post('/import', async (req, res) => {
         res.json({ ok: true, ...info });
     } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        throw e;
     } finally {
         conn.release();
     }
-});
+}));
 
 module.exports = router;

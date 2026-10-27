@@ -5,7 +5,7 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { str, num, parseJsonArray } = require('../utils');
+const { asyncHandler, str, num, parseJsonArray } = require('../utils');
 
 const router = express.Router();
 
@@ -43,8 +43,7 @@ const rowToHistory = (r, withRecords) => {
    返回 { list, total, page, limit, totalPages }
    列表项含 records（题目明细）与 favNos（该轮已收藏的题号），
    便于前端直接渲染展开明细与收藏状态 */
-router.get('/', async (req, res) => {
-    try {
+router.get('/', asyncHandler(async (req, res) => {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
         const where = [];
@@ -96,14 +95,10 @@ router.get('/', async (req, res) => {
             limit,
             totalPages: Math.max(1, Math.ceil(total / limit))
         });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* GET /api/history/:id 单轮详情（含 records 明细） */
-router.get('/:id', async (req, res) => {
-    try {
+router.get('/:id', asyncHandler(async (req, res) => {
         const [rows] = await pool.query(
             `SELECT h.*, COALESCE(
                 (SELECT JSON_ARRAYAGG(JSON_OBJECT(
@@ -116,15 +111,12 @@ router.get('/:id', async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ error: '记录不存在' });
         rows[0].records = parseJsonArray(rows[0].records);
         res.json(rowToHistory(rows[0], true));
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* POST /api/history 归档一轮（事务：rounds + records 一起写入）
    body: { mode, modeName, title, description, finishedAt, maxCount,
            totalMs, correct, rate, catId, catName, subId, subName, records[] } */
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const b = req.body || {};
@@ -178,15 +170,15 @@ router.post('/', async (req, res) => {
         res.status(201).json({ id });
     } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        throw e;
     } finally {
         conn.release();
     }
-});
+}));
 
 /* PUT /api/history/:id 编辑标题/描述/分类（同步更新该轮收藏的快照）
    body: { title, description, catId, catName, subId, subName } */
-router.put('/:id', async (req, res) => {
+router.put('/:id', asyncHandler(async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const b = req.body || {};
@@ -225,46 +217,34 @@ router.put('/:id', async (req, res) => {
         res.json({ ok: true });
     } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        throw e;
     } finally {
         conn.release();
     }
-});
+}));
 
 /* PUT /api/history/:id/record/:no 更新单题知识点描述
    body: { note } */
-router.put('/:id/record/:no', async (req, res) => {
-    try {
+router.put('/:id/record/:no', asyncHandler(async (req, res) => {
         const [r] = await pool.query(
             'UPDATE records SET note=? WHERE round_id=? AND no=?',
             [str(req.body.note, 255), req.params.id, num(req.params.no)]
         );
         if (r.affectedRows === 0) return res.status(404).json({ error: '题目记录不存在' });
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* DELETE /api/history/:id 删除单轮（records、favorites 级联删除） */
-router.delete('/:id', async (req, res) => {
-    try {
+router.delete('/:id', asyncHandler(async (req, res) => {
         const [r] = await pool.query('DELETE FROM rounds WHERE id=?', [req.params.id]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '记录不存在' });
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 /* DELETE /api/history 清空全部历史（records、favorites 级联删除） */
-router.delete('/', async (req, res) => {
-    try {
+router.delete('/', asyncHandler(async (req, res) => {
         await pool.query('DELETE FROM rounds');
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+}));
 
 module.exports = router;
