@@ -27,7 +27,7 @@
         selCat: null, selSub: null, selBank: null, mode: MODES.order.k, count: MIN_COUNT,
         run: null,                // 运行中会话 { sessionId, questions, idx, ok, ng, skip, answers, startTs, review }
         curBank: 1, editIdx: -1, mgCat: 'all', mgSub: 'all',  // 题库管理（两层下拉筛选：大类→二级分类）
-        mgQPage: 1, mgQPageSize: 20,   // 题库管理题目列表分页
+        mgQPage: 1, mgQPageSize: 10,   // 题库管理题目列表分页
         recPage: 1, recTotal: 0,  // 练习记录分页
         stats: null,              // 练习统计
         timer: null

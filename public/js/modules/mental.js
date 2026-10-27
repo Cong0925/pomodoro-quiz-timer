@@ -80,7 +80,7 @@
         stats: null,
         timer: null,
         /* 题库管理状态 */
-        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: false, editId: 0, page: 1, pageSize: 20, total: 0, groups: {}, allTotal: 0 },
+        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: false, editId: 0, page: 1, pageSize: 10, total: 0, groups: {}, allTotal: 0 },
         mgKwTimer: null
     };
 
