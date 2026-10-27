@@ -404,6 +404,8 @@
         const ms = Date.now() - state.run.startTs;
         try {
             const r = await api.post(`/api/mental/${state.run.sessionId}/finish`, { ms });
+            /* 刷新历史总数（侧边栏徽标） */
+            try { await PQ.data.loadHistoryPage({ page: 1, limit: (PQ.data.historyPage || {}).limit || 20 }); if (PQ.app) PQ.app.updateBadges(); } catch (e) { /* 不阻塞结算 */ }
             /* 与题库练习一致：时长并入今日学习时长 */
             try { await api.post('/api/study-daily', { date: U.todayKey(new Date()), addMs: ms }); } catch (e) { /* 不阻塞结算 */ }
             el('mPaneRun').hidden = true;
