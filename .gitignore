@@ -1,11 +1,17 @@
 # 依赖
 node_modules/
 
+# claude 配置  默认提交
+# .claude
+
 # 环境配置（含数据库密码，勿提交）
 .env
 
 # 数据备份与本地数据（含个人学习数据，勿提交；跨电脑迁移请用 npm run backup 导出、npm run restore 导入）
 data/
+
+# 子分支版本,单独作为分支管理,不在main提交
+web-app
 
 # 运行时产物
 *.log
