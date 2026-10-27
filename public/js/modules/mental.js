@@ -25,6 +25,10 @@
             k: 'estimate', n: '估算值', d: '取整估算，先数量级再微调',
             icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>'
         },
+        square: {
+            k: 'square', n: '平方数', d: '1-20 平方秒回，反查也练',
+            icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="1.5"/><path d="M16 8l5-5M21 3h-5v5M8 16l-5 5M3 21h5v-5"/></svg>'
+        },
         mixed: {
             k: 'mixed', n: '综合练习', d: '三类题型混合，全面检验',
             icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5h16M4 12h16M4 19h10"/><circle cx="19" cy="19" r="2.2"/></svg>'
@@ -53,6 +57,13 @@
         [1, 10, '10%'], [1, 11, '9.1%'], [1, 12, '8.3%'], [1, 13, '7.7%'],
         [1, 14, '7.1%'], [1, 15, '6.7%'], [1, 16, '6.25%'], [1, 17, '5.9%'],
         [1, 18, '5.6%'], [1, 19, '5.3%'], [1, 20, '5%']
+    ];
+
+    /* 平方数速查表（1² ~ 20²，用于技巧手册） */
+    const SQUARE_TABLE = [
+        [1, 1], [2, 4], [3, 9], [4, 16], [5, 25], [6, 36], [7, 49], [8, 64],
+        [9, 81], [10, 100], [11, 121], [12, 144], [13, 169], [14, 196],
+        [15, 225], [16, 256], [17, 289], [18, 324], [19, 361], [20, 400]
     ];
 
     const state = {
@@ -567,6 +578,21 @@
                 </tr>`);
         }
         tbody.innerHTML = rows.join('');
+
+        const sq = el('mSquareTbody');
+        if (!sq || sq.dataset.rendered) return;
+        sq.dataset.rendered = '1';
+        const sRows = [];
+        for (let i = 0; i < SQUARE_TABLE.length; i += 2) {
+            const a = SQUARE_TABLE[i];
+            const b = SQUARE_TABLE[i + 1];
+            sRows.push(`
+                <tr>
+                    <td>${a[0]}²</td><td>${a[1]}</td>
+                    <td>${b ? b[0] + '²' : '—'}</td><td>${b ? b[1] : '—'}</td>
+                </tr>`);
+        }
+        sq.innerHTML = sRows.join('');
     }
 
     /* ---------- 事件绑定 ---------- */

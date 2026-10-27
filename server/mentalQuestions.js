@@ -45,7 +45,38 @@ const QUESTIONS = [
     { qtype: 'estimate', difficulty: 2, stem: '499 × 61 ≈ ?', options: ['30000', '31000', '29000', '32000'], answer: 0, tip: '取整：500 × 60 = 30000。', tag: '凑整估算' },
     { qtype: 'estimate', difficulty: 2, stem: '8102 ÷ 41 ≈ ?', options: ['200', '210', '190', '220'], answer: 0, tip: '取整：8000 ÷ 40 = 200。', tag: '凑整估算' },
     { qtype: 'estimate', difficulty: 3, stem: '12.9% × 820 ≈ ?', options: ['105', '95', '110', '90'], answer: 0, tip: '12.9% ≈ 12.5% = 1/8，820 ÷ 8 ≈ 102.5，最接近 105（百化分+估算结合）。', tag: '百化分+估算' },
-    { qtype: 'estimate', difficulty: 3, stem: '6.1% × 1950 ≈ ?', options: ['120', '115', '125', '110'], answer: 0, tip: '6.1% ≈ 6%，1950 ≈ 2000，6% × 2000 = 120。', tag: '百分数估算' }
+    { qtype: 'estimate', difficulty: 3, stem: '6.1% × 1950 ≈ ?', options: ['120', '115', '125', '110'], answer: 0, tip: '6.1% ≈ 6%，1950 ≈ 2000，6% × 2000 = 120。', tag: '百分数估算' },
+
+    /* ---------- 平方数（1~20 的平方；fillable=1，未来可开启填空题模式：填纯数字） ---------- */
+    { qtype: 'square', difficulty: 1, stem: '1² = ?', options: ['1', '4', '9', '2'], answer: 0, tip: '1² = 1。', tag: '平方数-基础', fillable: 1 },
+    { qtype: 'square', difficulty: 1, stem: '2² = ?', options: ['4', '9', '1', '6'], answer: 0, tip: '2² = 4。', tag: '平方数-基础', fillable: 1 },
+    { qtype: 'square', difficulty: 1, stem: '3² = ?', options: ['9', '16', '4', '6'], answer: 0, tip: '3² = 9。', tag: '平方数-基础', fillable: 1 },
+    { qtype: 'square', difficulty: 1, stem: '4² = ?', options: ['16', '25', '9', '12'], answer: 0, tip: '4² = 16。', tag: '平方数-基础', fillable: 1 },
+    { qtype: 'square', difficulty: 1, stem: '5² = ?', options: ['25', '36', '16', '20'], answer: 0, tip: '5² = 25。', tag: '平方数-基础', fillable: 1 },
+    { qtype: 'square', difficulty: 1, stem: '6² = ?', options: ['36', '49', '25', '30'], answer: 0, tip: '6² = 36。', tag: '平方数-基础', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '7² = ?', options: ['49', '64', '36', '42'], answer: 0, tip: '7² = 49。', tag: '平方数-常用', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '8² = ?', options: ['64', '81', '49', '56'], answer: 0, tip: '8² = 64。', tag: '平方数-常用', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '9² = ?', options: ['81', '100', '64', '72'], answer: 0, tip: '9² = 81。', tag: '平方数-常用', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '10² = ?', options: ['100', '121', '81', '90'], answer: 0, tip: '10² = 100。', tag: '平方数-常用', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '11² = ?', options: ['121', '144', '100', '110'], answer: 0, tip: '11² = 121。', tag: '平方数-常用', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '12² = ?', options: ['144', '169', '121', '132'], answer: 0, tip: '12² = 144。', tag: '平方数-常用', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '13² = ?', options: ['169', '196', '144', '156'], answer: 0, tip: '13² = 169。', tag: '平方数-常用', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '14² = ?', options: ['196', '225', '169', '182'], answer: 0, tip: '14² = 196。', tag: '平方数-常用', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '15² = ?', options: ['225', '256', '196', '210'], answer: 0, tip: '15² = 225。', tag: '平方数-进阶', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '16² = ?', options: ['256', '289', '225', '240'], answer: 0, tip: '16² = 256。', tag: '平方数-进阶', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '17² = ?', options: ['289', '324', '256', '272'], answer: 0, tip: '17² = 289。', tag: '平方数-进阶', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '18² = ?', options: ['324', '361', '289', '306'], answer: 0, tip: '18² = 324。', tag: '平方数-进阶', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '19² = ?', options: ['361', '400', '324', '342'], answer: 0, tip: '19² = 361。', tag: '平方数-进阶', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '20² = ?', options: ['400', '441', '361', '380'], answer: 0, tip: '20² = 400。', tag: '平方数-进阶', fillable: 1 },
+    /* 反向：由平方数反推底数（11~18） */
+    { qtype: 'square', difficulty: 1, stem: '121 = ?²', options: ['10', '11', '12', '13'], answer: 1, tip: '121 = 11²。', tag: '平方数-反查', fillable: 1 },
+    { qtype: 'square', difficulty: 1, stem: '144 = ?²', options: ['12', '13', '11', '14'], answer: 0, tip: '144 = 12²。', tag: '平方数-反查', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '169 = ?²', options: ['13', '12', '14', '15'], answer: 0, tip: '169 = 13²。', tag: '平方数-反查', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '196 = ?²', options: ['14', '13', '15', '16'], answer: 0, tip: '196 = 14²。', tag: '平方数-反查', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '225 = ?²', options: ['15', '14', '16', '17'], answer: 0, tip: '225 = 15²。', tag: '平方数-反查', fillable: 1 },
+    { qtype: 'square', difficulty: 2, stem: '256 = ?²', options: ['16', '15', '17', '18'], answer: 0, tip: '256 = 16²。', tag: '平方数-反查', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '289 = ?²', options: ['17', '16', '18', '15'], answer: 0, tip: '289 = 17²。', tag: '平方数-反查', fillable: 1 },
+    { qtype: 'square', difficulty: 3, stem: '324 = ?²', options: ['18', '17', '19', '16'], answer: 0, tip: '324 = 18²。', tag: '平方数-反查', fillable: 1 }
 ];
 
 module.exports = QUESTIONS;

@@ -12,24 +12,28 @@ const SEED_QUESTIONS = require('../mentalQuestions');
 
 const router = express.Router();
 
-const TYPE_NAMES = { percent: '百化分', compare: '分数比大小', estimate: '估算值', mixed: '综合练习' };
-const VALID_TYPES = ['percent', 'compare', 'estimate', 'mixed'];
+const TYPE_NAMES = { percent: '百化分', compare: '分数比大小', estimate: '估算值', square: '平方数', mixed: '综合练习' };
+const VALID_TYPES = ['percent', 'compare', 'estimate', 'square', 'mixed'];
 
-/* ---- 内置题库：表空时自动写入种子题目（幂等） ---- */
+/* ---- 内置题库：按题型补种（该题型为空时写入其种子题目，幂等） ---- */
 async function ensureSeed() {
-    const [rows] = await pool.query('SELECT COUNT(*) AS n FROM mental_questions');
-    if (rows[0].n > 0) return;
-    const vals = [];
-    const params = [];
-    SEED_QUESTIONS.forEach(q => {
-        vals.push('(?,?,?,?,?,?,?,?,?)');
-        params.push(q.qtype, q.difficulty, q.stem, JSON.stringify(q.options), String(q.answer), q.tip, q.tag || '', 1, q.fillable ? 1 : 0);
-    });
-    await pool.query(
-        `INSERT INTO mental_questions (qtype, difficulty, stem, options, answer, tip, tag, active, fillable)
-         VALUES ${vals.join(',')}`,
-        params
-    );
+    const groups = {};
+    SEED_QUESTIONS.forEach(q => { (groups[q.qtype] = groups[q.qtype] || []).push(q); });
+    for (const qtype of Object.keys(groups)) {
+        const [rows] = await pool.query('SELECT COUNT(*) AS n FROM mental_questions WHERE qtype=?', [qtype]);
+        if (rows[0].n > 0) continue;
+        const vals = [];
+        const params = [];
+        groups[qtype].forEach(q => {
+            vals.push('(?,?,?,?,?,?,?,?,?)');
+            params.push(q.qtype, q.difficulty, q.stem, JSON.stringify(q.options), String(q.answer), q.tip, q.tag || '', 1, q.fillable ? 1 : 0);
+        });
+        await pool.query(
+            `INSERT INTO mental_questions (qtype, difficulty, stem, options, answer, tip, tag, active, fillable)
+             VALUES ${vals.join(',')}`,
+            params
+        );
+    }
 }
 
 /* Fisher-Yates 洗牌（返回新数组） */
@@ -104,17 +108,20 @@ function fillMeta(q) {
     if (frac) return { fillDir: 'den', fillExpected: frac[1] };
     const pct = ansTxt.match(/^([\d.]+)%$/);
     if (pct) return { fillDir: 'pct', fillExpected: pct[1] };
+    const int = ansTxt.match(/^\d+$/);
+    if (int) return { fillDir: 'val', fillExpected: int[0] };
     return { fillDir: 'pct', fillExpected: ansTxt.replace(/[^\d.]/g, '') || '0' };
 }
 
 /* 填空题判对：四舍五入到 1 位小数一致
    - den（填分母）：整数必须精确
+   - val（填数值）：整数必须精确（平方数等纯整数答案）
    - pct（填百分数）：round1(输入) === round1(期望) */
 function fillCheck(input, q) {
     const { fillDir, fillExpected } = fillMeta(q);
     const n = parseFloat(input);
     if (!isFinite(n)) return false;
-    if (fillDir === 'den') return String(Math.round(n)) === fillExpected;
+    if (fillDir === 'den' || fillDir === 'val') return String(Math.round(n)) === fillExpected;
     const e = parseFloat(fillExpected);
     return Math.round(n * 10) / 10 === Math.round(e * 10) / 10;
 }
