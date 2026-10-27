@@ -648,7 +648,7 @@
                 <td class="p-q-stem-cell" title="${U.escapeHtml(q.stem)}">${U.escapeHtml(q.stem.split('\n')[0])}</td>
                 <td>${TYPES[q.qtype] ? TYPES[q.qtype].n : q.qtype}</td>
                 <td><span class="p-diff ${dm[1]}"><i></i>${dm[0]}</span></td>
-                <td><span class="p-ans-badge">${U.escapeHtml(ansTxt)}</span></td>
+                <td class="m-mg-ans">${U.escapeHtml(ansTxt)}</td>
                 <td>${q.fillable ? '填空' : '选择'}</td>
                 <td class="p-q-ops">
                     <button class="p-op-btn" data-act="edit" data-qid="${q.id}" title="编辑题目">${mgEditSvg}</button>

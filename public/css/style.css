@@ -2285,6 +2285,7 @@ button:hover {
 .m-mg-inactive { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #4b5563; cursor: pointer; user-select: none; }
 .m-q-inactive { opacity: .55; }
 .m-q-inactive td { background: #fafafa; }
+.m-mg-ans { color: #1d4ed8; font-weight: 600; white-space: nowrap; }
 .m-fill-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; cursor: pointer; user-select: none; padding-top: 6px; }
 .m-fill-chk input { width: 15px; height: 15px; accent-color: #2563eb; }
 .m-opt-del { margin-left: 2px; }
