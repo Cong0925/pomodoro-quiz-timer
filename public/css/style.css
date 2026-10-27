@@ -2410,6 +2410,16 @@ button:hover {
 .m-session-item .m-si-title { font-size: 14px; font-weight: 700; color: #1f2937; }
 .m-session-item .m-si-meta { font-size: 12px; color: #6b7280; margin-top: 3px; }
 .m-si-rate { font-size: 17px; font-weight: 800; color: #2563eb; min-width: 64px; text-align: right; }
+/* 会话明细：独占整行铺满卡片，浅色底与标题区分隔 */
+.m-session-item .m-rec-detail {
+    flex-basis: 100%; margin-top: 10px;
+    border-top: 1px dashed #e5e7eb; padding: 10px 12px;
+    background: #fafbfd; border-radius: 8px;
+}
+.m-rec-detail .p-rec-summary { font-size: 13px; font-weight: 600; color: #374151; padding: 6px 0 2px; }
+.m-rec-detail .p-rec-row { font-size: 13px; padding: 9px 0; }
+.m-rec-detail .p-rd-ans { font-size: 12.5px; color: #4b5563; }
+.m-rec-detail .p-rd-ans b { font-weight: 700; color: #111827; }
 
 /* 技巧手册 */
 .m-manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
