@@ -63,6 +63,13 @@
         [15, 225], [16, 256], [17, 289], [18, 324], [19, 361], [20, 400]
     ];
 
+    /* 幂次估算速查表（1.x 连乘近似值，资料分析增长类常用，用于技巧手册） */
+    const POW_TABLE = [
+        ['1.2³', '1.7'], ['1.2⁴', '2'], ['1.3³', '2.2'], ['1.3⁴', '2.9'],
+        ['1.4³', '2.7'], ['1.4⁴', '3.8'], ['1.05⁴', '1.21'], ['1.1⁴', '1.46'],
+        ['1.15⁴', '1.75'], ['1.1⁵', '1.61']
+    ];
+
     const state = {
         mtab: TABS.START,
         type: 'percent',
@@ -583,6 +590,21 @@
                 </tr>`);
         }
         sq.innerHTML = sRows.join('');
+
+        const pw = el('mPowTbody');
+        if (!pw || pw.dataset.rendered) return;
+        pw.dataset.rendered = '1';
+        const pRows = [];
+        for (let i = 0; i < POW_TABLE.length; i += 2) {
+            const a = POW_TABLE[i];
+            const b = POW_TABLE[i + 1];
+            pRows.push(`
+                <tr>
+                    <td>${a[0]}</td><td>${a[1]}</td>
+                    <td>${b ? b[0] : '—'}</td><td>${b ? b[1] : '—'}</td>
+                </tr>`);
+        }
+        pw.innerHTML = pRows.join('');
     }
 
     /* ---------- 事件绑定 ---------- */
