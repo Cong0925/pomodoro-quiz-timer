@@ -54,7 +54,7 @@ web-app/
     └── package.json   npm run dev / start / init-db / backup / restore / migrate
 ```
 
-## 四、当前进度（截至 2026-10-28 14:09）
+## 四、当前进度（截至 2026-10-28 15:14）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -64,10 +64,17 @@ web-app/
 5. ✅ 权限弹窗根因修复：会话项目根是 `web-app/`（非仓库根），已新建 `web-app/.claude/settings.json` 全放开配置（ask 保留 git/rm 六类弹窗），并清空 settings.local.json 冗余窄规则——**需新开会话生效**
 6. ✅ **后端功能完成（2026-10-28，方案B）**：14 表 × 57 接口盘点查漏，补 13 个接口（practice 单库详情/题目批量导入删除/会话删除/历史筛选；mental 会话删除/历史筛选；study-daily 区间查询/按日删除），契约升级（CORS 白名单制 .env 可配 CORS_ORIGINS、题型枚举校验、memos 参数校验、totalMs 转 number）
 7. ✅ **全量验收通过**：`scripts/acceptance.js`（npm run test:acceptance）91 通过/0 失败/4 跳过（跳过为清空全部类破坏性接口）；揪出并修复 practice `GET /history/:id` SQL 漏 WHERE session_id 上游缺陷（**main 分支同款缺陷未修，需在 main 单独处理**）
+8. ✅ **Vue 前端全量转化完成（2026-10-28，方案B Element Plus 重构版，public/ 零触碰）**：
+   - 架构：`src/{api(8个typed模块), types, utils, stores(4), composables/useTimer, components(8), views(9), router}`，全部业务逻辑对照主版本 `public/js/modules/` 同口径转化
+   - 里程碑①：App 外壳（el-menu+徽标）+ 计时模式（空格/Y/N/P 键盘、单题对错弹窗、整组错题标记面板、自动归档）+ 悬浮学习计时（60s上报+beacon+单实例锁）+ 历史/收藏/统计
+   - 里程碑②：题库练习（三级选题、做题即判+解析、结算回看、题库管理分页、记录明细）+ 速算（4题型、填空 fillDir 方向、无限流 more/结束、管理端软删恢复、技巧手册三表）
+   - 里程碑③：日历备忘（日/选月/选年三级视图、类型标签、4字标题）+ 分类管理（prompt/confirm → El 弹窗）+ 设置（JSON 导出含 showSaveFilePicker/导入合并/数据库信息/关于）
+   - 验证：`npm run build`（vue-tsc+vite）全绿；dev 5173 页面 + /api 代理连通 3000 后端冒烟通过；`git status` 确认 public/ server/ 零改动
 
 **待办（建议优先级）**：
-1. ⬜ 业务模块迁移开发：计时模式、题库练习、速算、历史、收藏、统计、分类、日历备忘、设置（后端接口已全部就绪，可参照主版本 `public/js/modules/` 逻辑 + 现成 REST API）
-2. ⬜ main 分支 practice GET /history/:id 同款 SQL 缺陷待修复（须在 main 分支单独操作）
+1. ⬜ 浏览器人工验收：与主版本并排对照操作各模块（键位/弹窗/边界行为），修复体验差异
+2. ⬜ main 主版本 practice `GET /history/:id` SQL 缺陷修复（须在该文件所属的 main 历史中单独处理，web-app 版已修）
+3. ⬜ 未提交：web-app 前端全部新文件等用户明确说「提交」
 
 **关键接口约定（前端对接用）**：
 - 错误响应统一 `{ error: '中文描述' }`；分页统一 `{ list, total, page, limit, totalPages }`
