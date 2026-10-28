@@ -101,7 +101,9 @@ async function delCat(cat: Category): Promise<void> {
       confirmButtonText: '删除',
       cancelButtonText: '取消',
     })
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【删除分类确认弹窗异常】', e)
     return
   }
   try {
@@ -153,7 +155,9 @@ async function delSub(cat: Category, sub: CategorySub): Promise<void> {
       confirmButtonText: '删除',
       cancelButtonText: '取消',
     })
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【删除小类确认弹窗异常】', e)
     return
   }
   try {
@@ -184,8 +188,8 @@ async function restoreBuiltin(): Promise<void> {
         <p class="mode-desc">两级分类（大类 → 小类）；删除分类不影响历史记录的名称快照</p>
       </div>
       <div class="header-actions">
-        <el-button @click="restoreBuiltin">恢复内置分类</el-button>
-        <el-button type="primary" @click="addCat">+ 添加大类</el-button>
+        <el-button plain @click="restoreBuiltin">恢复内置分类</el-button>
+        <el-button plain @click="addCat">+ 添加大类</el-button>
       </div>
     </div>
 
@@ -199,7 +203,7 @@ async function restoreBuiltin(): Promise<void> {
           <div class="group-actions">
             <el-button size="small" text type="primary" @click="addSub(cat)">+ 小类</el-button>
             <el-button size="small" text @click="renameCat(cat)">重命名</el-button>
-            <el-button size="small" text type="danger" @click="delCat(cat)">删除</el-button>
+            <el-button size="small" text @click="delCat(cat)">删除</el-button>
           </div>
         </div>
         <div class="subs">
@@ -275,6 +279,12 @@ async function restoreBuiltin(): Promise<void> {
 }
 .sub-chip {
   cursor: pointer;
+  background: #f3f4f6 !important;
+  border-color: #e5e7eb !important;
+  color: #4b5563 !important;
+}
+.sub-chip .el-tag__close {
+  color: #9ca3af;
 }
 .no-sub {
   font-size: 12px;

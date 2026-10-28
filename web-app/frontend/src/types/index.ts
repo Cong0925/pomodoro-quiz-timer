@@ -148,9 +148,24 @@ export interface StatsRow {
   studyMs: number
 }
 
+/** 全段合计（后端聚合，供「总计」卡片，与分页无关） */
+export interface StatsSum {
+  rounds: number
+  questions: number
+  correct: number
+  skipped: number
+  workMs: number
+  studyMs: number
+}
+
 export interface StatsData {
   today: StatsToday
+  sum: StatsSum
   list: StatsRow[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
 }
 
 export type StatsGran = 'day' | 'week' | 'month'

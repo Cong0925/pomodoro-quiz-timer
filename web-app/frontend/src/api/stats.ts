@@ -2,8 +2,8 @@
 import { http } from './http'
 import type { StatsData, StatsGran, StudyRangeResult } from '../types'
 
-export function fetchStats(gran: StatsGran): Promise<StatsData> {
-  return http.get<StatsData>(`/stats?gran=${gran}`)
+export function fetchStats(gran: StatsGran, page = 1, limit = 10): Promise<StatsData> {
+  return http.get<StatsData>(`/stats?gran=${gran}&page=${page}&limit=${limit}`)
 }
 
 export function reportStudyDelta(date: string, addMs: number): Promise<{ ok: boolean; added: number }> {

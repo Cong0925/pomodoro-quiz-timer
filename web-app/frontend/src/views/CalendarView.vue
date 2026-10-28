@@ -190,7 +190,7 @@ onMounted(() => {
           <el-button text @click="navBy(-1)">‹</el-button>
           <span class="cal-title" :class="{ picker: viewMode !== 'year' }" @click="onTitleClick">{{ title }}</span>
           <el-button text @click="navBy(1)">›</el-button>
-          <el-button size="small" class="today-btn" @click="goToday">今天</el-button>
+          <el-button size="small" class="today-btn" @click="goToday">回到今天</el-button>
         </div>
 
         <!-- 日历视图 -->
@@ -256,8 +256,8 @@ onMounted(() => {
         <el-input v-model="memoTitle" maxlength="4" placeholder="标题（限 4 字）" class="memo-title" @input="onTitleInput" />
         <el-input v-model="memoText" type="textarea" :rows="6" maxlength="1000" placeholder="备忘详细内容" />
         <div class="editor-actions">
+          <el-button :disabled="!selected" @click="clear">清空</el-button>
           <el-button type="primary" :disabled="!selected" @click="save">保存备忘</el-button>
-          <el-button :disabled="!selected" @click="clear">清空该日</el-button>
         </div>
       </el-card>
     </div>
@@ -277,10 +277,10 @@ onMounted(() => {
   font-size: 13px;
 }
 .cal-layout {
-  display: grid;
-  grid-template-columns: 1fr 300px;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
 }
 .cal-toolbar {
   display: flex;

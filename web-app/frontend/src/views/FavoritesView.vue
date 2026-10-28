@@ -90,7 +90,9 @@ async function clearAll(): Promise<void> {
       confirmButtonText: '清空',
       cancelButtonText: '取消',
     })
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【清空收藏确认弹窗异常】', e)
     return
   }
   try {
@@ -117,32 +119,32 @@ async function loadMore(): Promise<void> {
         <h2>错题收藏</h2>
         <p class="mode-desc">在历史记录明细中点击「收藏」把错题加入这里，可改分类、移除</p>
       </div>
-      <el-button plain type="danger" @click="clearAll">清空全部</el-button>
     </div>
 
-    <el-card shadow="never" class="filter-card">
-      <el-select v-model="filterMode" style="width: 140px" @change="reload">
-        <el-option value="" label="全部模式" />
-        <el-option value="single" label="单题模式" />
-        <el-option value="batch" label="整组模式" />
-      </el-select>
-      <CatSelect
-        v-model:cat-id="filterCatId"
-        v-model:sub-id="filterSubId"
-        cat-placeholder="全部大类"
-        sub-placeholder="全部小类"
-        @update:cat-id="reload"
-        @update:sub-id="reload"
-      />
-      <span class="filter-count">
-        {{ filtering ? `筛选结果：${favStore.list.length} / ${favStore.total} 条` : `共 ${favStore.total} 条` }}
+    <!-- 单行工具栏：筛选 + 统计计数 + 清空（方案A） -->
+    <div class="toolbar">
+      <div class="tb-filters">
+        <el-select v-model="filterMode" class="tb-select" placeholder="全部模式" @change="reload">
+          <el-option value="" label="全部模式" />
+          <el-option value="single" label="单题模式" />
+          <el-option value="batch" label="整组模式" />
+        </el-select>
+        <CatSelect
+          v-model:cat-id="filterCatId"
+          v-model:sub-id="filterSubId"
+          cat-placeholder="全部大类"
+          sub-placeholder="全部小类"
+          @update:cat-id="reload"
+          @update:sub-id="reload"
+        />
+      </div>
+      <span class="tb-count">
+        {{ filtering ? `筛选 ${favStore.list.length}/${favStore.total} 条` : `共 ${favStore.total} 条` }}
+        <i class="tb-dot">·</i> 本页 {{ summary.count }}
+        <i class="tb-dot">·</i> 轮次 {{ summary.rounds }}
+        <i class="tb-dot">·</i> 单题 {{ summary.single }}
       </span>
-    </el-card>
-
-    <div class="summary-row">
-      <el-card shadow="never" class="sum-card"><div class="num">{{ summary.count }}</div><div class="label">本页收藏</div></el-card>
-      <el-card shadow="never" class="sum-card"><div class="num">{{ summary.rounds }}</div><div class="label">来源轮次</div></el-card>
-      <el-card shadow="never" class="sum-card"><div class="num">{{ summary.single }}</div><div class="label">单题模式</div></el-card>
+      <el-button size="small" type="danger" plain @click="clearAll">清空收藏</el-button>
     </div>
 
     <el-empty v-if="!loading && favStore.list.length === 0" description="暂无收藏的错题" />
@@ -194,33 +196,40 @@ async function loadMore(): Promise<void> {
   color: var(--el-text-color-secondary);
   font-size: 13px;
 }
-.filter-card {
-  margin-bottom: 12px;
+/* 单行工具栏：左筛选 / 中计数 / 右清空 */
+.toolbar {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-bg-color);
+}
+.tb-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
-.filter-count {
+.tb-select {
+  width: 130px;
+}
+.tb-count {
+  flex: 1;
+  text-align: center;
   font-size: 13px;
   color: var(--el-text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.summary-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.sum-card {
-  text-align: center;
-}
-.sum-card .num {
-  font-size: 20px;
-  font-weight: 700;
-}
-.sum-card .label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+.tb-dot {
+  color: var(--el-border-color);
+  font-style: normal;
+  margin: 0 2px;
 }
 .fav-list {
   display: flex;

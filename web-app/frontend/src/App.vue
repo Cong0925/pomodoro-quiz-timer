@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import StudyFloat from './components/StudyFloat.vue'
 import { useCategoriesStore } from './stores/categoriesStore'
 import { useFavoritesStore } from './stores/favoritesStore'
@@ -100,6 +101,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <el-config-provider :locale="zhCn">
   <el-container class="app-shell">
     <!-- 左侧菜单 -->
     <el-aside width="200px" class="sidebar">
@@ -116,16 +118,14 @@ onUnmounted(() => {
           <el-menu-item v-for="item in g.items" :key="item.key" :index="item.key">
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
-            <el-badge
+            <span
               v-if="item.key === 'history' && historyStore.total > 0"
-              :value="historyStore.total"
               class="menu-badge"
-            />
-            <el-badge
+            >{{ historyStore.total > 99 ? '99+' : historyStore.total }}</span>
+            <span
               v-if="item.key === 'favorites' && favStore.total > 0"
-              :value="favStore.total"
               class="menu-badge"
-            />
+            >{{ favStore.total }}</span>
           </el-menu-item>
         </el-menu-item-group>
       </el-menu>
@@ -147,6 +147,7 @@ onUnmounted(() => {
 
     <StudyFloat />
   </el-container>
+  </el-config-provider>
 </template>
 
 <style scoped>
@@ -179,14 +180,40 @@ onUnmounted(() => {
   border-right: none;
   overflow-y: auto;
 }
-:deep(.el-menu-item .el-badge) {
+/* 原版风格：active 整行浅蓝底 + 蓝字，不要左边框 */
+.menu :deep(.el-menu-item.is-active) {
+  background: #eff6ff;
+  color: #2563eb;
+  border-right: none;
+}
+.menu :deep(.el-menu-item.is-active::before) {
+  display: none;
+}
+.menu :deep(.el-menu-item:hover) {
+  background: #f3f4f6;
+}
+.menu-badge {
   margin-left: auto;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 .data-file-card {
-  padding: 12px 16px;
+  margin: 8px 10px 12px;
+  padding: 10px 12px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  border-top: 1px solid var(--el-border-color-lighter);
+  background: #f9fafb;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
 }
 .data-file-card .tip {
   margin-top: 2px;

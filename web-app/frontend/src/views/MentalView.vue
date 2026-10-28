@@ -154,12 +154,13 @@ async function answerFillSubmit(): Promise<void> {
   const q = curQ.value
   const fracMode = q?.fillDir === 'frac'
   const okNum = /^\d+(\.\d+)?$/.test(val)
-  const okFrac = fracMode && /^\d+\s*\/\s*\d+$/.test(val)
-  if (!okNum && !okFrac) {
-    ElMessage.error(fracMode ? '请输入分数（如 11.1% 填 1/9）' : '请输入数字（如 8 或 11.1）')
+  if (!okNum) {
+    ElMessage.error(fracMode ? '请输入分母数字（如 11.1% 填 9）' : '请输入数字（如 8 或 11.1）')
     return
   }
-  await doAnswer(val)
+  // frac 模式：前端已显示"1/"前缀，用户只输分母，拼成"1/分母"提交
+  const ansText = fracMode ? `1/${val}` : val
+  await doAnswer(ansText)
 }
 
 async function doAnswer(ans: string): Promise<void> {
@@ -241,10 +242,13 @@ async function endRun(): Promise<void> {
   if (!run.value?.infinite) return
   try {
     await ElMessageBox.confirm('结束本轮无限流练习？已答题目将计入本次结算。', '结束练习', {
+      type: 'warning',
       confirmButtonText: '结束',
       cancelButtonText: '继续练习',
     })
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【结束练习确认弹窗异常】', e)
     return
   }
   await finish()
@@ -313,10 +317,23 @@ onUnmounted(() => {
 
 <template>
   <div class="mental-view">
-    <h2>速算练习</h2>
-    <el-tabs v-model="tab">
-      <!-- ========== 开始练习 ========== -->
-      <el-tab-pane label="开始练习" name="start">
+    <div class="view-header">
+      <div>
+        <h2>速算练习</h2>
+        <p class="mode-desc">资料分析专项技巧训练：百化分 · 分数比大小 · 估算值 · 答完即时给技巧提示 · 自动归档历史</p>
+      </div>
+    </div>
+
+    <!-- 胶囊 tab 按钮组（原版顺序：开始/题库管理/练习记录/技巧手册） -->
+    <div class="m-tabs">
+      <button class="m-tab" :class="{ active: tab === 'start' }" @click="tab = 'start'">开始练习</button>
+      <button class="m-tab" :class="{ active: tab === 'manage' }" @click="tab = 'manage'">题库管理</button>
+      <button class="m-tab" :class="{ active: tab === 'records' }" @click="tab = 'records'">练习记录</button>
+      <button class="m-tab" :class="{ active: tab === 'manual' }" @click="tab = 'manual'">技巧手册</button>
+    </div>
+
+    <!-- ========== 开始练习 ========== -->
+    <div v-show="tab === 'start'">
         <MentalSetupPane
           v-if="phase === 'setup'"
           :type="type"
@@ -404,29 +421,61 @@ onUnmounted(() => {
           <!-- 错题回顾 -->
           <MentalReviewList :items="wrongItems" />
         </template>
-      </el-tab-pane>
+    </div>
 
-      <!-- ========== 练习记录 ========== -->
-      <el-tab-pane label="练习记录" name="records">
-        <MentalRecords />
-      </el-tab-pane>
+    <!-- ========== 题库管理 ========== -->
+    <div v-show="tab === 'manage'">
+      <MentalManage />
+    </div>
 
-      <!-- ========== 题库管理 ========== -->
-      <el-tab-pane label="题库管理" name="manage">
-        <MentalManage />
-      </el-tab-pane>
+    <!-- ========== 练习记录 ========== -->
+    <div v-show="tab === 'records'">
+      <MentalRecords />
+    </div>
 
-      <!-- ========== 技巧手册 ========== -->
-      <el-tab-pane label="技巧手册" name="manual">
-        <MentalManual />
-      </el-tab-pane>
-    </el-tabs>
+    <!-- ========== 技巧手册 ========== -->
+    <div v-show="tab === 'manual'">
+      <MentalManual />
+    </div>
   </div>
 </template>
 
 <style scoped>
-h2 {
-  margin: 0 0 10px;
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.view-header h2 {
+  margin: 0 0 4px;
+}
+.mode-desc {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+.m-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.m-tab {
+  padding: 7px 18px;
+  border: 1px solid var(--el-border-color);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+.m-tab.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+.m-tab:hover:not(.active) {
+  background: #f3f4f6;
 }
 .run-bar {
   margin: 8px 0 14px;

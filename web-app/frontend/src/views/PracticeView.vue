@@ -264,10 +264,22 @@ onUnmounted(() => {
 
 <template>
   <div class="practice-view">
-    <h2>题库练习</h2>
-    <el-tabs v-model="tab" class="p-tabs">
-      <!-- ========== 开始练习 ========== -->
-      <el-tab-pane label="开始练习" name="start">
+    <div class="view-header">
+      <div>
+        <h2>练习模式</h2>
+        <p class="mode-desc">题库练习 · 即答即判 · 答案解析 · 错题重练</p>
+      </div>
+    </div>
+
+    <!-- 胶囊 tab 按钮组（原版风格） -->
+    <div class="p-tabs">
+      <button class="p-tab" :class="{ active: tab === 'start' }" @click="tab = 'start'">开始练习</button>
+      <button class="p-tab" :class="{ active: tab === 'manage' }" @click="tab = 'manage'">题库管理</button>
+      <button class="p-tab" :class="{ active: tab === 'records' }" @click="tab = 'records'">练习记录</button>
+    </div>
+
+    <!-- ========== 开始练习 ========== -->
+    <div v-show="tab === 'start'">
         <PracticeSetupPane
           v-if="phase === 'setup'"
           :categories="catStore.categories"
@@ -351,24 +363,56 @@ onUnmounted(() => {
             </template>
           </el-result>
         </template>
-      </el-tab-pane>
+    </div>
 
-      <!-- ========== 题库管理 ========== -->
-      <el-tab-pane label="题库管理" name="manage">
-        <PracticeManage :banks="banks" @refresh-banks="loadBanks" />
-      </el-tab-pane>
+    <!-- ========== 题库管理 ========== -->
+    <div v-show="tab === 'manage'">
+      <PracticeManage :banks="banks" @refresh-banks="loadBanks" />
+    </div>
 
-      <!-- ========== 练习记录 ========== -->
-      <el-tab-pane label="练习记录" name="records">
-        <PracticeRecords />
-      </el-tab-pane>
-    </el-tabs>
+    <!-- ========== 练习记录 ========== -->
+    <div v-show="tab === 'records'">
+      <PracticeRecords />
+    </div>
   </div>
 </template>
 
 <style scoped>
-h2 {
-  margin: 0 0 10px;
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.view-header h2 {
+  margin: 0 0 4px;
+}
+.mode-desc {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+.p-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.p-tab {
+  padding: 7px 18px;
+  border: 1px solid var(--el-border-color);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+.p-tab.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+.p-tab:hover:not(.active) {
+  background: #f3f4f6;
 }
 .run-head {
   display: flex;

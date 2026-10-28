@@ -59,10 +59,18 @@ function buildKeys(gran, start, end) {
     return keys;
 }
 
-/* GET /api/stats?gran=day|week|month
-   返回 { today: {...}, list: [{key,label,rounds,questions,correct,rate,workMs,studyMs}] } */
+/* GET /api/stats?gran=day|week|month&page=&limit=
+   返回 { today, sum(全段合计), list(当前页), total, page, limit, totalPages }
+   注：列表为三表聚合 + JS 补零拼接，无法直接 SQL LIMIT/OFFSET，分页在聚合后切页 */
 router.get('/', asyncHandler(async (req, res) => {
         const gran = ['day', 'week', 'month'].includes(req.query.gran) ? req.query.gran : 'day';
+
+        /* 分页参数（非法/越界钳制） */
+        let page = parseInt(req.query.page, 10);
+        let limit = parseInt(req.query.limit, 10);
+        if (!Number.isFinite(page) || page < 1) page = 1;
+        if (!Number.isFinite(limit) || limit < 1) limit = 10;
+        if (limit > 100) limit = 100;
 
         /* 今日情况（rounds 与 records 分开聚合，避免 JOIN 重复计算 correct/total_ms） */
         const [t] = await pool.query(
@@ -146,7 +154,24 @@ router.get('/', asyncHandler(async (req, res) => {
             };
         });
 
-        res.json({ today, list });
+        /* 全段合计（整段 list 求和，与分页无关，供前端「总计」卡片）
+           注意：mysql2 的 SUM/COUNT 返回字符串，必须 Number() 再累加，否则变字符串拼接 */
+        const sum = list.reduce((acc, r) => {
+            acc.rounds += Number(r.rounds);
+            acc.questions += Number(r.questions);
+            acc.correct += Number(r.correct);
+            acc.skipped += Number(r.skipped);
+            acc.workMs += Number(r.workMs);
+            acc.studyMs += Number(r.studyMs);
+            return acc;
+        }, { rounds: 0, questions: 0, correct: 0, skipped: 0, workMs: 0, studyMs: 0 });
+
+        /* 当前页切片（页码越界返回空 list，由前端回退页码） */
+        const total = list.length;
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        const pageList = list.slice((page - 1) * limit, page * limit);
+
+        res.json({ today, sum, list: pageList, total, page, limit, totalPages });
 }));
 
 module.exports = router;

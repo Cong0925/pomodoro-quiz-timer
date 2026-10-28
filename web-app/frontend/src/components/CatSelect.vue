@@ -43,12 +43,13 @@ function onCatChange(v: string): void {
 </script>
 
 <template>
-  <el-select :model-value="catId" class="cat-select" @change="onCatChange">
+  <el-select :model-value="catId" class="cat-select" :placeholder="catPlaceholder" @change="onCatChange">
     <el-option v-for="o in catOptions" :key="o.value" :value="o.value" :label="o.label" />
   </el-select>
   <el-select
     :model-value="subId"
     class="cat-select"
+    :placeholder="subPlaceholder"
     :disabled="subDisabled"
     @update:model-value="emit('update:subId', $event)"
   >

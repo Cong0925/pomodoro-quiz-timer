@@ -1,4 +1,4 @@
-<!-- 速算练习记录：统计条 + 会话列表（展开明细/删除/加载更多） -->
+<!-- 速算练习记录：统计条 + 会话表格（展开行显示明细） -->
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -11,9 +11,10 @@ const DIFF_NAMES: Record<number, string> = { 0: '不限难度', 1: '简单', 2: 
 const stats = ref<MentalStats | null>(null)
 const list = ref<MentalSessionRow[]>([])
 const page = ref(1)
+const pageSize = ref(10)
 const total = ref(0)
 const loading = ref(false)
-const openIds = ref<Set<number>>(new Set())
+const expandedKeys = ref<string[]>([])
 const details = ref<Record<number, MentalDetailRecord[] | 'loading' | string>>({})
 
 async function loadStats(): Promise<void> {
@@ -28,8 +29,8 @@ async function loadPage(reset = false): Promise<void> {
   if (reset) page.value = 1
   loading.value = true
   try {
-    const data = await mentalApi.fetchMentalHistory(page.value)
-    list.value = reset ? data.list : [...list.value, ...data.list]
+    const data = await mentalApi.fetchMentalHistory(page.value, pageSize.value)
+    list.value = data.list
     total.value = data.total
   } catch (e) {
     ElMessage.error('记录加载失败：' + (e instanceof Error ? e.message : String(e)))
@@ -38,23 +39,29 @@ async function loadPage(reset = false): Promise<void> {
   }
 }
 
-async function toggleDetail(s: MentalSessionRow): Promise<void> {
-  const next = new Set(openIds.value)
-  if (next.has(s.id)) {
-    next.delete(s.id)
-    openIds.value = next
-    return
-  }
-  next.add(s.id)
-  openIds.value = next
-  if (!details.value[s.id]) {
-    details.value[s.id] = 'loading'
-    try {
-      const r = await mentalApi.fetchMentalDetail(s.id)
-      details.value[s.id] = r.records
-    } catch (e) {
-      details.value[s.id] = '明细加载失败：' + (e instanceof Error ? e.message : String(e))
-    }
+function onPageChange(p: number): void {
+  page.value = p
+  loadPage()
+}
+function onSizeChange(s: number): void {
+  pageSize.value = s
+  page.value = 1
+  loadPage()
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function onExpandChange(row: MentalSessionRow, expandedRows: any): Promise<void> {
+  const expanded = Array.isArray(expandedRows) && expandedRows.some((r: any) => r.id === row.id)
+  // 手风琴：只保留当前展开行
+  expandedKeys.value = expanded ? [String(row.id)] : []
+  if (!expanded) return
+  if (details.value[row.id]) return
+  details.value[row.id] = 'loading'
+  try {
+    const res = await mentalApi.fetchMentalDetail(row.id)
+    details.value[row.id] = res.records
+  } catch (e) {
+    details.value[row.id] = '明细加载失败：' + (e instanceof Error ? e.message : String(e))
   }
 }
 
@@ -65,12 +72,14 @@ async function removeSession(s: MentalSessionRow): Promise<void> {
       confirmButtonText: '删除',
       cancelButtonText: '取消',
     })
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【删除速算记录确认弹窗异常】', e)
     return
   }
   try {
     await mentalApi.deleteMentalSession(s.id)
-    openIds.value.delete(s.id)
+    expandedKeys.value = []
     delete details.value[s.id]
     await loadPage(true)
     await loadStats()
@@ -80,7 +89,6 @@ async function removeSession(s: MentalSessionRow): Promise<void> {
   }
 }
 
-/** 明细里的正确答案文本：填空直接文本，选择转选项 */
 function correctText(d: MentalDetailRecord, fill: boolean): string {
   if (d.answer == null) return '—'
   if (fill) return String(d.answer)
@@ -114,50 +122,106 @@ onMounted(() => {
 
     <el-empty v-if="!loading && list.length === 0" description="暂无速算练习记录" />
 
-    <div v-loading="loading" class="rec-list">
-      <el-card v-for="s in list" :key="s.id" shadow="never" class="rec-card">
-        <div class="rec-head" @click="toggleDetail(s)">
-          <div class="rec-main">
-            <div class="rec-title">
-              {{ s.qtype_name }}{{ s.answer_mode === 'fill' ? ' · 填空题' : '' }}
-              <span class="rec-sub"> · {{ DIFF_NAMES[s.difficulty] || '不限难度' }} · {{ s.started_at || '' }}</span>
-            </div>
-            <div class="rec-meta">
-              {{ s.total_count === 0 ? '∞ 无限流' : `共 ${s.total_count} 题` }} · 对 {{ s.correct_count }} · 错 {{ s.wrong_count }} · 跳 {{ s.skipped_count }} · 用时 {{ formatMs(s.total_ms) }}
-            </div>
-          </div>
-          <span class="rec-rate" :class="{ low: s.rate < 60 }">{{ s.rate }}%</span>
-          <el-button size="small" text type="danger" @click.stop="removeSession(s)">删除</el-button>
-          <span class="rec-arrow" :class="{ open: openIds.has(s.id) }">›</span>
-        </div>
-
-        <div v-if="openIds.has(s.id)" class="rec-body">
-          <template v-if="detailOf(s.id)?.kind === 'loading'">加载明细…</template>
-          <template v-else-if="detailOf(s.id)?.kind === 'error'">{{ (detailOf(s.id) as { msg: string }).msg }}</template>
-          <template v-else-if="detailOf(s.id)?.kind === 'list'">
-            <div class="rec-grid">
-              <div
-                v-for="d in (detailOf(s.id) as { kind: 'list'; data: MentalDetailRecord[] }).data"
-                :key="d.no"
-                class="rec-cell"
-                :class="'m-' + d.result"
-              >
-                <div class="rc-top">
-                  <span class="rc-mark">{{ d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗' }}</span>
-                  <span class="rc-stem" :title="d.stem">{{ d.stem }}</span>
+    <el-table
+      v-else
+      v-loading="loading"
+      :data="list"
+      class="rec-table"
+      stripe
+      size="small"
+      :height="list.length ? 560 : undefined"
+      :row-key="(row: MentalSessionRow) => String(row.id)"
+      :expand-row-keys="expandedKeys"
+      @expand-change="(row: MentalSessionRow, expandedRows: any) => onExpandChange(row, expandedRows)"
+    >
+      <el-table-column type="index" label="#" width="55" align="center" :index="(i: number) => (page - 1) * pageSize + i + 1" />
+      <el-table-column type="expand">
+        <template #default="{ row }">
+          <div class="expand-body">
+            <template v-if="detailOf(row.id)?.kind === 'loading'">
+              <div class="expand-loading">加载明细…</div>
+            </template>
+            <template v-else-if="detailOf(row.id)?.kind === 'error'">
+              <div class="expand-error">{{ (detailOf(row.id) as { msg: string }).msg }}</div>
+            </template>
+            <template v-else-if="detailOf(row.id)?.kind === 'list'">
+              <div class="rec-grid">
+                <div
+                  v-for="d in (detailOf(row.id) as { kind: 'list'; data: MentalDetailRecord[] }).data"
+                  :key="d.no"
+                  class="rec-cell"
+                  :class="'m-' + d.result"
+                >
+                  <div class="rc-top">
+                    <span class="rc-mark">{{ d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗' }}</span>
+                    <span class="rc-stem" :title="d.stem">{{ d.stem }}</span>
+                  </div>
+                  <div class="rc-ans">正确答案 <b>{{ correctText(d, row.answer_mode === 'fill') }}</b></div>
+                  <div v-if="d.tip" class="rc-tip">技巧：{{ d.tip }}</div>
                 </div>
-                <div class="rc-ans">正确答案 <b>{{ correctText(d, s.answer_mode === 'fill') }}</b></div>
-                <div v-if="d.tip" class="rc-tip">技巧：{{ d.tip }}</div>
               </div>
-            </div>
-          </template>
-        </div>
-      </el-card>
-    </div>
+            </template>
+          </div>
+        </template>
+      </el-table-column>
 
-    <div v-if="list.length < total" class="load-more">
-      <el-button plain @click="loadPage()">加载更多（{{ list.length }}/{{ total }}）</el-button>
-    </div>
+      <el-table-column prop="qtype_name" label="题型" width="200">
+        <template #default="{ row }">
+          <div class="cell-primary">{{ row.qtype_name }}</div>
+          <div class="cell-sub">{{ row.answer_mode === 'fill' ? '填空题' : '选择题' }}</div>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="难度" width="90">
+        <template #default="{ row }">{{ DIFF_NAMES[row.difficulty] || '不限' }}</template>
+      </el-table-column>
+
+      <el-table-column prop="total_count" label="题量" width="80" align="center" sortable>
+        <template #default="{ row }">
+          {{ row.total_count === 0 ? '∞' : row.total_count }}
+        </template>
+      </el-table-column>
+
+      <el-table-column label="对/错/跳" width="110" align="center">
+        <template #default="{ row }">
+          <span class="c-ok">{{ row.correct_count }}</span> /
+          <span class="c-ng">{{ row.wrong_count }}</span> /
+          <span class="c-skip">{{ row.skipped_count }}</span>
+        </template>
+      </el-table-column>
+
+      <el-table-column prop="total_ms" label="用时" width="100" align="center" sortable>
+        <template #default="{ row }">{{ formatMs(row.total_ms) }}</template>
+      </el-table-column>
+
+      <el-table-column prop="rate" label="正确率" width="90" align="center" sortable>
+        <template #default="{ row }">
+          <span class="rate" :class="{ low: row.rate < 60 }">{{ row.rate }}%</span>
+        </template>
+      </el-table-column>
+
+      <el-table-column prop="started_at" label="时间" min-width="150" sortable>
+        <template #default="{ row }">{{ row.started_at || '—' }}</template>
+      </el-table-column>
+
+      <el-table-column label="操作" width="200" align="center" fixed="right">
+        <template #default="{ row }">
+          <el-button size="small" text type="danger" @click="removeSession(row as MentalSessionRow)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-pagination
+      v-if="total > 0"
+      v-model:current-page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+      :page-sizes="[10, 20, 50, 100]"
+      layout="total, sizes, prev, pager, next, jumper"
+      class="rec-pager"
+      @current-change="onPageChange"
+      @size-change="onSizeChange"
+    />
   </div>
 </template>
 
@@ -179,54 +243,29 @@ onMounted(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
-.rec-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.rec-table {
+  width: 100%;
 }
-.rec-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-.rec-main {
-  flex: 1;
-  min-width: 0;
-}
-.rec-title {
+.cell-primary {
   font-weight: 600;
 }
-.rec-sub {
-  font-weight: 400;
+.cell-sub {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
-.rec-meta {
-  font-size: 12px;
+.c-ok { color: var(--el-color-success); font-weight: 600; }
+.c-ng { color: var(--el-color-danger); font-weight: 600; }
+.c-skip { color: var(--el-color-warning); font-weight: 600; }
+.rate { font-weight: 700; color: var(--el-color-success); }
+.rate.low { color: var(--el-color-danger); }
+.expand-body {
+  padding: 12px 16px;
+  background: var(--el-fill-color-lighter);
+}
+.expand-loading, .expand-error {
+  padding: 8px 0;
   color: var(--el-text-color-secondary);
-  margin-top: 2px;
-}
-.rec-rate {
-  font-weight: 700;
-  color: var(--el-color-success);
-}
-.rec-rate.low {
-  color: var(--el-color-danger);
-}
-.rec-arrow {
-  font-size: 18px;
-  color: var(--el-text-color-secondary);
-  transition: transform 0.15s;
-  display: inline-block;
-}
-.rec-arrow.open {
-  transform: rotate(90deg);
-}
-.rec-body {
-  margin-top: 10px;
-  border-top: 1px solid var(--el-border-color-lighter);
-  padding-top: 10px;
+  font-size: 13px;
 }
 .rec-grid {
   display: grid;
@@ -238,7 +277,7 @@ onMounted(() => {
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 12px;
-  background: var(--el-fill-color-blank);
+  background: var(--el-bg-color);
 }
 .rc-top {
   display: flex;
@@ -271,5 +310,9 @@ onMounted(() => {
 .load-more {
   text-align: center;
   margin: 14px 0;
+}
+.rec-pager {
+  margin-top: 12px;
+  justify-content: flex-end;
 }
 </style>

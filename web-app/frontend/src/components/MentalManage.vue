@@ -197,7 +197,9 @@ async function deactivate(q: MentalQuestion): Promise<void> {
       confirmButtonText: '停用',
       cancelButtonText: '取消',
     })
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【停用题目确认弹窗异常】', e)
     return
   }
   try {
@@ -281,19 +283,17 @@ onMounted(() => load())
           {{ total }} 道题 · 题库共 {{ allTotal }} 道
         </div>
 
-        <el-table v-loading="loading" :data="list" size="small" stripe>
-          <el-table-column label="#" width="50">
-            <template #default="{ $index }">{{ (page - 1) * pageSize + $index + 1 }}</template>
-          </el-table-column>
-          <el-table-column label="题干" min-width="240">
+        <el-table v-loading="loading" :data="list" size="default" stripe :height="list.length ? 500 : undefined">
+          <el-table-column type="index" label="#" width="55" align="center" :index="(i: number) => (page - 1) * pageSize + i + 1" />
+          <el-table-column prop="stem" label="题干" min-width="240">
             <template #default="{ row }">
               <span class="stem-cell" :class="{ inactive: !row.active }">{{ row.stem.split('\n')[0] }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="题型" width="100">
+          <el-table-column prop="qtype" label="题型" width="100" sortable>
             <template #default="{ row }">{{ TYPE_NAMES[row.qtype] || row.qtype }}</template>
           </el-table-column>
-          <el-table-column label="难度" width="70" align="center">
+          <el-table-column prop="difficulty" label="难度" width="70" align="center" sortable>
             <template #default="{ row }">{{ diffText(row.difficulty) }}</template>
           </el-table-column>
           <el-table-column label="答案" min-width="90">
@@ -302,7 +302,7 @@ onMounted(() => load())
           <el-table-column label="形式" width="60" align="center">
             <template #default="{ row }">{{ row.fillable ? '填空' : '选择' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="130" align="center">
+          <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">
               <el-button size="small" text type="primary" @click="openDialog(row.id)">编辑</el-button>
               <el-button v-if="row.active" size="small" text type="danger" @click="deactivate(row as MentalQuestion)">停用</el-button>
@@ -310,11 +310,6 @@ onMounted(() => load())
             </template>
           </el-table-column>
         </el-table>
-        <el-empty
-          v-if="!loading && list.length === 0"
-          :description="allTotal === 0 ? '题库暂无题目' : '该筛选下暂无题目'"
-          :image-size="60"
-        />
 
         <div class="pager">
           <el-pagination
@@ -331,7 +326,7 @@ onMounted(() => load())
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialog" :title="editId ? '编辑题目' : '新增题目'" width="600px" align-center>
+    <el-dialog v-model="dialog" :title="editId ? '编辑题目' : '新增题目'" width="800px" align-center>
       <el-form label-width="90px">
         <el-form-item label="题型" required>
           <el-select v-model="form.qtype" style="width: 160px" @change="onTypeChange">
@@ -347,7 +342,7 @@ onMounted(() => load())
           </el-radio-group>
         </el-form-item>
         <el-form-item label="题干" required>
-          <el-input v-model="form.stem" type="textarea" :rows="2" maxlength="20000" />
+          <el-input v-model="form.stem" type="textarea" :rows="4" maxlength="20000" />
         </el-form-item>
         <el-form-item v-if="!form.fillable" v-for="(_, i) in form.options" :key="i" :label="String.fromCharCode(65 + i)">
           <el-input v-model="form.options[i]" maxlength="200" :placeholder="`选项 ${String.fromCharCode(65 + i)} 内容`" />
@@ -363,7 +358,7 @@ onMounted(() => load())
           <el-input v-else v-model="form.answer" style="width: 220px" placeholder="规范答案文本（如 1/8、14.3%、169、1.7）" />
         </el-form-item>
         <el-form-item label="技巧提示">
-          <el-input v-model="form.tip" type="textarea" :rows="2" maxlength="20000" placeholder="答题反馈的核心内容" />
+          <el-input v-model="form.tip" type="textarea" :rows="3" maxlength="20000" placeholder="答题反馈的核心内容" />
         </el-form-item>
         <el-form-item label="标签">
           <el-input v-model="form.tag" style="width: 260px" placeholder="如 百化分-1/7 / 交叉相乘" />

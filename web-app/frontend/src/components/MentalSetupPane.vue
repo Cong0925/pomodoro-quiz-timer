@@ -29,8 +29,8 @@ const COUNT_OPTIONS = [10, 15, 20, 0]
     </div>
 
     <div class="start-row">
-      <el-button type="primary" size="large" @click="emit('start')">开始练习</el-button>
       <span class="hint">{{ tip }}</span>
+      <el-button type="primary" size="large" @click="emit('start')">开始练习</el-button>
     </div>
   </div>
 </template>
@@ -43,7 +43,7 @@ const COUNT_OPTIONS = [10, 15, 20, 0]
 }
 .type-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 .type-card {
@@ -54,8 +54,8 @@ const COUNT_OPTIONS = [10, 15, 20, 0]
   background: var(--el-bg-color);
 }
 .type-card.active {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
+  border: 1.5px solid #2563eb;
+  background: #eff6ff;
 }
 .tc-name {
   font-weight: 700;
@@ -72,11 +72,12 @@ const COUNT_OPTIONS = [10, 15, 20, 0]
 .start-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: 18px 0;
 }
 .hint {
   font-size: 12px;
   color: var(--el-text-color-placeholder);
-  margin-left: 10px;
 }
 </style>

@@ -300,11 +300,20 @@ async function main() {
     /* ---- 6. 统计 ---- */
     group('6. 学习统计 /api/stats');
     for (const gran of ['day', 'week', 'month']) {
-        await t(`GET /?gran=${gran} 返回 today+list`, async () => {
+        await t(`GET /?gran=${gran} 返回 today+sum+分页 list`, async () => {
             const { status, data } = await req('GET', `/api/stats?gran=${gran}`);
-            assert(status === 200 && data.today && Array.isArray(data.list), `status=${status}`);
+            assert(status === 200 && data.today && data.sum && Array.isArray(data.list), `status=${status}`);
+            assert(typeof data.total === 'number' && data.page >= 1 && data.limit >= 1 && data.totalPages >= 1, `分页字段缺失: ${JSON.stringify({ total: data.total, page: data.page, limit: data.limit, totalPages: data.totalPages })}`);
         });
     }
+    await t('GET /?page=2&limit=5 分页切页生效', async () => {
+        const { status, data } = await req('GET', '/api/stats?gran=day&page=2&limit=5');
+        assert(status === 200 && data.page === 2 && data.limit === 5 && data.list.length <= 5, `status=${status} page=${data.page} limit=${data.limit} len=${data.list.length}`);
+    });
+    await t('GET /?page=0&limit=999 非法参数钳制为 1/100', async () => {
+        const { status, data } = await req('GET', '/api/stats?gran=day&page=0&limit=999');
+        assert(status === 200 && data.page === 1 && data.limit === 100, `status=${status} page=${data.page} limit=${data.limit}`);
+    });
 
     /* ---- 7. 题库练习 ---- */
     group('7. 题库练习 /api/practice');

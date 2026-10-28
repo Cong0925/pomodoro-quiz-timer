@@ -131,8 +131,28 @@ const modeDesc = computed(() =>
         <h2>{{ modeTitle }}</h2>
         <p class="mode-desc">{{ modeDesc }}</p>
       </div>
-      <div v-if="timer.mode.value === 'batch'" class="batch-setting">
-        <span>本轮题量：</span>
+    </div>
+
+    <el-card shadow="never" class="block-card">
+      <div class="cat-row">
+        <span class="label">刷题类型：</span>
+        <CatSelect v-model:cat-id="selCatId" v-model:sub-id="selSubId" />
+        <span class="hint">选择本轮刷题类型，便于按分类查找；可在「分类管理」中自定义</span>
+      </div>
+    </el-card>
+
+    <el-card shadow="never" class="block-card">
+      <template #header><b>信息</b></template>
+      <div class="meta-row">
+        <span class="meta-label">标题</span>
+        <el-input v-model="timer.roundMeta.title" maxlength="60" placeholder="本轮标题（回车确认后空格开始计时）" />
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">描述</span>
+        <el-input v-model="timer.roundMeta.desc" maxlength="120" placeholder="练习册 / 题号范围 / 训练内容" />
+      </div>
+      <div class="batch-setting">
+        <span class="meta-label">本轮题量</span>
         <el-select v-model="batchCount" style="width: 110px">
           <el-option value="10" label="10 题" />
           <el-option value="15" label="15 题" />
@@ -148,34 +168,23 @@ const modeDesc = computed(() =>
           style="width: 120px; margin-left: 8px"
         />
       </div>
-    </div>
-
-    <el-card shadow="never" class="block-card">
-      <div class="cat-row">
-        <span class="label">刷题类型：</span>
-        <CatSelect v-model:cat-id="selCatId" v-model:sub-id="selSubId" />
-        <span class="hint">选择本轮刷题类型，便于按分类查找；可在「分类管理」中自定义</span>
-      </div>
-      <div class="meta-row">
-        <el-input v-model="timer.roundMeta.title" maxlength="60" placeholder="本轮标题（回车确认后空格开始计时）" />
-        <el-input v-model="timer.roundMeta.desc" maxlength="120" placeholder="描述（可选）：练习册 / 题号范围 / 训练内容" />
-      </div>
     </el-card>
 
     <el-card shadow="never" class="block-card stage-card">
       <div class="time-display">{{ timer.timeText.value }}</div>
       <div class="info-bar">
-        本轮：<b>{{ timer.records.value.length }}</b>/<b>{{ timer.maxRound.value }}</b> 题
-        <el-divider direction="vertical" />
-        总用时：<b>{{ formatTime(timer.totalMs.value) }}</b>
-        <el-divider direction="vertical" />
-        答对：<b>{{ timer.correctCount.value }}</b> 题
-        <el-divider direction="vertical" />
-        正确率：<b>{{ timer.rateText.value }}</b>
+        <div class="info-line">
+          本轮：<b>{{ timer.records.value.length }}</b>/<b>{{ timer.maxRound.value }}</b> 题
+          <span class="info-gap">总用时：<b>{{ formatTime(timer.totalMs.value) }}</b></span>
+        </div>
+        <div class="info-line">
+          答对：<b>{{ timer.correctCount.value }}</b> 题
+          <span class="info-gap">正确率：<b>{{ timer.rateText.value }}</b></span>
+        </div>
       </div>
       <div class="btn-group">
-        <el-button @click="timer.stop()">停止</el-button>
-        <el-button @click="timer.clearRound()">清空本轮</el-button>
+        <el-button type="danger" @click="timer.stop()">停止</el-button>
+        <el-button class="btn-gray" @click="timer.clearRound()">清空本轮</el-button>
         <el-button v-if="timer.showNewRoundBtn.value" type="primary" @click="timer.startNewRound()">开启新一轮</el-button>
       </div>
     </el-card>
@@ -253,11 +262,24 @@ const modeDesc = computed(() =>
 .batch-setting {
   display: flex;
   align-items: center;
+  gap: 10px;
   font-size: 13px;
   color: var(--el-text-color-regular);
 }
+.meta-label {
+  width: 60px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
 .block-card {
   margin-bottom: 14px;
+}
+.block-card :deep(.el-card__header) {
+  padding: 10px 16px;
+}
+.block-card :deep(.el-card__body) {
+  padding-top: 14px;
 }
 .cat-row {
   display: flex;
@@ -274,8 +296,9 @@ const modeDesc = computed(() =>
 }
 .meta-row {
   display: flex;
+  align-items: center;
   gap: 10px;
-  margin-top: 12px;
+  margin-bottom: 12px;
 }
 .meta-row .el-input {
   flex: 1;
@@ -294,11 +317,28 @@ const modeDesc = computed(() =>
 .info-bar {
   color: var(--el-text-color-regular);
   margin-bottom: 16px;
+  line-height: 1.9;
+}
+.info-line {
+  font-size: 14px;
+}
+.info-gap {
+  margin-left: 24px;
 }
 .btn-group {
   display: flex;
   justify-content: center;
   gap: 10px;
+}
+.btn-gray {
+  background: #6b7280;
+  color: #fff;
+  border-color: #6b7280;
+}
+.btn-gray:hover {
+  background: #4b5563;
+  border-color: #4b5563;
+  color: #fff;
 }
 .record-wrap {
   display: flex;

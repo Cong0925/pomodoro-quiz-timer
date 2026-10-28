@@ -111,24 +111,21 @@ onMounted(() => {
       <!-- 本地化保存 -->
       <el-tab-pane label="本地化保存" name="backup">
         <el-card shadow="never" class="s-card">
-          <template #header><b>导出全部数据</b></template>
-          <p class="s-desc">把全部数据（分类 / 历史 / 收藏 / 学习时长 / 备忘 / 练习 / 速算）导出为 JSON 文件，可用于备份或迁移到其他电脑。</p>
-          <el-button type="primary" @click="doExport">保存 JSON（导出全部数据）</el-button>
-        </el-card>
-
-        <el-card shadow="never" class="s-card">
-          <template #header><b>导入合并</b></template>
-          <p class="s-desc">
-            选择之前导出的 JSON 文件合并导入：历史与收藏以文件为准替换；分类更新/新增（本地多出的保留）；
-            学习时长按日取较大值；备忘按日覆盖。<b>导入会覆盖当前历史与收藏，请先导出备份。</b>
+          <h3 class="s-title">本地化保存（JSON 备份 / 迁移）</h3>
+          <p class="s-desc">把数据库中的全部数据导出为 JSON 文件保存到本地，或从 JSON 文件导入数据。适合定期备份、换电脑迁移数据。</p>
+          <div class="s-actions">
+            <el-button size="large" @click="doExport">保存 JSON（导出全部数据）</el-button>
+            <el-button size="large" @click="pickImportFile">导入 JSON（合并数据）</el-button>
+          </div>
+          <p class="s-tip">
+            <strong>说明：</strong>导出会下载一个 <code>data-日期.json</code> 文件；导入会自动合并数据（按轮次去重），不会重复、不会丢失。建议每周导出一次作为备份。
           </p>
-          <el-button type="warning" @click="pickImportFile">导入 JSON（合并数据）</el-button>
           <input ref="fileInput" type="file" accept="application/json,.json" style="display: none" @change="onFileChange" />
         </el-card>
       </el-tab-pane>
 
       <!-- 数据库信息 -->
-      <el-tab-pane label="数据库" name="db">
+      <el-tab-pane label="数据库信息" name="db">
         <el-card v-loading="dbLoading" shadow="never" class="s-card">
           <el-descriptions v-if="dbInfo" :column="2" border size="small">
             <el-descriptions-item label="数据库名">{{ dbInfo.dbName }}</el-descriptions-item>
@@ -170,10 +167,35 @@ h2 {
 .s-card {
   margin-bottom: 12px;
 }
+.s-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
 .s-desc {
   font-size: 13px;
   color: var(--el-text-color-secondary);
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   line-height: 1.6;
+}
+.s-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.s-tip {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  background: #f9fafb;
+  border: 1px dashed var(--el-border-color-light);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0;
+  line-height: 1.6;
+}
+.s-tip code {
+  background: #eef2ff;
+  padding: 0 4px;
+  border-radius: 3px;
+  color: #2563eb;
 }
 </style>

@@ -83,6 +83,12 @@ function diffText(d: number): string {
   return d === 1 ? '简单' : d === 3 ? '困难' : '中等'
 }
 
+/* ---- 题库行操作菜单（三点） ---- */
+function onBankCmd(cmd: string | number | object, b: Bank): void {
+  if (cmd === 'edit') openBankDialog(b.id)
+  else if (cmd === 'delete') delBank(b)
+}
+
 /* ---- 题库弹窗 ---- */
 const bankDialog = ref(false)
 const bankEditId = ref(0)
@@ -122,7 +128,9 @@ async function delBank(b: Bank): Promise<void> {
       '删除题库',
       { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
     )
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【删除题库确认弹窗异常】', e)
     return
   }
   try {
@@ -189,7 +197,9 @@ async function delQuestion(id: number): Promise<void> {
       confirmButtonText: '删除',
       cancelButtonText: '取消',
     })
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【删除题目确认弹窗异常】', e)
     return
   }
   try {
@@ -233,8 +243,17 @@ async function delQuestion(id: number): Promise<void> {
             <div class="br-meta">{{ b.description || '暂无描述' }}</div>
           </div>
           <div class="br-ops" @click.stop>
-            <el-button size="small" text @click="openBankDialog(b.id)">编辑</el-button>
-            <el-button size="small" text type="danger" @click="delBank(b)">删除</el-button>
+            <el-dropdown trigger="click" @command="(cmd: string | number | object) => onBankCmd(cmd, b)">
+              <el-button class="ops-btn" text>
+                <el-icon><MoreFilled /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                  <el-dropdown-item command="delete" type="danger" divided>删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
       </div>
@@ -249,27 +268,24 @@ async function delQuestion(id: number): Promise<void> {
           <el-button type="primary" :disabled="!curBank" @click="openQDialog(0)">+ 新增题目</el-button>
         </div>
 
-        <el-table v-loading="qLoading" :data="questions" size="small" stripe>
-          <el-table-column label="#" width="50">
-            <template #default="{ $index }">{{ (qPage - 1) * qPageSize + $index + 1 }}</template>
-          </el-table-column>
-          <el-table-column label="题干" min-width="260">
+        <el-table v-loading="qLoading" :data="questions" size="default" stripe :height="questions.length ? 500 : undefined">
+          <el-table-column type="index" label="#" width="55" align="center" :index="(i: number) => (qPage - 1) * qPageSize + i + 1" />
+          <el-table-column prop="stem" label="题干" min-width="260">
             <template #default="{ row }"><span class="stem-cell">{{ row.stem.split('\n')[0] }}</span></template>
           </el-table-column>
-          <el-table-column label="答案" width="70" align="center">
+          <el-table-column prop="answer" label="答案" width="70" align="center" sortable>
             <template #default="{ row }"><el-tag size="small">{{ row.answer }}</el-tag></template>
           </el-table-column>
-          <el-table-column label="难度" width="80" align="center">
+          <el-table-column prop="difficulty" label="难度" width="80" align="center" sortable>
             <template #default="{ row }">{{ diffText(row.difficulty) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="110" align="center">
+          <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">
               <el-button size="small" text type="primary" @click="openQDialog(row.id)">编辑</el-button>
               <el-button size="small" text type="danger" @click="delQuestion(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
-        <el-empty v-if="!qLoading && questions.length === 0" description="该题库暂无题目" :image-size="60" />
 
         <div class="q-pager">
           <el-pagination
@@ -314,10 +330,10 @@ async function delQuestion(id: number): Promise<void> {
     </el-dialog>
 
     <!-- 题目弹窗 -->
-    <el-dialog v-model="qDialog" :title="qEditId ? '编辑题目' : '新增题目'" width="560px" align-center>
+    <el-dialog v-model="qDialog" :title="qEditId ? '编辑题目' : '新增题目'" width="880px" align-center>
       <el-form label-width="60px">
         <el-form-item label="题干" required>
-          <el-input v-model="qForm.stem" type="textarea" :rows="3" maxlength="20000" placeholder="题干内容" />
+          <el-input v-model="qForm.stem" type="textarea" :rows="6" maxlength="20000" placeholder="题干内容" />
         </el-form-item>
         <el-form-item v-for="(_, i) in qForm.options" :key="i" :label="String.fromCharCode(65 + i)">
           <el-input v-model="qForm.options[i]" maxlength="200" :placeholder="`选项 ${String.fromCharCode(65 + i)} 内容`" />
@@ -335,7 +351,7 @@ async function delQuestion(id: number): Promise<void> {
           </el-radio-group>
         </el-form-item>
         <el-form-item label="解析">
-          <el-input v-model="qForm.analysis" type="textarea" :rows="2" maxlength="20000" placeholder="可选" />
+          <el-input v-model="qForm.analysis" type="textarea" :rows="4" maxlength="20000" placeholder="可选" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -395,6 +411,13 @@ async function delQuestion(id: number): Promise<void> {
 }
 .br-ops {
   flex-shrink: 0;
+}
+.br-ops .ops-btn {
+  padding: 4px;
+  color: var(--el-text-color-secondary);
+}
+.br-ops .ops-btn:hover {
+  color: var(--el-color-primary);
 }
 .q-panel {
   border: 1px solid var(--el-border-color-lighter);

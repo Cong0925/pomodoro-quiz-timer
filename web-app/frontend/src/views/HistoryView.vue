@@ -111,7 +111,9 @@ async function removeItem(h: HistoryItem): Promise<void> {
       '删除确认',
       { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
     )
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【删除历史记录确认弹窗异常】', e)
     return
   }
   try {
@@ -131,7 +133,9 @@ async function clearAll(): Promise<void> {
       confirmButtonText: '清空',
       cancelButtonText: '取消',
     })
-  } catch {
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【清空历史记录确认弹窗异常】', e)
     return
   }
   try {
@@ -218,12 +222,12 @@ async function loadMore(): Promise<void> {
         <h2>历史记录</h2>
         <p class="mode-desc">每完成一整轮自动归档，清空本轮也会先存档再清空</p>
       </div>
-      <el-button plain type="danger" @click="clearAll">清空全部</el-button>
+      <el-button plain @click="clearAll">清空全部</el-button>
     </div>
 
     <!-- 筛选 -->
     <el-card shadow="never" class="filter-card">
-      <el-select v-model="filterMode" style="width: 140px" @change="reload">
+      <el-select v-model="filterMode" style="width: 140px" placeholder="全部模式" @change="reload">
         <el-option value="" label="全部模式" />
         <el-option value="single" label="单题模式" />
         <el-option value="batch" label="整组模式" />

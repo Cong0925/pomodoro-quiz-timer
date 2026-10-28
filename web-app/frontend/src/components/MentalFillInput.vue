@@ -6,13 +6,13 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'submi
 
 <template>
   <div class="fill-row">
-    <span v-if="fillDir === 'den'" class="fill-prefix">1/</span>
+    <span v-if="fillDir === 'den' || fillDir === 'frac'" class="fill-prefix">1/</span>
     <el-input
       :model-value="modelValue"
       class="fill-input"
       :placeholder="
         fillDir === 'den' ? '填分母（如 12.5% 填 8）'
-        : fillDir === 'frac' ? '填分数（如 11.1% 填 1/9）'
+        : fillDir === 'frac' ? '填分母（如 11.1% 填 9）'
         : fillDir === 'val' ? '填数字（如 13² 填 169）'
         : fillDir === 'dec' ? '填数值（如 1.2³ 填 1.7）'
         : '填百分数数值（如 1/9 填 11.1）'

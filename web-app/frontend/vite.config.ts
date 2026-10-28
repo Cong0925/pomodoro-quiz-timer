@@ -19,11 +19,11 @@ export default defineConfig({
     }),
   ],
   server: {
-    port: 5173,
+    port: 8889,
     // 前后端分离：/api 请求代理到后端 Express 服务
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:8888',
         changeOrigin: true,
       },
     },
