@@ -12,29 +12,28 @@ last_modified: 2026-10-27
 
 ## 〇、项目多版本架构与规范适用范围
 
-> 本项目为**一仓多版本**结构。不同版本位于不同目录、由不同分支管理；编码前必须先确认当前操作的是哪个版本。
+> 本项目为**一仓多版本、单分支管理**结构。不同版本位于不同目录、统一在 `main` 分支维护（2026-10-28 起，历史 `version-vue+node` 分支已并入 main 并删除）；编码前必须先确认当前操作的是哪个版本。
 
 ### 0.1 版本结构总览
 
 | 版本 | 目录 | 分支 | 技术栈 | 状态 |
 |------|------|------|--------|------|
 | **主版本**（初始版本/原始代码） | 仓库根目录 | `main` | 原生 HTML/CSS/JS + Node.js + Express + MySQL | 已有完整代码，持续维护 |
-| **web-app 版本** | `web-app/` | `version-vue+node` | Vue 3 + TypeScript + Node.js（前后端分离） | 目录已建，编码进行中 |
-| **app 版本** | `app/`（规划） | 未来新建独立分支 | 规划中（预留 Rust/Tauri 等） | 未创建 |
+| **web-app 版本** | `web-app/` | `main` | Vue 3 + TypeScript + Node.js（前后端分离） | 后端完成，前端编码进行中 |
+| **app 版本** | `app/`（规划） | `main`（未来） | 规划中（预留 Rust/Tauri 等） | 未创建 |
 
 ```
-pomodoro-quiz-timer/                 ← 仓库根目录
-├── server/  public/  ...            ← 主版本代码（main 分支）
-├── web-app/                         ← Vue + Node 版（version-vue+node 分支）
+pomodoro-quiz-timer/                 ← 仓库根目录（main 分支）
+├── server/  public/  ...            ← 主版本代码
+├── web-app/                         ← Vue + Node 版
 └── app/                             ← app 版（规划中，尚未创建）
 ```
 
 ### 0.2 分支管理策略（强制）
 
-1. **`main` 分支**：只维护主版本（根目录）代码；`web-app/`、`app/` 等子版本目录**不在 main 提交**（由根目录 `.gitignore` 控制）。
-2. **`version-vue+node` 分支**：web-app 版本专属分支，Vue + Node 相关代码**只在此分支提交**。
-3. **app 版本**：创建后使用独立分支管理（如 `version-app`），目录同样不在 main 提交。
-4. **跨版本禁止混提**：一次提交只属于一个版本，禁止将主版本与 web-app / app 的改动混在同一提交。
+1. **单分支模型**：全部版本统一在 `main` 分支维护（2026-10-28 起）。
+2. **跨版本禁止混提**：一次提交只属于一个版本，禁止将主版本与 web-app / app 的改动混在同一提交。
+3. **禁止私自提交**：未经用户明确说「提交」，禁止 commit/push。
 
 ### 0.3 本规范章节适用范围
 
@@ -87,7 +86,7 @@ pomodoro-quiz-timer/                 ← 仓库根目录
 
 ## 三、前端 Vue 规范
 
-> **适用版本**：web-app 版本（`web-app/` 目录，`version-vue+node` 分支）。主版本为原生 JS，不适用本章。
+> **适用版本**：web-app 版本（`web-app/` 目录，main 分支）。主版本为原生 JS，不适用本章。
 
 ### 3.1 组件结构
 
@@ -161,13 +160,13 @@ src/
         └── index.ts             # 模块入口（导出公共 API）
 ```
 
-> **例外**：已有的 `src/views/`、`src/pet/`、`src/components/` 结构保持不变，新功能模块使用上述结构。
+> **例外**：已有的 `src/views/`、`src/components/` 结构保持不变，新功能模块使用上述结构。
 
 ---
 
 ## 四、TypeScript 规范
 
-> **适用版本**：web-app 版本（`web-app/` 目录，`version-vue+node` 分支）。
+> **适用版本**：web-app 版本（`web-app/` 目录，main 分支）。
 
 ### 4.1 类型定义
 
@@ -195,7 +194,7 @@ import { helper } from './utils'
 
 ## 五、Pinia Store 规范
 
-> **适用版本**：web-app 版本（`web-app/` 目录，`version-vue+node` 分支）。
+> **适用版本**：web-app 版本（`web-app/` 目录，main 分支）。
 
 - 每个 store 对应一个独立领域
 - 文件名：`xxxStore.ts`（驼峰，Store 后缀）

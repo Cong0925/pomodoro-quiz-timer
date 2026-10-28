@@ -1,0 +1,37 @@
+/* 全局基础样式（骨架阶段，后续按模块扩展） */
+:root {
+  --text: #606266;
+  --text-h: #303133;
+  --bg: #fff;
+  --border: #e4e7ed;
+  --accent: #409eff;
+
+  --sans: system-ui, 'Segoe UI', 'Microsoft YaHei', Roboto, sans-serif;
+
+  font: 16px/150% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #cfd3dc;
+    --text-h: #e5eaf3;
+    --bg: #14151a;
+    --border: #2c2e38;
+    --accent: #79bbff;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  min-height: 100svh;
+}

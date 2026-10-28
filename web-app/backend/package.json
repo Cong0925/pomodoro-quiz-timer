@@ -1,0 +1,22 @@
+{
+  "name": "pomodoro-quiz-timer-backend",
+  "version": "1.0.0",
+  "description": "刷题计时器 web-app 版后端（Node + Express + MySQL，移植自主版本 server/）",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "init-db": "node init-db.js",
+    "backup": "node backup.js",
+    "restore": "node restore.js",
+    "migrate": "node migrate.js",
+    "dev": "node --watch index.js",
+    "test:acceptance": "node scripts/acceptance.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.11.0"
+  }
+}

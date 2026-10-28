@@ -1,12 +1,27 @@
 {
-   "enabledPlugins": {
+  "enabledPlugins": {
     "playwright@claude-plugins-official": true,
     "claude-hud@claude-hud": true,
     "document-skills@anthropic-agent-skills": true
   },
   "permissions": {
     "allow": [
-      "Bash(rm *)"
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "ask": [
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git reset*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(rm*)"
     ]
   }
 }
