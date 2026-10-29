@@ -73,6 +73,49 @@ router.delete('/banks/:id', asyncHandler(async (req, res) => {
 
 /* ---------- 题目 ---------- */
 
+/* ---------- 图片题目（方案C）：base64 内嵌，单图 ≤300KB，整包 ≤40MB ---------- */
+const MAX_IMG_BYTES = 300 * 1024;
+const MAX_IMG_COUNT = 20;
+const MAX_TOTAL_IMG_KB = 40 * 1024;
+const IMG_RE = /^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);base64,/;
+const imgKB = s => Math.round(s.length * 0.75 / 1024);
+
+/* 校验题干图数组：合法返回 { value: JSON字符串|null }，非法返回 { error } */
+function parseStemImg(v) {
+    if (v === undefined || v === null || v === '') return { value: null };
+    if (!Array.isArray(v)) return { error: 'stemImg 必须是数组' };
+    if (v.length === 0) return { value: null };
+    if (v.length > MAX_IMG_COUNT) return { error: `题干图最多 ${MAX_IMG_COUNT} 张` };
+    for (const s of v) {
+        if (typeof s !== 'string' || !IMG_RE.test(s)) return { error: '题干图必须是 data:image base64 字符串' };
+        const kb = imgKB(s);
+        if (kb > MAX_IMG_BYTES / 1024) return { error: `单张题干图不能超过 300KB（当前约 ${kb}KB）` };
+    }
+    return { value: JSON.stringify(v) };
+}
+
+/* 校验选项数组（options[].img 同约束）：合法返回 { value: JSON字符串 }，非法返回 { error } */
+function parseOptions(v) {
+    const arr = Array.isArray(v) ? v : [];
+    for (const o of arr) {
+        if (o && typeof o === 'object' && o.img) {
+            if (typeof o.img !== 'string' || !IMG_RE.test(o.img)) return { error: '选项图片必须是 data:image base64 字符串' };
+            const kb = imgKB(o.img);
+            if (kb > MAX_IMG_BYTES / 1024) return { error: `选项图片不能超过 300KB（当前约 ${kb}KB）` };
+        }
+    }
+    return { value: JSON.stringify(arr) };
+}
+
+/* 整包图片载荷估算（题干图 + 选项图 base64 总长度 → KB），超 40MB 拒绝 */
+function totalImgKB(body) {
+    let chars = 0;
+    const b = body || {};
+    if (Array.isArray(b.stemImg)) for (const s of b.stemImg) chars += s.length;
+    if (Array.isArray(b.options)) for (const o of b.options) if (o && typeof o === 'object' && o.img) chars += o.img.length;
+    return Math.round(chars * 0.75 / 1024);
+}
+
 /* GET /api/practice/banks/:id/questions?page=&pageSize=
    后端分页：传 page/pageSize 返回 { total, list }，否则返回全量数组（供编辑弹窗使用） */
 router.get('/banks/:id/questions', asyncHandler(async (req, res) => {
@@ -82,35 +125,40 @@ router.get('/banks/:id/questions', asyncHandler(async (req, res) => {
         if (page >= 1 && pageSize >= 1) {
             const [cnt] = await pool.query('SELECT COUNT(*) c FROM questions WHERE bank_id=?', [bankId]);
             const [rows] = await pool.query(
-                `SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source
+                `SELECT id, bank_id, type, stem, stem_img, options, answer, analysis, difficulty, source
                  FROM questions WHERE bank_id=? ORDER BY id ASC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
                 [bankId]
             );
             return res.json({ total: cnt[0].c, list: rows });
         }
         const [rows] = await pool.query(
-            'SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source FROM questions WHERE bank_id=? ORDER BY id ASC',
+            'SELECT id, bank_id, type, stem, stem_img, options, answer, analysis, difficulty, source FROM questions WHERE bank_id=? ORDER BY id ASC',
             [bankId]
         );
         res.json(rows);
 }));
 
-/* POST /api/practice/questions { bankId, type, stem, options, answer, analysis, difficulty, source } */
+/* POST /api/practice/questions { bankId, type, stem, stemImg, options, answer, analysis, difficulty, source } */
 router.post('/questions', asyncHandler(async (req, res) => {
         const bankId = num(req.body && req.body.bankId);
         const stem = str(req.body && req.body.stem, 20000).trim();
         if (!bankId) return res.status(400).json({ error: '缺少题库ID' });
-        if (!stem) return res.status(400).json({ error: '题干不能为空' });
+        const stemImgRes = parseStemImg(req.body && req.body.stemImg);
+        if (stemImgRes.error) return res.status(400).json({ error: stemImgRes.error });
+        if (!stem && !stemImgRes.value) return res.status(400).json({ error: '题干文字或题干图至少填一项' });
+        const optRes = parseOptions(req.body && req.body.options);
+        if (optRes.error) return res.status(400).json({ error: optRes.error });
+        if (totalImgKB(req.body) > MAX_TOTAL_IMG_KB) return res.status(400).json({ error: '图片总大小不能超过 40MB，请压缩图片后重试' });
         const type = str(req.body.type, 10) || 'single';
-        const options = JSON.stringify(req.body.options || []);
+        const options = optRes.value;
         const answer = str(req.body.answer, 50).trim();
         if (!answer) return res.status(400).json({ error: '正确答案不能为空' });
         const analysis = str(req.body.analysis, 20000).trim();
         const difficulty = Math.min(3, Math.max(1, num(req.body.difficulty) || 2));
         const source = str(req.body.source, 100).trim();
         const [r] = await pool.query(
-            'INSERT INTO questions (bank_id, type, stem, options, answer, analysis, difficulty, source) VALUES (?,?,?,?,?,?,?,?)',
-            [bankId, type, stem, options, answer, analysis, difficulty, source]
+            'INSERT INTO questions (bank_id, type, stem, stem_img, options, answer, analysis, difficulty, source) VALUES (?,?,?,?,?,?,?,?,?)',
+            [bankId, type, stem, stemImgRes.value, options, answer, analysis, difficulty, source]
         );
         res.status(201).json({ id: r.insertId });
 }));
@@ -119,17 +167,22 @@ router.post('/questions', asyncHandler(async (req, res) => {
 router.put('/questions/:id', asyncHandler(async (req, res) => {
         const id = num(req.params.id);
         const stem = str(req.body && req.body.stem, 20000).trim();
-        if (!stem) return res.status(400).json({ error: '题干不能为空' });
+        const stemImgRes = parseStemImg(req.body && req.body.stemImg);
+        if (stemImgRes.error) return res.status(400).json({ error: stemImgRes.error });
+        if (!stem && !stemImgRes.value) return res.status(400).json({ error: '题干文字或题干图至少填一项' });
+        const optRes = parseOptions(req.body && req.body.options);
+        if (optRes.error) return res.status(400).json({ error: optRes.error });
+        if (totalImgKB(req.body) > MAX_TOTAL_IMG_KB) return res.status(400).json({ error: '图片总大小不能超过 40MB，请压缩图片后重试' });
         const type = str(req.body.type, 10) || 'single';
-        const options = JSON.stringify(req.body.options || []);
+        const options = optRes.value;
         const answer = str(req.body.answer, 50).trim();
         if (!answer) return res.status(400).json({ error: '正确答案不能为空' });
         const analysis = str(req.body.analysis, 20000).trim();
         const difficulty = Math.min(3, Math.max(1, num(req.body.difficulty) || 2));
         const source = str(req.body.source, 100).trim();
         const [r] = await pool.query(
-            'UPDATE questions SET type=?, stem=?, options=?, answer=?, analysis=?, difficulty=?, source=? WHERE id=?',
-            [type, stem, options, answer, analysis, difficulty, source, id]
+            'UPDATE questions SET type=?, stem=?, stem_img=?, options=?, answer=?, analysis=?, difficulty=?, source=? WHERE id=?',
+            [type, stem, stemImgRes.value, options, answer, analysis, difficulty, source, id]
         );
         if (r.affectedRows === 0) return res.status(404).json({ error: '题目不存在' });
         res.json({ ok: true });
@@ -198,14 +251,14 @@ router.post('/start', asyncHandler(async (req, res) => {
         // 查题目（不含 answer/analysis）
         const ph = qIds.map(() => '?').join(',');
         const [qs] = await pool.query(
-            `SELECT id, type, stem, options, difficulty FROM questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
+            `SELECT id, type, stem, stem_img, options, difficulty FROM questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
             [...qIds, ...qIds]
         );
         res.status(201).json({
             sessionId,
             bank: { id: b.id, name: b.name, catName, subName },
             mode,
-            questions: qs.map(q => ({ id: q.id, type: q.type, stem: q.stem, options: q.options, difficulty: q.difficulty })),
+            questions: qs.map(q => ({ id: q.id, type: q.type, stem: q.stem, stemImg: q.stem_img || null, options: q.options, difficulty: q.difficulty })),
             total: qs.length
         });
 }));
@@ -225,7 +278,7 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
         if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
 
         const questionId = num(req.body && req.body.questionId);
-        const [q] = await pool.query('SELECT id, answer, analysis, stem, options, type FROM questions WHERE id=?', [questionId]);
+        const [q] = await pool.query('SELECT id, answer, analysis, stem, stem_img, options, type FROM questions WHERE id=?', [questionId]);
         if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
 
         const correct = userAnswer === str(q[0].answer, 50);
@@ -240,7 +293,7 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
              ${correct ? 'correct_count = correct_count + 1' : 'wrong_count = wrong_count + 1'}
              WHERE id=?`, [sessionId]
         );
-        res.json({ result, correctAnswer: str(q[0].answer, 50), analysis: q[0].analysis, stem: q[0].stem, options: q[0].options });
+        res.json({ result, correctAnswer: str(q[0].answer, 50), analysis: q[0].analysis, stem: q[0].stem, stemImg: q[0].stem_img || null, options: q[0].options });
 }));
 
 /* POST /api/practice/:id/skip { no, ms } */
@@ -252,7 +305,7 @@ router.post('/:id/skip', asyncHandler(async (req, res) => {
         const [ex] = await pool.query('SELECT id FROM practice_records WHERE session_id=? AND no=?', [sessionId, no]);
         if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
         const questionId = num(req.body && req.body.questionId);
-        const [q] = await pool.query('SELECT id, answer, analysis FROM questions WHERE id=?', [questionId]);
+        const [q] = await pool.query('SELECT id, answer, analysis, stem, stem_img, options, type FROM questions WHERE id=?', [questionId]);
         if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
         const now = nowDateTime();
         await pool.query(
@@ -260,7 +313,7 @@ router.post('/:id/skip', asyncHandler(async (req, res) => {
             [sessionId, questionId, no, null, 'skip', ms, now]
         );
         await pool.query('UPDATE practice_sessions SET skipped_count = skipped_count + 1 WHERE id=?', [sessionId]);
-        res.json({ result: 'skip', correctAnswer: str(q[0].answer, 50), analysis: q[0].analysis });
+        res.json({ result: 'skip', correctAnswer: str(q[0].answer, 50), analysis: q[0].analysis, stem: q[0].stem, stemImg: q[0].stem_img || null });
 }));
 
 /* POST /api/practice/:id/finish { ms }
@@ -357,13 +410,13 @@ router.get('/history/:id', asyncHandler(async (req, res) => {
         if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
         const [recs] = await pool.query(`
             SELECT pr.no, pr.question_id, pr.user_answer, pr.result, pr.ms,
-                   q.stem, q.answer AS correct_answer, q.analysis, q.options
+                   q.stem, q.stem_img, q.answer AS correct_answer, q.analysis, q.options
             FROM practice_records pr
             LEFT JOIN questions q ON q.id = pr.question_id
             ORDER BY pr.no ASC`, [id]);
         res.json({ session: s[0], records: recs.map(r => ({
             no: r.no, questionId: r.question_id, userAnswer: r.user_answer, result: r.result, ms: r.ms,
-            stem: r.stem || '（题目已删除）', correctAnswer: r.correct_answer || '', analysis: r.analysis || '',
+            stem: r.stem || '（题目已删除）', stemImg: r.stem_img || null, correctAnswer: r.correct_answer || '', analysis: r.analysis || '',
             options: r.options
         })) });
 }));

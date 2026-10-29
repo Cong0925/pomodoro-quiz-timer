@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图片题目存储 Demo（图形推理） - 刷题计时器</title>
+<style>
+/* ============ 设计变量（对齐 Element Plus + 项目主色 #2563eb） ============ */
+:root {
+  --primary: #2563eb;
+  --primary-light: #eff6ff;
+  --success: #67c23a;
+  --success-light: #f0f9eb;
+  --danger: #f56c6c;
+  --danger-light: #fef0f0;
+  --warning: #e6a23c;
+  --border: #e4e7ed;
+  --border-light: #ebeef5;
+  --bg: #fff;
+  --fill: #f5f7fa;
+  --fill-light: #fafafa;
+  --text: #303133;
+  --text-2: #909399;
+  --text-3: #606266;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--fill);
+  padding: 20px;
+}
+
+/* ============ 顶部说明横幅 ============ */
+.banner {
+  background: var(--primary-light);
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: #1e40af;
+}
+.banner b { font-size: 14px; }
+.banner .tag {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: 6px;
+}
+
+/* ============ 区块 tab ============ */
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab {
+  padding: 7px 18px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.tab:hover:not(.active) { background: #f3f4f6; }
+
+.panel { display: none; }
+.panel.show { display: block; }
+
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.card-sub { font-size: 12px; color: var(--text-2); margin-bottom: 12px; }
+
+/* ============ 通用表单（对齐 el-form） ============ */
+.form-row { display: flex; margin-bottom: 14px; }
+.form-label {
+  width: 60px;
+  flex-shrink: 0;
+  padding-top: 8px;
+  font-size: 14px;
+  color: var(--text-3);
+}
+.form-label.required::before { content: '*'; color: var(--danger); margin-right: 3px; }
+.form-body { flex: 1; min-width: 0; }
+textarea.inp, input.inp {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+textarea.inp:focus, input.inp:focus { border-color: var(--primary); }
+input.inp { height: 34px; }
+select.inp {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 14px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text-3);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn:hover { color: var(--primary); border-color: var(--primary); }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn.primary:hover { background: #1d4ed8; color: #fff; }
+.btn.small { height: 26px; padding: 0 10px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ============ 图片上传区 ============ */
+.upload-hint { font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
+.img-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.img-thumb {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--fill-light);
+}
+.img-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.img-thumb .del {
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+}
+.img-thumb .size {
+  position: absolute;
+  left: 0; bottom: 0; right: 0;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: 10px;
+  text-align: center;
+  padding: 1px 0;
+}
+.opt-img-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.opt-img-row .img-thumb { width: 64px; height: 64px; }
+
+/* ============ 模拟弹窗外观 ============ */
+.mock-dialog {
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  padding: 16px 20px;
+}
+.mock-dialog .dlg-head {
+  font-size: 16px;
+  font-weight: 700;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 14px;
+}
+.mock-dialog .dlg-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+.payload-box {
+  margin-top: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--fill-light);
+  padding: 10px 12px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text-3);
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+/* ============ 答题区（复刻 PracticeView） ============ */
+.run-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.run-title { font-size: 18px; font-weight: 700; }
+.run-meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.run-counts { font-size: 13px; }
+.run-counts .ok { color: var(--success); font-weight: 700; }
+.run-counts .ng { color: var(--danger); font-weight: 700; }
+.run-counts .skip { color: var(--warning); font-weight: 700; }
+.progress {
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.progress .bar { height: 100%; background: var(--primary); border-radius: 4px; transition: width .3s; }
+.q-no { font-size: 13px; color: var(--text-2); }
+.q-stem { font-size: 17px; font-weight: 600; margin: 8px 0 10px; white-space: pre-wrap; }
+.stem-imgs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.stem-imgs img {
+  max-height: 110px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: #fff;
+  cursor: zoom-in;
+}
+.opt-list { display: flex; gap: 12px; flex-wrap: wrap; }
+.opt-item {
+  width: 148px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+  background: var(--bg);
+  text-align: center;
+  transition: border-color .15s, box-shadow .15s;
+}
+.opt-item:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(37,99,235,.15); }
+.opt-item .opt-label {
+  display: inline-block;
+  width: 24px; height: 24px;
+  line-height: 24px;
+  border-radius: 50%;
+  background: var(--fill);
+  font-weight: 700;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.opt-item img { max-width: 100%; max-height: 96px; display: block; margin: 0 auto; }
+.opt-item.correct { border-color: var(--success); background: var(--success-light); cursor: default; }
+.opt-item.correct .opt-label { background: var(--success); color: #fff; }
+.opt-item.wrong { border-color: var(--danger); background: var(--danger-light); cursor: default; }
+.opt-item.wrong .opt-label { background: var(--danger); color: #fff; }
+.opt-item.dim { opacity: .5; cursor: default; }
+.analysis-box {
+  margin-top: 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+}
+.ab-title { font-weight: 600; margin-bottom: 6px; }
+.ab-body { font-size: 13px; color: var(--text-3); white-space: pre-wrap; margin-bottom: 10px; }
+.run-actions { margin-top: 14px; display: flex; gap: 10px; }
+
+/* ============ 表格（复刻 el-table 风格） ============ */
+table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.grid th {
+  background: var(--fill);
+  color: var(--text-3);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+table.grid td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); vertical-align: top; }
+table.grid tr:hover td { background: var(--fill-light); }
+table.grid .row-stem { display: flex; align-items: center; gap: 8px; }
+table.grid .row-stem img { height: 44px; border: 1px solid var(--border-light); border-radius: 6px; cursor: zoom-in; }
+.tag {
+  display: inline-block;
+  font-size: 12px;
+  border-radius: 4px;
+  padding: 0 6px;
+  line-height: 20px;
+}
+.tag.ok { background: var(--success-light); color: var(--success); border: 1px solid #c2e7b0; }
+.tag.ng { background: var(--danger-light); color: var(--danger); border: 1px solid #fbc4c4; }
+
+/* ============ Lightbox ============ */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+.lightbox.show { display: flex; }
+.lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 8px; background: #fff; }
+
+/* 提示条 */
+.toast {
+  display: none;
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  padding: 10px 18px;
+  font-size: 13px;
+  z-index: 1000;
+}
+.toast.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <span class="tag">方案C · Demo</span>
+  <b>图片题目存储方案演示（图形推理）</b> —— 展示三个核心交互：① 题目录入弹窗的多图上传（canvas 压缩 ≤300KB → base64）；② 答题页题干多图 + 图片选项渲染（判定态、点击放大）；③ 练习记录回看表格图片渲染。纯静态页，无需后端，双击即可打开。
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="edit">① 题目录入弹窗</button>
+  <button class="tab" data-tab="answer">② 答题渲染</button>
+  <button class="tab" data-tab="records">③ 回看表格</button>
+</div>
+
+<!-- ==================== ① 题目录入弹窗（复刻 PracticeManage 弹窗 + 图片上传） ==================== -->
+<div class="panel show" id="panel-edit">
+  <div class="card">
+    <div class="card-title">图形推理题目录入</div>
+    <div class="card-sub">题干预留「题干图」多图上传（支持九宫格/数列多图）；选项支持 文字 + 图片 混合；上传后自动压缩至 ≤300KB 转 base64 内嵌存储（方案C）。</div>
+
+    <div class="mock-dialog">
+      <div class="dlg-head">新增题目</div>
+
+      <div class="form-row">
+        <div class="form-label required">题干</div>
+        <div class="form-body">
+          <textarea class="inp" id="f-stem" rows="3" maxlength="20000" placeholder="题干文字（图推题可为空，以题干图为主）">从所给的四个选项中，选择最合适的一个填入问号处，使之呈现一定的规律性：</textarea>
+          <div class="upload-hint" style="margin-top:8px;">题干图（支持多张，按顺序排列；图推九宫格/数列多图在此上传）</div>
+          <div class="img-grid" id="stem-imgs"></div>
+          <div style="margin-top:8px;">
+            <button class="btn small" id="btn-stem-upload">+ 上传题干图</button>
+            <span class="upload-hint" id="stem-size-info" style="margin-left:8px;"></span>
+          </div>
+          <input type="file" id="file-stem" accept="image/*" multiple style="display:none">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label required">选项</div>
+        <div class="form-body" id="opt-rows"></div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label required">答案</div>
+        <div class="form-body">
+          <select class="inp" id="f-answer" style="width:120px;">
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+          </select>
+          <span class="upload-hint" style="margin-left:10px;">图推题通常为单选，答案对应选项图</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">难度</div>
+        <div class="form-body">
+          <label style="margin-right:14px;cursor:pointer;"><input type="radio" name="diff" value="1"> 简单</label>
+          <label style="margin-right:14px;cursor:pointer;"><input type="radio" name="diff" value="2" checked> 中等</label>
+          <label style="cursor:pointer;"><input type="radio" name="diff" value="3"> 困难</label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">解析</div>
+        <div class="form-body">
+          <textarea class="inp" id="f-analysis" rows="3" maxlength="20000" placeholder="规律说明（图推题以文字描述规律为主）"></textarea>
+        </div>
+      </div>
+
+      <div class="dlg-foot">
+        <button class="btn" id="btn-save">保存题目</button>
+      </div>
+
+      <div class="payload-box" id="payload-box" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ② 答题渲染（复刻 PracticeView 做题区） ==================== -->
+<div class="panel" id="panel-answer">
+  <div class="card">
+    <div class="card-title">图推答题渲染</div>
+    <div class="card-sub">题干多图数组渲染（数列题示例，可点击放大）；选项渲染为图片卡片，作答后自动判定（对=绿 / 错=红 / 其余淡化）；下一题切换预置示例。</div>
+
+    <div class="run-head">
+      <div>
+        <div class="run-title">公务员考试-判断推理 · 图形推理</div>
+        <div class="run-meta">公务员考试 / 判断推理 · 顺序 · 用时 00:12</div>
+      </div>
+      <div class="run-counts">对 <span class="ok">1</span> · 错 <span class="ng">0</span> · 跳 <span class="skip">0</span></div>
+    </div>
+    <div class="progress"><div class="bar" id="run-bar" style="width:33%"></div></div>
+
+    <div id="q-area"></div>
+    <div class="run-actions" id="q-actions" style="display:none;">
+      <button class="btn primary" id="btn-next">下一题</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ③ 回看表格（复刻 PracticeRecords） ==================== -->
+<div class="panel" id="panel-records">
+  <div class="card">
+    <div class="card-title">练习记录回看</div>
+    <div class="card-sub">明细表格渲染题干缩略图（点击放大）；答案/结果/解析与文字题同一口径。</div>
+    <table class="grid">
+      <thead>
+        <tr>
+          <th style="width:50px;">#</th>
+          <th style="width:55%;">题干</th>
+          <th style="width:70px;">我的答案</th>
+          <th style="width:70px;">正确答案</th>
+          <th style="width:70px;">结果</th>
+          <th>解析</th>
+        </tr>
+      </thead>
+      <tbody id="records-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightbox-img" alt=""></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 工具：SVG → data URI（示例图形推理题用） ============ */
+function dotsSvg(n, size) {
+  /* 圆形内 n 个圆点，按 3x3 位置排布（点数递增规律） */
+  size = size || 96;
+  const pos = [[50,28],[28,50],[72,50],[50,72],[28,28],[72,28],[28,72],[72,72],[50,88]]; // 9 个位置
+  let dots = '';
+  for (let i = 0; i < n; i++) dots += `<circle cx="${pos[i][0]}" cy="${pos[i][1]}" r="7" fill="#2563eb"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+    <rect x="2" y="2" width="96" height="96" rx="14" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>${dots}</svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+function triSvg(n, size) {
+  /* 区域内 n 个三角形（数量递增规律） */
+  size = size || 96;
+  const pos = [[50,26],[28,52],[72,52],[50,76],[28,32],[72,32],[28,72],[72,72],[50,88]];
+  let ts = '';
+  for (let i = 0; i < n; i++) {
+    const [cx, cy] = pos[i];
+    ts += `<polygon points="${cx-9},${cy+7} ${cx+9},${cy+7} ${cx},${cy-8}" fill="#16a34a"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+    <rect x="2" y="2" width="96" height="96" rx="14" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>${ts}</svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+function gridSvg(seq, size) {
+  /* 3x3 九宫格图：seq 为 9 项数组，'?' 表示问号位 */
+  size = size || 240;
+  let cells = '';
+  for (let i = 0; i < 9; i++) {
+    const v = seq[i];
+    const cell = v === '?'
+      ? '<text x="50" y="64" font-size="34" text-anchor="middle" fill="#f59e0b" font-weight="bold">?</text>'
+      : dotsSvgBody(v);
+    cells += `<g transform="translate(${(i % 3) * 33.34} ${Math.floor(i / 3) * 33.34}) scale(0.3334)">
+      <rect x="2" y="2" width="96" height="96" rx="14" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>${cell}</g>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">${cells}</svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+function dotsSvgBody(n) {
+  const pos = [[50,28],[28,50],[72,50],[50,72],[28,28],[72,28],[28,72],[72,72],[50,88]];
+  let d = '';
+  for (let i = 0; i < n; i++) d += `<circle cx="${pos[i][0]}" cy="${pos[i][1]}" r="7" fill="#2563eb"/>`;
+  return d;
+}
+
+/* ============ 预置示例题（结构 = 方案C 字段契约） ============ */
+const SAMPLE_QUESTIONS = [
+  {
+    stem: '从所给的四个选项中，选择最合适的一个填入问号处，使之呈现一定的规律性：',
+    stemImg: [gridSvg([1,2,3,4,5,6,7,8,'?'])],
+    options: [
+      { label: 'A', text: '', img: dotsSvg(9) },
+      { label: 'B', text: '', img: dotsSvg(7) },
+      { label: 'C', text: '', img: dotsSvg(6) },
+      { label: 'D', text: '', img: dotsSvg(8) },
+    ],
+    answer: 'A',
+    analysis: '规律：每行/每列圆点数量依次递增（1→9），问号处应为 9 个圆点，选 A。',
+  },
+  {
+    stem: '观察图形变化规律，选出问号处应填入的图形：',
+    stemImg: [triSvg(1), triSvg(2), triSvg(3), triSvg(4)],
+    options: [
+      { label: 'A', text: '', img: triSvg(3) },
+      { label: 'B', text: '', img: triSvg(5) },
+      { label: 'C', text: '', img: triSvg(6) },
+      { label: 'D', text: '', img: triSvg(4) },
+    ],
+    answer: 'B',
+    analysis: '规律：三角形数量依次递增 1 个（1→2→3→4），问号处应为 5 个三角形，选 B。',
+  },
+];
+
+/* ============ 答题渲染逻辑 ============ */
+let qIdx = 0;
+const runStats = { ok: 0, ng: 0, skip: 0 };
+
+function optClass(label, my, correct) {
+  if (my == null) return '';
+  if (label === correct) return 'correct';
+  if (label === my) return 'wrong';
+  return 'dim';
+}
+
+function renderQ() {
+  const q = SAMPLE_QUESTIONS[qIdx];
+  const total = SAMPLE_QUESTIONS.length;
+  const my = q._my;
+  document.getElementById('run-bar').style.width = ((qIdx / total) * 100 + 10) + '%';
+
+  let stemImgs = '';
+  q.stemImg.forEach((src) => { stemImgs += `<img src="${src}" onclick="zoom(this)" alt="题干图">`; });
+
+  let opts = '';
+  q.options.forEach((o) => {
+    opts += `<div class="opt-item ${optClass(o.label, my, q.answer)}" onclick="answerQ('${o.label}')">
+      <span class="opt-label">${o.label}</span><br>
+      ${o.img ? `<img src="${o.img}" onclick="event.stopPropagation();zoom(this)" alt="选项${o.label}">` : `<span class="opt-text">${o.text || ''}</span>`}
+    </div>`;
+  });
+
+  let analysisHtml = '';
+  let actionsHtml = '';
+  if (my != null) {
+    const isOk = my === q.answer;
+    const tag = isOk ? '回答正确' : (my === 'skip' ? '本题跳过' : '回答错误');
+    analysisHtml = `<div class="analysis-box">
+      <div class="ab-title">解析 · ${tag}</div>
+      <div class="ab-body">${q.analysis}</div>
+    </div>`;
+    actionsHtml = `<button class="btn primary" id="btn-next2" onclick="nextQ()">${qIdx + 1 >= total ? '完成' : '下一题'}</button>`;
+  } else {
+    actionsHtml = `<button class="btn" onclick="skipQ()">跳过</button>`;
+  }
+
+  document.getElementById('q-area').innerHTML = `
+    <div class="q-no">第 ${qIdx + 1} / ${total} 题</div>
+    <div class="q-stem">${q.stem}</div>
+    ${stemImgs ? `<div class="stem-imgs">${stemImgs}</div>` : ''}
+    <div class="opt-list">${opts}</div>
+    ${analysisHtml}`;
+  document.getElementById('q-actions').innerHTML = actionsHtml;
+  document.getElementById('q-actions').style.display = my != null ? 'block' : 'block';
+  document.getElementById('btn-next') && (document.getElementById('btn-next').style.display = 'none');
+  if (my != null) {
+    const b = document.getElementById('btn-next2');
+    if (b) b.onclick = nextQ;
+  }
+}
+
+function answerQ(label) {
+  const q = SAMPLE_QUESTIONS[qIdx];
+  if (q._my != null) return;
+  q._my = label;
+  if (label === q.answer) runStats.ok++;
+  else runStats.ng++;
+  refreshStats();
+  renderQ();
+}
+
+function skipQ() {
+  const q = SAMPLE_QUESTIONS[qIdx];
+  if (q._my != null) return;
+  q._my = 'skip';
+  runStats.skip++;
+  refreshStats();
+  renderQ();
+}
+
+function nextQ() {
+  if (qIdx + 1 >= SAMPLE_QUESTIONS.length) { qIdx = 0; SAMPLE_QUESTIONS.forEach(x => delete x._my); runStats.ok = runStats.ng = runStats.skip = 0; }
+  else qIdx++;
+  refreshStats();
+  renderQ();
+}
+
+function refreshStats() {
+  document.querySelector('#panel-answer .run-counts').innerHTML =
+    `对 <span class="ok">${runStats.ok}</span> · 错 <span class="ng">${runStats.ng}</span> · 跳 <span class="skip">${runStats.skip}</span>`;
+}
+
+/* ============ Lightbox 放大 ============ */
+function zoom(img) {
+  document.getElementById('lightbox-img').src = img.src;
+  document.getElementById('lightbox').classList.add('show');
+}
+document.getElementById('lightbox').addEventListener('click', function () { this.classList.remove('show'); });
+
+/* ============ ① 录入弹窗：图片上传 + 压缩 ============ */
+let stemImgs = [];      // { dataUrl, size }
+const optImgs = { A: null, B: null, C: null, D: null };
+const OPT_LABELS = ['A', 'B', 'C', 'D'];
+
+function fmtKB(b) { return (b / 1024).toFixed(1) + ' KB'; }
+
+/* 图片压缩：canvas 缩放 + JPEG 质量迭代，目标 ≤ maxKB */
+async function compressImageFile(file, maxKB = 300) {
+  const orig = file.size;
+  const raw = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = raw; });
+  const MAX_EDGE = 1000;
+  let scale = 1;
+  if (img.width > MAX_EDGE || img.height > MAX_EDGE) scale = MAX_EDGE / Math.max(img.width, img.height);
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); /* PNG 透明底转白底（JPEG 不支持透明） */
+  ctx.drawImage(img, 0, 0, w, h);
+  let q = 0.85, out = '', size = Infinity;
+  while (size > maxKB * 1024 && q >= 0.25) {
+    out = canvas.toDataURL('image/jpeg', q);
+    size = Math.round(out.length * 0.75); /* base64 → 字节估算 */
+    q -= 0.1;
+  }
+  return { dataUrl: out, size, orig };
+}
+
+function renderStemImgs() {
+  const box = document.getElementById('stem-imgs');
+  box.innerHTML = '';
+  stemImgs.forEach((it, i) => {
+    box.insertAdjacentHTML('beforeend', `
+      <div class="img-thumb">
+        <img src="${it.dataUrl}" onclick="zoom(this)" alt="题干图${i + 1}">
+        <span class="del" onclick="removeStemImg(${i})">×</span>
+        <span class="size">${fmtKB(it.size)}</span>
+      </div>`);
+  });
+  const total = stemImgs.reduce((s, x) => s + x.size, 0);
+  document.getElementById('stem-size-info').textContent = stemImgs.length
+    ? `已上传 ${stemImgs.length} 张 · 合计 ${fmtKB(total)}（上传时已压缩至 ≤300KB）` : '';
+}
+function removeStemImg(i) { stemImgs.splice(i, 1); renderStemImgs(); }
+
+function renderOptRows() {
+  const box = document.getElementById('opt-rows');
+  box.innerHTML = '';
+  OPT_LABELS.forEach((lb) => {
+    const img = optImgs[lb];
+    box.insertAdjacentHTML('beforeend', `
+      <div class="opt-row" style="margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input class="inp" data-opt="${lb}" placeholder="选项 ${lb} 文字（图片题可留空）" style="flex:1;">
+          <button class="btn small" data-upload="${lb}">+ 传图</button>
+          ${img ? `<span class="upload-hint">${fmtKB(img.size)}</span>` : ''}
+        </div>
+        ${img ? `<div class="opt-img-row"><div class="img-thumb"><img src="${img.dataUrl}" onclick="zoom(this)" alt="选项${lb}图"><span class="del" onclick="removeOptImg('${lb}')">×</span></div></div>` : ''}
+        <input type="file" data-file="${lb}" accept="image/*" style="display:none;">
+      </div>`);
+  });
+  box.querySelectorAll('input[data-opt]').forEach((el) => {
+    el.value = qFormOptText[el.dataset.opt] || '';
+    el.addEventListener('input', () => { qFormOptText[el.dataset.opt] = el.value; });
+  });
+  box.querySelectorAll('button[data-upload]').forEach((b) => {
+    b.addEventListener('click', () => { box.querySelector(`input[data-file="${b.dataset.upload}"]`).click(); });
+  });
+  box.querySelectorAll('input[data-file]').forEach((el) => {
+    el.addEventListener('change', async () => {
+      const f = el.files && el.files[0];
+      if (!f) return;
+      const lb = el.dataset.file;
+      const res = await compressImageFile(f);
+      optImgs[lb] = res;
+      qFormOptText[lb] = qFormOptText[lb] || '';
+      renderOptRows();
+      toast(`选项 ${lb} 图：原始 ${fmtKB(res.orig)} → 压缩后 ${fmtKB(res.size)}`);
+    });
+  });
+}
+function removeOptImg(lb) { optImgs[lb] = null; renderOptRows(); }
+
+const qFormOptText = { A: '', B: '', C: '', D: '' };
+
+document.getElementById('btn-stem-upload').addEventListener('click', () => document.getElementById('file-stem').click());
+document.getElementById('file-stem').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  let total = 0;
+  for (const f of files) {
+    const res = await compressImageFile(f);
+    stemImgs.push(res);
+    total += res.orig;
+  }
+  renderStemImgs();
+  toast(`已上传 ${files.length} 张题干图（压缩前合计 ${fmtKB(total)}）`);
+  e.target.value = '';
+});
+
+/* 保存 → 展示方案C 提交结构（payload JSON） */
+document.getElementById('btn-save').addEventListener('click', () => {
+  const stem = document.getElementById('f-stem').value.trim();
+  const analysis = document.getElementById('f-analysis').value.trim();
+  const answer = document.getElementById('f-answer').value;
+  if (!stem && stemImgs.length === 0) return toast('题干文字或题干图至少填一项');
+  const diff = document.querySelector('input[name="diff"]:checked').value;
+  const options = OPT_LABELS.map((lb) => ({
+    label: lb,
+    text: qFormOptText[lb] || '',
+    ...(optImgs[lb] ? { img: optImgs[lb].dataUrl } : {}),
+  }));
+  const payload = {
+    bankId: 12,
+    type: 'single',
+    stem,
+    stemImg: stemImgs.map((x) => x.dataUrl),
+    options,
+    answer,
+    analysis,
+    difficulty: +diff,
+    source: '',
+  };
+  document.getElementById('payload-box').style.display = 'block';
+  document.getElementById('payload-box').textContent =
+    '// 保存后提交给 POST /api/practice/questions 的结构（方案C：stemImg 多图数组 + options[].img 内嵌 base64）\n' +
+    JSON.stringify(payload, null, 2).replace(/(data:image\/jpeg;base64,)[^"]{40}[^"]*/, '$1…（图片 base64 已省略显示，实际完整写入）');
+  toast('题目已保存（演示：查看下方提交结构）');
+});
+
+/* ============ ③ 回看表格 ============ */
+function renderRecords() {
+  const rows = [
+    { no: 1, q: SAMPLE_QUESTIONS[0], my: 'B', result: 'ng' },
+    { no: 2, q: SAMPLE_QUESTIONS[1], my: 'B', result: 'ok' },
+  ];
+  const tbody = document.getElementById('records-tbody');
+  tbody.innerHTML = '';
+  rows.forEach((r) => {
+    const stemHtml = `<div class="row-stem">
+      <span style="font-size:12px;color:var(--text-3);">${r.q.stem.split('：')[0]}：</span>
+      ${r.q.stemImg.slice(0, 2).map((s) => `<img src="${s}" onclick="zoom(this)" alt="题干图">`).join('')}
+      ${r.q.stemImg.length > 2 ? `<span style="font-size:11px;color:var(--text-2);">+${r.q.stemImg.length - 2} 图</span>` : ''}
+    </div>`;
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${r.no}</td>
+        <td>${stemHtml}</td>
+        <td>${r.my}</td>
+        <td>${r.q.answer}</td>
+        <td><span class="tag ${r.result === 'ok' ? 'ok' : 'ng'}">${r.result === 'ok' ? '正确' : '错误'}</span></td>
+        <td style="font-size:12px;color:var(--text-3);">${r.q.analysis}</td>
+      </tr>`);
+  });
+}
+
+/* ============ tab 切换 ============ */
+document.querySelectorAll('.tab').forEach((t) => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((x) => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach((x) => x.classList.remove('show'));
+    t.classList.add('active');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('show');
+  });
+});
+
+/* ============ 提示条 ============ */
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+/* ============ 初始化 ============ */
+renderOptRows();
+renderStemImgs();
+renderQ();
+renderRecords();
+</script>
+</body>
+</html>

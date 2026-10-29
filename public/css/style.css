@@ -2223,6 +2223,9 @@ button:hover {
 .p-c-ok { color: #16a34a; } .p-c-ng { color: #dc2626; } .p-c-skip { color: #f59e0b; }
 .p-q-no { font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
 .p-q-stem { font-size: 14.5px; line-height: 1.8; margin-bottom: 14px; white-space: pre-wrap; word-break: break-word; }
+/* 真题导入题：题干/解析 HTML 内嵌图片（题目图/公式图）统一约束 */
+.p-q-stem img, .p-analysis-body img { max-width: 100%; height: auto; border-radius: 6px; display: inline-block; vertical-align: middle; }
+.p-q-stem img { max-height: 420px; }
 .p-opt-list { display: flex; flex-direction: column; gap: 9px; }
 .p-opt-list[hidden] { display: none; }
 .m-fill-row[hidden] { display: none; }
@@ -2243,6 +2246,13 @@ button:hover {
 .p-opt-item.wrong { border-color: #dc2626; background: #fef2f2; }
 .p-opt-item.wrong .p-opt-label { background: #dc2626; border-color: #dc2626; color: #fff; }
 .p-opt-item.dim { opacity: .55; }
+/* 图片题目（方案C）：题干多图 + 图片选项 */
+.p-stem-imgs { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 14px; }
+.p-stem-imgs img { max-height: 110px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: zoom-in; }
+.p-opt-img { height: 84px; max-width: 100%; border-radius: 6px; }
+.p-lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 9999; align-items: center; justify-content: center; cursor: zoom-out; }
+.p-lightbox.show { display: flex; }
+.p-lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 8px; background: #fff; }
 .p-analysis { margin-top: 14px; border-top: 1px dashed #e5e7eb; padding-top: 12px; }
 .p-analysis-title { font-size: 13px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
 .p-analysis-body { font-size: 13.5px; line-height: 1.8; color: #4b5563; }
@@ -2372,6 +2382,7 @@ button:hover {
 .p-rd-ng { background: #fef2f2; color: #dc2626; }
 .p-rd-skip { background: #fef9c3; color: #b45309; }
 .p-rd-stem { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-rd-img { width: 40px; height: 40px; border: 1.5px solid #e5e7eb; border-radius: 6px; flex-shrink: 0; cursor: zoom-in; background: #fff; object-fit: contain; }
 .p-rd-ans { color: #6b7280; flex-shrink: 0; }
 .p-rd-ans b { color: #1f2937; }
 .p-rec-loading { font-size: 12.5px; color: #9ca3af; padding: 10px 0; text-align: center; }

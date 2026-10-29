@@ -36,6 +36,9 @@ app.use('/api/practice', require('./routes/practice'));
 app.use('/api/mental', require('./routes/mental'));
 app.use('/api', require('./routes/data')); // /api/export  /api/import
 
+/* ---- 行测真题图片库静态服务：/qi-bank → data/qi-images（与 web-app 同一 URL 规范） ---- */
+app.use('/qi-bank', express.static(path.join(__dirname, '..', 'data', 'qi-images'), { maxAge: '7d', fallthrough: true }));
+
 /* ---- 前端静态文件 ---- */
 app.use(express.static(path.join(__dirname, '..', 'public'), {
     setHeaders: (res, filePath) => {

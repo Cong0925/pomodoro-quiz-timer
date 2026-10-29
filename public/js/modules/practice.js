@@ -27,6 +27,7 @@
         selCat: null, selSub: null, selBank: null, mode: MODES.order.k, count: MIN_COUNT,
         run: null,                // 运行中会话 { sessionId, questions, idx, ok, ng, skip, answers, startTs, review }
         curBank: 1, editIdx: -1, mgCat: 'all', mgSub: 'all',  // 题库管理（两层下拉筛选：大类→二级分类）
+        editStemImgs: [], editOptImgs: [], editOptCount: 4,   // 图片题目（方案C）：编辑弹窗题干图数组/选项图数组/选项数量
         mgQPage: 1, mgQPageSize: 10,   // 题库管理题目列表分页
         recPage: 1, recTotal: 0,  // 练习记录分页
         stats: null,              // 练习统计
@@ -36,6 +37,19 @@
     /* ---------- 基础 ---------- */
 
     function el(id) { return document.getElementById(id); }
+
+    /* HTML 题干（真题导入题 stem 为 HTML 含内嵌图）→ 纯文本，供表格/回看展示 */
+    function stripHtml(html) {
+        return String(html || '')
+            .replace(/<img[^>]*>/g, '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
     /* 进入练习视图：优先使用已缓存的分类，避免重复请求 */
     async function enter() {
@@ -211,15 +225,28 @@
     function renderQ() {
         const q = state.run.questions[state.run.idx];
         el('pQNo').textContent = `第 ${state.run.idx + 1} / ${state.run.questions.length} 题`;
-        el('pQStem').textContent = q.stem;
+        /* 真题导入题 stem 为 HTML（含内嵌题目图/公式图）；手录题为纯文本，innerHTML 同样安全渲染 */
+        el('pQStem').innerHTML = q.stem || '';
         el('pRunBar').style.width = (state.run.idx / state.run.questions.length * 100) + '%';
+        /* 题干多图（图片题目方案C） */
+        const si = el('pQStemImgs');
+        if (Array.isArray(q.stemImg) && q.stemImg.length) {
+            si.hidden = false;
+            si.innerHTML = q.stemImg.map(s => `<img src="${s}" data-src="${s}" alt="题干图">`).join('');
+            si.querySelectorAll('img').forEach(x => x.addEventListener('click', () => openLightbox(x.dataset.src)));
+        } else si.hidden = true;
         const list = el('pOptList');
         const opts = Array.isArray(q.options) && q.options.length ? q.options : [];
         list.innerHTML = opts.map((t, i) => {
             const label = String.fromCharCode(65 + i);
-            return `<div class="p-opt-item" data-k="${label}"><span class="p-opt-label">${label}</span><span class="p-opt-text">${U.escapeHtml(String(t))}</span></div>`;
+            const isObj = t && typeof t === 'object';
+            const text = isObj ? (t.text || '') : String(t || '');
+            const img = isObj ? (t.img || '') : '';
+            return `<div class="p-opt-item" data-k="${label}"><span class="p-opt-label">${label}</span>
+                ${img ? `<img src="${img}" data-src="${img}" class="p-opt-img" alt="选项${label}">` : `<span class="p-opt-text">${U.escapeHtml(text)}</span>`}</div>`;
         }).join('');
         list.querySelectorAll('.p-opt-item').forEach(x => x.addEventListener('click', () => answer(x.dataset.k)));
+        list.querySelectorAll('img.p-opt-img').forEach(x => x.addEventListener('click', (e) => { e.stopPropagation(); openLightbox(x.dataset.src); }));
 
         // 回看模式：直接展示结果
         if (state.run.review) {
@@ -281,7 +308,7 @@
         ab.hidden = false;
         const head = result === 'ok' ? '回答正确' : result === 'skip' ? '本题跳过' : '回答错误';
         ab.innerHTML = `<div class="p-analysis-title">解析 · ${head}</div>
-            <div class="p-analysis-body">${U.escapeHtml(analysis || '（暂无解析）')}</div>`;
+            <div class="p-analysis-body">${analysis || '（暂无解析）'}</div>`;
         el('pSkipBtn').hidden = true;
         el('pNextBtn').hidden = false;
     }
@@ -449,7 +476,7 @@
             const dm = diffMap[q.difficulty] || diffMap[2];
             return `<tr>
                 <td class="p-q-no">${(state.mgQPage - 1) * state.mgQPageSize + i + 1}</td>
-                <td class="p-q-stem-cell" title="${U.escapeHtml(q.stem)}">${U.escapeHtml(q.stem.split('\n')[0])}</td>
+                <td class="p-q-stem-cell" title="${U.escapeHtml(stripHtml(q.stem))}">${U.escapeHtml(stripHtml(q.stem).slice(0, 60))}</td>
                 <td><span class="p-ans-badge">${U.escapeHtml(q.answer)}</span></td>
                 <td><span class="p-diff ${dm[1]}"><i></i>${dm[0]}</span></td>
                 <td class="p-q-ops">
@@ -523,20 +550,106 @@
         const sel = el('pFAnswer');
         sel.innerHTML = opts.map((_, j) => `<option value="${String.fromCharCode(65 + j)}">${String.fromCharCode(65 + j)}</option>`).join('');
         sel.value = answer;
-        el('pFOpts').innerHTML = opts.map((t, j) => `
-            <div class="p-form-row"><span class="p-form-opt-label">${String.fromCharCode(65 + j)}</span>
-            <input type="text" class="pq-input pq-input--small" data-oi="${j}" value="${U.escapeHtml(String(t))}" placeholder="选项 ${String.fromCharCode(65 + j)} 内容"></div>`).join('');
+        state.editStemImgs = (q && Array.isArray(q.stem_img)) ? q.stem_img.map(String) : [];
+        state.editOptImgs = opts.map(o => (o && typeof o === 'object' ? (o.img || '') : ''));
+        state.editOptCount = opts.length;
+        renderOptRows(opts);
+        renderStemImgGrid();
         el('pQModalMask').classList.add('show');
+    }
+
+    /* 渲染选项行（文字 input + 传图按钮 + 图片缩略图；保留已有文字值） */
+    function renderOptRows(opts) {
+        const prevVals = [...el('pFOpts').querySelectorAll('input[data-oi]')].map(x => x.value);
+        el('pFOpts').innerHTML = opts.map((t, j) => {
+            const isObj = t && typeof t === 'object';
+            const text = prevVals[j] !== undefined ? prevVals[j] : (isObj ? (t.text || '') : String(t || ''));
+            const img = state.editOptImgs[j] || '';
+            return `<div class="p-form-row">
+                <span class="p-form-opt-label">${String.fromCharCode(65 + j)}</span>
+                <input type="text" class="pq-input pq-input--small" data-oi="${j}" value="${U.escapeHtml(text)}" placeholder="选项 ${String.fromCharCode(65 + j)} 内容（图片题可留空）">
+                <button type="button" class="pq-btn pq-btn--tiny" data-addimg="${j}">${img ? '换图' : '+ 图'}</button>
+                ${img ? `<img src="${img}" data-src="${img}" class="p-opt-img-thumb" alt="选项${String.fromCharCode(65 + j)}图">` : ''}
+                ${img ? `<button type="button" class="pq-btn pq-btn--tiny pq-btn--danger" data-delimg="${j}">删</button>` : ''}
+                <input type="file" data-file="${j}" accept="image/*" hidden>
+            </div>`;
+        }).join('');
+        el('pFOpts').querySelectorAll('img.p-opt-img-thumb').forEach(x =>
+            x.addEventListener('click', e => { e.stopPropagation(); openLightbox(x.dataset.src); }));
+    }
+
+    /* 渲染题干图缩略图网格 */
+    function renderStemImgGrid() {
+        const host = el('pFStemImgs');
+        host.innerHTML = state.editStemImgs.map((s, i) => `
+            <div class="p-q-img-item">
+                <img src="${s}" data-src="${s}" alt="题干图${i + 1}">
+                <button type="button" class="pq-btn pq-btn--tiny pq-btn--danger" data-delstem="${i}">×</button>
+            </div>`).join('');
+        host.querySelectorAll('img').forEach(x => x.addEventListener('click', () => openLightbox(x.dataset.src)));
+        el('pFStemImgCount').textContent = state.editStemImgs.length ? `已传 ${state.editStemImgs.length} 张` : '';
+    }
+
+    /* 图片压缩：canvas 缩放（长边 1000）+ JPEG 质量迭代，目标 ≤ maxKB；PNG 透明转白底 */
+    function compressImageFile(file, maxKB) {
+        maxKB = maxKB || 300;
+        return new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const MAX_EDGE = 1000;
+                    const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height));
+                    const w = Math.max(1, Math.round(img.width * scale));
+                    const h = Math.max(1, Math.round(img.height * scale));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return reject(new Error('当前浏览器不支持图片压缩'));
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    let q = 0.85, dataUrl = '', size = Infinity;
+                    while (size > maxKB * 1024 && q >= 0.25) {
+                        dataUrl = canvas.toDataURL('image/jpeg', q);
+                        size = Math.round(dataUrl.length * 0.75);
+                        q -= 0.1;
+                    }
+                    resolve({ dataUrl, size, orig: file.size });
+                };
+                img.onerror = () => reject(new Error('图片解析失败，请更换图片'));
+                img.src = r.result;
+            };
+            r.onerror = () => reject(new Error('读取图片失败'));
+            r.readAsDataURL(file);
+        });
+    }
+
+    /* 图片放大（lightbox） */
+    let lightboxEl = null;
+    function openLightbox(src) {
+        if (!lightboxEl) {
+            lightboxEl = document.createElement('div');
+            lightboxEl.className = 'p-lightbox';
+            lightboxEl.innerHTML = '<img alt="">';
+            lightboxEl.addEventListener('click', () => lightboxEl.classList.remove('show'));
+            document.body.appendChild(lightboxEl);
+        }
+        lightboxEl.querySelector('img').src = src;
+        lightboxEl.classList.add('show');
     }
 
     async function saveQ() {
         const stem = el('pFStem').value.trim();
-        if (!stem) { U.showToast('请填写题干', 'warning'); return; }
-        const opts = [...el('pFOpts').querySelectorAll('input')].map(x => x.value.trim());
-        if (opts.some(o => !o)) { U.showToast('请填写所有选项', 'warning'); return; }
+        const stemImg = state.editStemImgs.filter(s => s && /^data:image\//.test(s));
+        if (!stem && !stemImg.length) { U.showToast('请填写题干或上传题干图', 'warning'); return; }
+        const opts = [...el('pFOpts').querySelectorAll('input[data-oi]')].map(x => x.value.trim());
+        const optImgs = state.editOptImgs;
+        if (opts.some((o, i) => !o && !optImgs[i])) { U.showToast('请填写所有选项（文字或图片至少一项）', 'warning'); return; }
+        const options = opts.map((text, i) => optImgs[i] ? (text ? { text, img: optImgs[i] } : { img: optImgs[i] }) : text);
         const body = {
-            bankId: state.curBank, type: 'single', stem,
-            options: opts, answer: el('pFAnswer').value,
+            bankId: state.curBank, type: 'single', stem, stemImg,
+            options, answer: el('pFAnswer').value,
             analysis: el('pFAnalysis').value.trim(), difficulty: Number(el('pFDiff').value), source: ''
         };
         try {
@@ -694,12 +807,17 @@
             const s = r.session;
             body.innerHTML = `
                 <div class="p-rec-summary">共 ${s.total_count} 题 · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 用时 ${U.formatMs(s.total_ms)}</div>
-                ${r.records.map(d => `
-                    <div class="p-rec-row">
+                ${r.records.map(d => {
+                    const imgHtml = (Array.isArray(d.stemImg) && d.stemImg.length)
+                        ? `<img src="${d.stemImg[0]}" data-src="${d.stemImg[0]}" class="p-rd-img" alt="题干图">` : '';
+                    return `<div class="p-rec-row">
                         <span class="p-rd-no p-rd-${d.result}">${d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗'}</span>
-                        <span class="p-rd-stem" title="${U.escapeHtml(d.stem)}">${U.escapeHtml(d.stem)}</span>
+                        ${imgHtml}
+                        <span class="p-rd-stem" title="${U.escapeHtml(stripHtml(d.stem))}">${U.escapeHtml(stripHtml(d.stem) || (d.stemImg && d.stemImg.length ? '[图片题]' : ''))}</span>
                         <span class="p-rd-ans">我的 <b>${d.userAnswer || '—'}</b> · 答案 <b>${U.escapeHtml(d.correctAnswer) || '—'}</b></span>
-                    </div>`).join('')}`;
+                    </div>`;
+                }).join('')}`;
+            body.querySelectorAll('img.p-rd-img').forEach(x => x.addEventListener('click', () => openLightbox(x.dataset.src)));
         } catch (e) {
             body.innerHTML = '<div class="p-rec-loading">明细加载失败：' + U.escapeHtml(e.message) + '</div>';
         }
@@ -729,6 +847,43 @@
     el('pQCancel').addEventListener('click', () => el('pQModalMask').classList.remove('show'));
     el('pQSave').addEventListener('click', saveQ);
     el('pQModalMask').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+
+    /* 图片题目（方案C）：题干图上传 + 选项传图 */
+    el('pFStemAddBtn').addEventListener('click', () => el('pFStemFile').click());
+    el('pFStemFile').addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        let ok = 0;
+        for (const f of files) {
+            try { state.editStemImgs.push((await compressImageFile(f)).dataUrl); ok++; }
+            catch (err) { console.error('【题干图压缩失败】', err); }
+        }
+        U.showToast(`已上传 ${ok}/${files.length} 张题干图`, 'success');
+        renderStemImgGrid();
+        e.target.value = '';
+    });
+    el('pFStemImgs').addEventListener('click', e => {
+        const del = e.target.closest('[data-delstem]');
+        if (del) { state.editStemImgs.splice(Number(del.dataset.delstem), 1); renderStemImgGrid(); }
+    });
+    el('pFOpts').addEventListener('click', e => {
+        const add = e.target.closest('[data-addimg]');
+        if (add) { el('pFOpts').querySelector(`input[data-file="${add.dataset.addimg}"]`).click(); return; }
+        const del = e.target.closest('[data-delimg]');
+        if (del) { state.editOptImgs[Number(del.dataset.delimg)] = ''; renderOptRows(Array.from({ length: state.editOptCount }, () => '')); }
+    });
+    el('pFOpts').addEventListener('change', async e => {
+        const fi = e.target.closest('input[data-file]');
+        if (!fi || !fi.files || !fi.files[0]) return;
+        const j = Number(fi.dataset.file);
+        try {
+            const res = await compressImageFile(fi.files[0]);
+            state.editOptImgs[j] = res.dataUrl;
+            U.showToast(`选项 ${String.fromCharCode(65 + j)} 图：${(res.orig / 1024).toFixed(1)}KB → ${(res.size / 1024).toFixed(1)}KB`, 'success');
+        } catch (err) { U.showToast('图片压缩失败：' + err.message, 'error'); }
+        renderOptRows(Array.from({ length: state.editOptCount }, () => ''));
+        fi.value = '';
+    });
 
     /* 暴露给 app.js */
     PQ.practice = { enter, switchTab };

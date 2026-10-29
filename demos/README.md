@@ -18,6 +18,7 @@ start demos\demo-practice.html
 | `demo-history-detail.html` | 历史明细 5 列布局 | 历史记录明细列表的列布局方案演示 |
 | `demo-mental-math.html` | 速算练习界面 | 速算模块整体界面 Demo（侧边栏 + 练习区，含多锚点分区） |
 | `demo-practice.html` | 练习模式设计 | 题库练习模式的页面结构与交互设计 Demo |
+| `demo-question-image.html` | 图片题目存储（方案C） | 图形推理图片题：录入弹窗多图上传+压缩、答题图片选项渲染与判定、回看表格图片缩略 |
 
 ## 维护约定
 

@@ -323,6 +323,7 @@
                         </div>
                         <div class="p-q-no" id="pQNo"></div>
                         <div class="p-q-stem" id="pQStem"></div>
+                        <div class="p-stem-imgs" id="pQStemImgs" hidden></div>
                         <div class="p-opt-list" id="pOptList"></div>
                         <div class="p-analysis" id="pAnalysis" hidden></div>
                         <div class="p-q-actions">
@@ -759,7 +760,13 @@
         <div class="modal-box p-q-modal">
             <p class="p-q-modal-title" id="pQModalTitle">新增题目</p>
             <label class="p-form-label">题干</label>
-            <textarea class="pq-textarea" id="pFStem" rows="3" placeholder="输入题目题干"></textarea>
+            <textarea class="pq-textarea" id="pFStem" rows="3" placeholder="输入题目题干（图推等图片题可留空，用题干图）"></textarea>
+            <div class="p-q-img-toolbar">
+                <button type="button" class="pq-btn" id="pFStemAddBtn">+ 上传题干图（多张）</button>
+                <span class="p-q-img-count" id="pFStemImgCount"></span>
+            </div>
+            <div class="p-q-img-grid" id="pFStemImgs"></div>
+            <input type="file" id="pFStemFile" accept="image/*" multiple hidden>
             <label class="p-form-label">选项（单选，正确答案与下方一致）</label>
             <div id="pFOpts"></div>
             <div class="p-form-grid">

@@ -54,7 +54,7 @@ web-app/
     └── package.json   npm run dev / start / init-db / backup / restore / migrate
 ```
 
-## 四、当前进度（截至 2026-10-28 20:00）
+## 四、当前进度（截至 2026-10-28 22:40）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -80,14 +80,19 @@ web-app/
 16. ✅ **错题收藏改单行工具栏（2026-10-28 19:37，方案A）**：FavoritesView 删独立筛选卡+3 张统计卡，合并为一条 toolbar（左筛选下拉/中计数文案「共N条·本页·轮次·单题」/右清空按钮）；头部约 220px→50px；功能逻辑零改动；build 全绿；截图已删；未提交
 17. ✅ **弹窗规范审计+空 catch 修复（2026-10-28 19:45，方案B）**：审计确认全项目无原生 alert/confirm/prompt、提示确认面板已 100% 组件库化（11 confirm + 5 el-dialog + 60+ message）；修复 11 处空 catch（取消静默/真异常 console.error 中文日志）；MentalView 结束练习确认补 type:warning；build 全绿；未提交
 18. ✅ **ElMessageBox/ElMessage 样式缺失修复（2026-10-28 20:00，方案A）**：根因=按需 resolver 不给服务式 API 注入样式（产物 CSS 中 .el-message-box/.el-message 均为 0），确认框裸渲染左上角无遮罩；main.ts 手动引入 message-box/message 的 style/css（保持按需），产物已验证含规则；build 全绿；未提交
+19. ✅ **图片题目存储方案C 全量实现（2026-10-28 20:55）**：`questions` 表加 `stem_img JSON` + `options[].img`；web-app 后端全链路透传+校验（单图 ≤300KB、题干图 ≤20、整包 ≤40MB）+备份兼容；前端 canvas 压缩 `utils/image.ts`、录入多图上传、答题多图渲染+图片选项、回看缩略图；主版本同款同步；冒烟 12/12、build 全绿；**注意：stem_img 约定——GET /banks/:id/questions 返回原始列名下划线 `stem_img`，start/answer/history 映射接口为驼峰 `stemImg`**
+20. ✅ **行测真题全量导入（2026-10-28 22:20，仓库 ERRRC/xingcezhenti）**：图片落盘 `data/qi-images/{题目图(6152张), 公式图(33309张)}`（文件名保持仓库原哈希名，部署同构）；DB 存 `/qi-bank/<子目录>/<文件名>`（一次写好永不改）；解析导入工具 `tools/import-xingce/`（parser+import，md5 去重、断点续跑、--force 幂等）；**58890 题 → 去重后 27460 题**入库 9 个「行测真题·」题库（图推50:1818/定义51:1550/类比52:2170/逻辑53:2204/政治54:1084/常识55:4849/言语56:6956/数量57:3223/资料58:3606，分类沿用 gk 大类）；双端 `/qi-bank` 静态服务 + vite proxy；前端渲染改造（web-app PracticeView 题干/解析 v-html + :deep img 约束、PracticeRecords stripHtml；主版本 practice.js innerHTML + stripHtml + style.css img 约束）；build 全绿、node --check 通过、双端已重启（8888 PID 22208 / 8889 PID 16332）、端到端冒烟与数据抽查全过
 
 **待办（建议优先级）**：
 0. ⬜ **2 处点击删除无确认弹窗（2026-10-28 排查发现，方案 A/B 待用户选择）**：`CalendarView.vue clear()` 清空当日备忘直接删；`useTimer.ts cancelBatchRound()` 取消本轮丢弃未归档记录——均无 ElMessageBox.confirm，存在数据丢失风险
+0.5. ✅ **图片题目（图形推理）存储（方案C，2026-10-28 实现完成）**：`questions` 加 `stem_img JSON` + `options[].img`，base64 内嵌 ≤300KB/图、前端 canvas 压缩、批量导入/备份透传；web-app 与主版本双端同步实现，冒烟 12/12、build 全绿；**注意：8888 后端运行中为旧代码，需重启后生效；git 未提交**
+0.6. ✅ **行测真题导入（2026-10-28 完成，见进度第 20 条）**：27460 题入库 9 库 + 39461 张图落盘 `data/qi-images/` + `/qi-bank` 双端静态服务 + 前端渲染改造；**git 未提交**
 1. ⬜ 浏览器人工验收：与主版本并排对照操作各模块（键位/弹窗/边界行为），修复体验差异
 2. ⬜ main 主版本 practice `GET /history/:id` SQL 缺陷修复（须在该文件所属的 main 历史中单独处理，web-app 版已修）
 3. ✅ 已提交（2026-10-28 15:57，方案A 分 2 次）：`139ba20` feat(web-app) 前端全量视图+分层、`aec5db6` docs 备忘录与修改记录；`docs/imgs/` 2 张 Snipaste 截图未入库（未跟踪，待用户决定删除）
-4. ⬜ 界面对齐改动（第 9 条）+ 题库表格放大（第 10 条）+ 三点下拉菜单（第 11 条）+ 统计分页（第 12 条）+ 悬浮球可拖动（第 13 条）+ 统计头部指标条（第 14 条）+ 练习选题两栏布局（第 15 条）+ 错题收藏单行工具栏（第 16 条）+ 弹窗审计与空 catch 修复（第 17 条）+ message/message-box 样式修复（第 18 条）→ **已随 `2b72025` 提交（2026-10-28 用户指令「提交所有修改」）**；**仍未 push**
+4. ✅ 界面对齐改动（第 9 条）+ 题库表格放大（第 10 条）+ 三点下拉菜单（第 11 条）+ 统计分页（第 12 条）+ 悬浮球可拖动（第 13 条）+ 统计头部指标条（第 14 条）+ 练习选题两栏布局（第 15 条）+ 错题收藏单行工具栏（第 16 条）+ 弹窗审计与空 catch 修复（第 17 条）+ message/message-box 样式修复（第 18 条）→ **已随 `2b72025` 提交（2026-10-28 用户指令「提交所有修改」）**；**仍未 push**
 5. ⬜ 验收脚本 CORS 用例失败（存量）：backend/.env 白名单已改 8889（用户改了前端端口），而 `scripts/acceptance.js` 硬编码测 5173——需把脚本测试 Origin 改为读 .env 或用 TEST_BASE_URL 推导；另注意后端实际跑在 **8888** 端口（.env PORT），验收须 `TEST_BASE_URL=http://localhost:8888`
+6. ⬜ **行测导入待决策**：① `data/qi-images` 256MB 需随部署携带，DB 导出不含图（备份/迁移策略待定）；② 图推/常识等含题图模块可人工抽查做题体验；③ 若调整题库归属/去重口径，`tools/import-xingce/import.js --force --module 05` 可幂等重跑
 
 **关键接口约定（前端对接用）**：
 - 错误响应统一 `{ error: '中文描述' }`；分页统一 `{ list, total, page, limit, totalPages }`
@@ -97,6 +102,7 @@ web-app/
 - 后端实际监听端口以 backend/.env 的 PORT 为准（当前 **8888**）
 
 **提交状态**：2026-10-28 已将 web-app 全部代码 + docs + CLAUDE.md 一次性提交到 `main`（用户指令「传入 main」，方案A），`version-vue+node` 分支已删除；同日 15:57 追加 2 次提交（`139ba20` web-app 前端全量视图、`aec5db6` docs）；同日 20:xx 用户指令「提交所有修改」再追加 3 次提交：`2b72025` feat(web-app) 界面排版优化与弹窗样式规范修复（27 文件，含第 9~18 条全部改动）、`ad651de` docs 备忘录/修改记录/界面对齐差异清单、`23a6cf5` chore .shots 对比截图 33 张、`2a70117` docs 提交状态记录；**已 push**（2026-10-28 用户指令「推送」，`584281a..2a70117` → origin/main，本机 7897 代理未开经 `git -c http.proxy= -c https.proxy=` 绕过直连成功）。
+**当前未提交改动（等用户指令）**：20:55 之后的全部改动——方案C 全量实现（web-app 前后端 + 主版本 + demos/demo-question-image.html）、行测真题导入全套（data/qi-images 图片 256MB、tools/import-xingce/、双端 /qi-bank 静态服务、前端渲染改造）、docs 修改记录与备忘录更新；`xingcezhenti-main/` 源仓库目录也未入库（建议后续 gitignore 或仅保留 tools 依赖说明）。
 
 ## 五、关键约定（给下次会话的 Claude）
 
