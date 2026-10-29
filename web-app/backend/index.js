@@ -6,6 +6,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const pool = require('./db');
 
 const app = express();
@@ -49,6 +50,9 @@ app.use('/api/mental', require('./routes/mental'));
 app.use('/api', require('./routes/data')); // /api/export  /api/import
 
 /* ---- 前后端分离：不托管静态文件，前端由 Vite dev server 提供，经 proxy 访问 /api ---- */
+
+/* ---- 行测真题图片库静态服务：/qi-bank → data/qi-images（部署无关的相对路径） ---- */
+app.use('/qi-bank', express.static(path.join(__dirname, '../../data/qi-images'), { maxAge: '7d', fallthrough: true }));
 
 /* 404 兜底：仅返回 JSON */
 app.use((req, res) => {

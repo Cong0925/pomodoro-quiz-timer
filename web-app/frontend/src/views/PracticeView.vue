@@ -152,6 +152,16 @@ function optLabel(i: number): string {
   return String.fromCharCode(65 + i)
 }
 
+/* 图片选项（方案C）：options 元素可为 string（文字）或 { text, img }（图片混合） */
+function optText(i: number): string {
+  const o = curQ.value?.options?.[i]
+  return typeof o === 'string' ? o : (o?.text || '')
+}
+function optImg(i: number): string {
+  const o = curQ.value?.options?.[i]
+  return typeof o === 'object' && o?.img ? o.img : ''
+}
+
 async function answer(label: string): Promise<void> {
   const r = run.value
   const q = curQ.value
@@ -318,17 +328,29 @@ onUnmounted(() => {
 
           <template v-if="curQ">
             <div class="q-no">第 {{ run.idx + 1 }} / {{ run.questions.length }} 题</div>
-            <div class="q-stem">{{ curQ.stem }}</div>
+            <div class="q-stem" v-html="curQ.stem"></div>
+            <div v-if="curQ.stemImg && curQ.stemImg.length" class="stem-imgs">
+              <el-image
+                v-for="(src, i) in curQ.stemImg"
+                :key="i"
+                :src="src"
+                :preview-src-list="curQ.stemImg"
+                :initial-index="i"
+                fit="contain"
+                class="stem-img"
+              />
+            </div>
             <div class="opt-list">
               <div
-                v-for="(t, i) in curQ.options || []"
+                v-for="(_, i) in curQ.options || []"
                 :key="i"
                 class="opt-item"
                 :class="optClass(optLabel(i))"
                 @click="answer(optLabel(i))"
               >
                 <span class="opt-label">{{ optLabel(i) }}</span>
-                <span class="opt-text">{{ t }}</span>
+                <el-image v-if="optImg(i)" :src="optImg(i)" :preview-src-list="[optImg(i)]" fit="contain" class="opt-img" />
+                <span v-else class="opt-text">{{ optText(i) }}</span>
               </div>
             </div>
 
@@ -339,7 +361,7 @@ onUnmounted(() => {
                 <template v-else-if="curAnswer.result === 'skip'">本题跳过</template>
                 <template v-else>回答错误</template>
               </div>
-              <div class="ab-body">{{ curAnswer.analysis || '（暂无解析）' }}</div>
+              <div class="ab-body" v-html="curAnswer.analysis || '（暂无解析）'"></div>
               <el-button type="primary" @click="nextQ">{{ run.idx + 1 >= run.questions.length ? '完成' : '下一题' }}</el-button>
             </div>
             <div v-else class="run-actions">
@@ -448,6 +470,30 @@ onUnmounted(() => {
   margin: 8px 0 14px;
   white-space: pre-wrap;
 }
+/* v-html 渲染的题干/解析内嵌图片（题目图/公式图）统一约束尺寸 */
+.q-stem :deep(img),
+.ab-body :deep(img) {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 6px;
+}
+.q-stem :deep(img) {
+  max-height: 420px;
+}
+.stem-imgs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.stem-img {
+  max-height: 110px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-bg-color);
+}
 .opt-list {
   display: flex;
   flex-direction: column;
@@ -492,6 +538,11 @@ onUnmounted(() => {
   font-weight: 700;
   flex-shrink: 0;
 }
+.opt-img {
+  width: auto;
+  height: 84px;
+  max-width: 100%;
+}
 .analysis-box {
   margin-top: 14px;
   border: 1px solid var(--el-border-color-lighter);
@@ -508,6 +559,7 @@ onUnmounted(() => {
   color: var(--el-text-color-regular);
   white-space: pre-wrap;
   margin-bottom: 10px;
+  line-height: 1.7;
 }
 .run-actions {
   margin-top: 14px;

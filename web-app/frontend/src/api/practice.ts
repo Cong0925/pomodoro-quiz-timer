@@ -38,13 +38,18 @@ export function deleteBank(id: number): Promise<{ ok: boolean }> {
 }
 
 /* ---- 题目 ---- */
+/** 选项：文字（老数据）或 { text, img } 图片混合（方案C） */
+export type PracticeOption = string | { text?: string; img?: string }
+
 export interface PracticeQuestion {
   id: number
   bank_id?: number
   bankId?: number
   type: string
   stem: string
-  options: string[]
+  /** GET 题目行返回原始列名（与 bank_id 同约定）；start/answer 等映射接口返回驼峰 stemImg */
+  stem_img?: string[] | null
+  options: PracticeOption[]
   answer: string
   analysis?: string | null
   difficulty: number
@@ -55,7 +60,8 @@ export interface QuestionPayload {
   bankId: number
   type: string
   stem: string
-  options: string[]
+  stemImg?: string[]
+  options: PracticeOption[]
   answer: string
   analysis: string
   difficulty: number
@@ -93,7 +99,7 @@ export interface StartResult {
   sessionId: number
   bank: { id: number; name: string; catName: string; subName: string }
   mode: string
-  questions: Array<{ id: number; type: string; stem: string; options: string[]; difficulty: number }>
+  questions: Array<{ id: number; type: string; stem: string; stemImg?: string[] | null; options: PracticeOption[]; difficulty: number }>
   total: number
 }
 
@@ -106,7 +112,8 @@ export interface AnswerResult {
   correctAnswer: string
   analysis: string | null
   stem?: string
-  options?: string[]
+  stemImg?: string[] | null
+  options?: PracticeOption[]
 }
 
 export function answerQuestion(
@@ -173,9 +180,10 @@ export interface PracticeDetailRecord {
   result: 'ok' | 'ng' | 'skip'
   ms: number
   stem: string
+  stemImg?: string[] | null
   correctAnswer: string
   analysis: string
-  options: string[]
+  options: PracticeOption[]
 }
 
 export function fetchPracticeDetail(

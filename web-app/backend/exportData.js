@@ -55,10 +55,10 @@ async function exportAll(conn) {
         id: x.id, name: x.name, catId: x.cat_id, subId: x.sub_id, description: x.description
     }));
     const [qs] = await conn.query(
-        'SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source FROM questions ORDER BY id');
+        'SELECT id, bank_id, type, stem, stem_img, options, answer, analysis, difficulty, source FROM questions ORDER BY id');
     const questions = qs.map(x => ({
-        id: x.id, bankId: x.bank_id, type: x.type, stem: x.stem, options: x.options,
-        answer: x.answer, analysis: x.analysis, difficulty: x.difficulty, source: x.source
+        id: x.id, bankId: x.bank_id, type: x.type, stem: x.stem, stemImg: x.stem_img,
+        options: x.options, answer: x.answer, analysis: x.analysis, difficulty: x.difficulty, source: x.source
     }));
     const [ps] = await conn.query(
         `SELECT id, bank_id, bank_name, mode, total_count, done_count, correct_count, wrong_count,

@@ -8,6 +8,19 @@ import { formatMs } from '../utils/format'
 
 const MODE_NAMES: Record<string, string> = { order: '顺序', random: '随机', review: '错题重练' }
 
+/* HTML 题干（真题导入题 stem 为 HTML，含内嵌 <img>）→ 纯文本，供回看列表展示 */
+function stripHtml(html: string): string {
+  return (html || '')
+    .replace(/<img[^>]*>/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 const stats = ref<PracticeStats | null>(null)
 const list = ref<PracticeSessionRow[]>([])
 const page = ref(1)
@@ -153,7 +166,16 @@ onMounted(() => {
                 >
                   <span class="rd-mark" :class="'m-' + d.result">{{ d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗' }}</span>
                   <span class="rd-no">#{{ d.no }}</span>
-                  <span class="rd-stem" :title="d.stem">{{ d.stem }}</span>
+                  <span class="rd-stem-wrap">
+                    <el-image
+                      v-if="d.stemImg && d.stemImg.length"
+                      :src="d.stemImg[0]"
+                      :preview-src-list="d.stemImg"
+                      fit="contain"
+                      class="rd-stem-img"
+                    />
+                    <span class="rd-stem" :title="stripHtml(d.stem)">{{ stripHtml(d.stem) || (d.stemImg && d.stemImg.length ? '[图片题]' : '（题目已删除）') }}</span>
+                  </span>
                   <span class="rd-ans">我的 <b>{{ d.userAnswer || '—' }}</b> · 答案 <b>{{ d.correctAnswer || '—' }}</b></span>
                 </div>
               </div>
@@ -303,6 +325,27 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.rd-stem-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rd-stem-wrap .rd-stem {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rd-stem-img {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 .rd-ans {
   color: var(--el-text-color-secondary);

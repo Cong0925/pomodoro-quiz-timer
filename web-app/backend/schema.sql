@@ -176,6 +176,8 @@ CREATE TABLE IF NOT EXISTS question_banks (
 --    type: single=单选 multi=多选 judge=判断
 --    options 存 JSON：[{label:'A',text:'...'}, ...]；判断题为 ['正确','错误'] 或空
 --    answer：单选 'A' / 多选 'AB' / 判断 'T'|'F'
+--    stem_img 存 JSON 数组（base64 data URL 内嵌）：图形推理等图片题题干多图，如 ["data:image/png;base64,..."]
+--    options[].img 存选项图片 base64 data URL（文字+图片可混合）
 --    删除题库时级联删除题目；删除题目不影响练习历史（practice_records 存题号快照）
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS questions (
@@ -183,6 +185,7 @@ CREATE TABLE IF NOT EXISTS questions (
     bank_id     BIGINT       NOT NULL                COMMENT '所属题库ID',
     type        VARCHAR(10)  NOT NULL DEFAULT 'single' COMMENT '题型 single/multi/judge',
     stem        TEXT         NOT NULL                COMMENT '题干',
+    stem_img    JSON         NULL                    COMMENT '题干图片(base64数组，图推多图)',
     options     JSON         NULL                    COMMENT '选项JSON',
     answer      VARCHAR(50)  NOT NULL                COMMENT '正确答案',
     analysis    TEXT         NULL                    COMMENT '答案解析',
@@ -348,3 +351,7 @@ PREPARE st1 FROM @s1; EXECUTE st1; DEALLOCATE PREPARE st1;
 SET @c2 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'mental_sessions' AND column_name = 'answer_mode');
 SET @s2 := IF(@c2 = 0, 'ALTER TABLE mental_sessions ADD COLUMN answer_mode VARCHAR(8) NOT NULL DEFAULT ''choice'' COMMENT ''做题类型 choice=选择题 fill=填空题'' AFTER difficulty', 'SELECT 1');
 PREPARE st2 FROM @s2; EXECUTE st2; DEALLOCATE PREPARE st2;
+
+SET @c3 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'questions' AND column_name = 'stem_img');
+SET @s3 := IF(@c3 = 0, 'ALTER TABLE questions ADD COLUMN stem_img JSON NULL COMMENT ''题干图片(base64数组，图推多图)'' AFTER stem', 'SELECT 1');
+PREPARE st3 FROM @s3; EXECUTE st3; DEALLOCATE PREPARE st3;

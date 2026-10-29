@@ -26,6 +26,11 @@ export default defineConfig({
         target: 'http://localhost:8888',
         changeOrigin: true,
       },
+      // 行测真题图片库（data/qi-images 静态服务）
+      '/qi-bank': {
+        target: 'http://localhost:8888',
+        changeOrigin: true,
+      },
     },
   },
 })

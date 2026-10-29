@@ -4,7 +4,8 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCategoriesStore } from '../stores/categoriesStore'
 import * as practiceApi from '../api/practice'
-import type { Bank, PracticeQuestion } from '../api/practice'
+import { base64Bytes, compressImageFile, fmtKB, isDataImageUrl } from '../utils/image'
+import type { Bank, PracticeOption, PracticeQuestion } from '../api/practice'
 
 const props = defineProps<{ banks: Bank[] }>()
 const emit = defineEmits<{ (e: 'refresh-banks'): void }>()
@@ -143,36 +144,103 @@ async function delBank(b: Bank): Promise<void> {
 }
 
 /* ---- 题目弹窗 ---- */
+interface QOptionDraft { text: string; img: string }
+
 const qDialog = ref(false)
 const qEditId = ref(0)
-const qForm = ref({ stem: '', analysis: '', difficulty: 2, answer: 'A', options: ['', '', '', ''] })
+const qForm = ref<{
+  stem: string
+  stemImg: string[]
+  analysis: string
+  difficulty: number
+  answer: string
+  options: QOptionDraft[]
+}>({ stem: '', stemImg: [], analysis: '', difficulty: 2, answer: 'A', options: Array.from({ length: 4 }, () => ({ text: '', img: '' })) })
+
+/* 图片上传 refs（题干多图 / 选项逐项） */
+const stemFileInput = ref<HTMLInputElement | null>(null)
+const optFileInputs = ref<(HTMLInputElement | null)[]>([])
+function setOptFileRef(i: number, el: unknown): void {
+  optFileInputs.value[i] = el as HTMLInputElement
+}
+function triggerOptFile(i: number): void {
+  optFileInputs.value[i]?.click()
+}
+
+async function onOptFile(i: number, e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const f = input.files?.[0]
+  if (!f) return
+  try {
+    const res = await compressImageFile(f)
+    qForm.value.options[i].img = res.dataUrl
+    ElMessage.success(`选项 ${String.fromCharCode(65 + i)} 图已上传：${fmtKB(res.orig)} → ${fmtKB(res.size)}`)
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : '图片压缩失败')
+  } finally {
+    input.value = ''
+  }
+}
+
+async function onStemFiles(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  if (!files.length) return
+  let ok = 0
+  for (const f of files) {
+    try {
+      const res = await compressImageFile(f)
+      qForm.value.stemImg.push(res.dataUrl)
+      ok++
+    } catch (err) {
+      console.error('【题干图压缩失败】', err)
+    }
+  }
+  ElMessage.success(ok === files.length ? `已上传 ${ok} 张题干图` : `已上传 ${ok}/${files.length} 张题干图`)
+  input.value = ''
+}
+
+function removeStemImg(i: number): void {
+  qForm.value.stemImg.splice(i, 1)
+}
+
+const stemImgTotal = computed(() => qForm.value.stemImg.reduce((s, x) => s + base64Bytes(x), 0))
 
 function openQDialog(id = 0): void {
   qEditId.value = id
   if (id) {
     const q = questions.value.find((x) => x.id === id)
+    const opts = (q?.options && q.options.length ? [...q.options] : ['', '', '', '']) as PracticeOption[]
     qForm.value = {
       stem: q?.stem || '',
+      stemImg: Array.isArray(q?.stem_img) ? q.stem_img : [],
       analysis: q?.analysis || '',
       difficulty: q?.difficulty || 2,
       answer: q?.answer || 'A',
-      options: (q?.options && q.options.length ? [...q.options] : ['', '', '', '']) as string[],
+      options: opts.map((o) => (typeof o === 'string' ? { text: o, img: '' } : { text: o.text || '', img: o.img || '' })),
     }
   } else {
-    qForm.value = { stem: '', analysis: '', difficulty: 2, answer: 'A', options: ['', '', '', ''] }
+    qForm.value = { stem: '', stemImg: [], analysis: '', difficulty: 2, answer: 'A', options: Array.from({ length: 4 }, () => ({ text: '', img: '' })) }
   }
   qDialog.value = true
 }
 
 async function saveQuestion(): Promise<void> {
   const stem = qForm.value.stem.trim()
-  if (!stem) return void ElMessage.warning('请填写题干')
-  if (qForm.value.options.some((o) => !o.trim())) return void ElMessage.warning('请填写所有选项')
+  const stemImg = qForm.value.stemImg.filter(isDataImageUrl)
+  if (!stem && stemImg.length === 0) return void ElMessage.warning('请填写题干或上传题干图')
+  if (qForm.value.options.some((o) => !o.text.trim() && !o.img)) return void ElMessage.warning('请填写所有选项（文字或图片至少一项）')
+  const options: PracticeOption[] = qForm.value.options.map((o) => {
+    const text = o.text.trim()
+    if (o.img) return text ? { text, img: o.img } : { img: o.img }
+    return text
+  })
   const payload: practiceApi.QuestionPayload = {
     bankId: curBank.value,
     type: 'single',
     stem,
-    options: qForm.value.options.map((o) => o.trim()),
+    stemImg,
+    options,
     answer: qForm.value.answer,
     analysis: qForm.value.analysis.trim(),
     difficulty: qForm.value.difficulty,
@@ -271,7 +339,12 @@ async function delQuestion(id: number): Promise<void> {
         <el-table v-loading="qLoading" :data="questions" size="default" stripe :height="questions.length ? 500 : undefined">
           <el-table-column type="index" label="#" width="55" align="center" :index="(i: number) => (qPage - 1) * qPageSize + i + 1" />
           <el-table-column prop="stem" label="题干" min-width="260">
-            <template #default="{ row }"><span class="stem-cell">{{ row.stem.split('\n')[0] }}</span></template>
+            <template #default="{ row }">
+              <div class="stem-cell-wrap">
+                <el-image v-if="row.stem_img && row.stem_img.length" :src="row.stem_img[0]" :preview-src-list="row.stem_img" fit="contain" class="table-stem-img" />
+                <span class="stem-cell">{{ row.stem.split('\n')[0] || (row.stem_img && row.stem_img.length ? '[图片题]' : '') }}</span>
+              </div>
+            </template>
           </el-table-column>
           <el-table-column prop="answer" label="答案" width="70" align="center" sortable>
             <template #default="{ row }"><el-tag size="small">{{ row.answer }}</el-tag></template>
@@ -333,10 +406,35 @@ async function delQuestion(id: number): Promise<void> {
     <el-dialog v-model="qDialog" :title="qEditId ? '编辑题目' : '新增题目'" width="880px" align-center>
       <el-form label-width="60px">
         <el-form-item label="题干" required>
-          <el-input v-model="qForm.stem" type="textarea" :rows="6" maxlength="20000" placeholder="题干内容" />
+          <el-input v-model="qForm.stem" type="textarea" :rows="6" maxlength="20000" placeholder="题干文字（图推等图片题可留空，用题干图）" />
+          <div class="stem-img-toolbar">
+            <el-button size="small" @click="stemFileInput?.click()">+ 上传题干图（支持多张）</el-button>
+            <span v-if="qForm.stemImg.length" class="img-count">已传 {{ qForm.stemImg.length }} 张 · 合计 {{ fmtKB(stemImgTotal) }}</span>
+          </div>
+          <div v-if="qForm.stemImg.length" class="stem-img-grid">
+            <div v-for="(src, i) in qForm.stemImg" :key="i" class="stem-img-item">
+              <el-image :src="src" :preview-src-list="qForm.stemImg" :initial-index="i" fit="contain" class="stem-img-thumb" />
+              <div class="stem-img-meta">
+                <span>{{ fmtKB(base64Bytes(src)) }}</span>
+                <el-button size="small" text type="danger" @click="removeStemImg(i)">删除</el-button>
+              </div>
+            </div>
+          </div>
+          <input ref="stemFileInput" type="file" accept="image/*" multiple class="hidden-file" @change="onStemFiles" />
         </el-form-item>
-        <el-form-item v-for="(_, i) in qForm.options" :key="i" :label="String.fromCharCode(65 + i)">
-          <el-input v-model="qForm.options[i]" maxlength="200" :placeholder="`选项 ${String.fromCharCode(65 + i)} 内容`" />
+        <el-form-item v-for="(opt, i) in qForm.options" :key="i" :label="String.fromCharCode(65 + i)">
+          <div class="opt-edit-block">
+            <div class="opt-edit-row">
+              <el-input v-model="opt.text" maxlength="200" :placeholder="`选项 ${String.fromCharCode(65 + i)} 内容（图片题可留空）`" />
+              <el-button size="small" @click="triggerOptFile(i)">{{ opt.img ? '更换图片' : '+ 传图' }}</el-button>
+              <input :ref="(el: unknown) => setOptFileRef(i, el)" type="file" accept="image/*" class="hidden-file" @change="onOptFile(i, $event)" />
+            </div>
+            <div v-if="opt.img" class="opt-img-preview">
+              <el-image :src="opt.img" :preview-src-list="[opt.img]" fit="contain" class="opt-preview-img" />
+              <span class="img-count">{{ fmtKB(base64Bytes(opt.img)) }}</span>
+              <el-button size="small" text type="danger" @click="opt.img = ''">删除图片</el-button>
+            </div>
+          </div>
         </el-form-item>
         <el-form-item label="答案" required>
           <el-select v-model="qForm.answer" style="width: 120px">
@@ -447,6 +545,76 @@ async function delQuestion(id: number): Promise<void> {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
+}
+.stem-cell-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.table-stem-img {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+/* 图片题目（方案C）：弹窗上传与预览 */
+.hidden-file {
+  display: none;
+}
+.stem-img-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.img-count {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.stem-img-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.stem-img-item {
+  width: 110px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  padding: 4px;
+  background: var(--el-fill-color-light);
+}
+.stem-img-thumb {
+  width: 100px;
+  height: 100px;
+}
+.stem-img-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+.opt-edit-block {
+  width: 100%;
+}
+.opt-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.opt-img-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.opt-preview-img {
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
 }
 .q-pager {
   margin-top: 10px;
