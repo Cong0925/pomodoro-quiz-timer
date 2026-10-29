@@ -26,7 +26,7 @@
         banks: [],                // 题库列表
         selCat: null, selSub: null, selBank: null, mode: MODES.order.k, count: MIN_COUNT,
         run: null,                // 运行中会话 { sessionId, questions, idx, ok, ng, skip, answers, startTs, review }
-        curBank: 1, editIdx: -1, mgCat: 'all', mgSub: 'all',  // 题库管理（两层下拉筛选：大类→二级分类）
+        curBank: 1, editIdx: -1, editType: 'single', editAnswer: 'A', mgCat: 'all', mgSub: 'all',  // 题库管理（两层下拉筛选：大类→二级分类）
         editStemImgs: [], editOptImgs: [], editOptCount: 4,   // 图片题目（方案C）：编辑弹窗题干图数组/选项图数组/选项数量
         mgQPage: 1, mgQPageSize: 10,   // 题库管理题目列表分页
         mgQStatus: 'normal',        // 题库管理题目状态筛选：normal/deleted/all
@@ -184,7 +184,7 @@
         // 按钮始终可点：未完成选择时点击由 startPractice 弹 toast 提示
         btn.disabled = false;
         if (!state.selCat) { btn.classList.add('muted'); tip.textContent = '请先选择考试大类'; return; }
-        if (!state.selSub) { btn.classList.add('muted'); tip.textContent = '请先选择二级分类'; return; }
+        if (state.selSub === null) { btn.classList.add('muted'); tip.textContent = '请先选择二级分类'; return; }
         if (!state.selBank) { btn.classList.add('muted'); tip.textContent = '请选择题库'; return; }
         btn.classList.remove('muted');
         tip.textContent = state.mode === MODES.review.k ? '将从练习历史中抽取错题，不足部分补随机题' : `将抽取 ${state.count} 道题`;
@@ -193,7 +193,7 @@
     async function startPractice() {
         // 未完成选择时给出明确提示，按钮不静默无反应
         if (!state.selCat) { U.showToast('请先选择考试大类', 'warning'); return; }
-        if (!state.selSub) { U.showToast('请先选择二级分类', 'warning'); return; }
+        if (state.selSub === null) { U.showToast('请先选择二级分类', 'warning'); return; }
         if (!state.selBank) { U.showToast('请先选择题库', 'warning'); return; }
         try {
             const r = await api.post('/api/practice/start', {
@@ -254,8 +254,25 @@
             return `<div class="p-opt-item" data-k="${label}"><span class="p-opt-label">${label}</span>
                 ${img ? `<img src="${img}" data-src="${img}" class="p-opt-img" alt="选项${label}">` : `<span class="p-opt-text">${U.escapeHtml(text)}</span>`}</div>`;
         }).join('');
-        list.querySelectorAll('.p-opt-item').forEach(x => x.addEventListener('click', () => answer(x.dataset.k)));
+        const oldSubmit = el('pMultiSubmit');
+        if (oldSubmit) oldSubmit.remove();
+        list.querySelectorAll('.p-opt-item').forEach(x => x.addEventListener('click', () => onOptClick(x.dataset.k)));
         list.querySelectorAll('img.p-opt-img').forEach(x => x.addEventListener('click', (e) => { e.stopPropagation(); openLightbox(x.dataset.src); }));
+        /* 多选题：勾选式作答 + 提交按钮（单选/判断点击即提交） */
+        if (q.type === 'multi' && !state.run.review) {
+            state.run.multiSel = [];
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.id = 'pMultiSubmit';
+            btn.className = 'p-multi-submit';
+            btn.textContent = '提交答案';
+            btn.disabled = true;
+            btn.addEventListener('click', () => {
+                if (!state.run.multiSel || !state.run.multiSel.length) return;
+                answer([...state.run.multiSel].sort().join(''));
+            });
+            list.after(btn);
+        }
 
         // 回看模式：直接展示结果
         if (state.run.review) {
@@ -294,7 +311,24 @@
         renderQ();
     }
 
+    /* 选项点击：多选题切换勾选，其余题型直接提交 */
+    function onOptClick(k) {
+        const q = state.run.questions[state.run.idx];
+        if (q && q.type === 'multi' && !state.run.review && !state.run.answers[state.run.idx]) {
+            const sel = state.run.multiSel || (state.run.multiSel = []);
+            const i = sel.indexOf(k);
+            if (i >= 0) sel.splice(i, 1); else sel.push(k);
+            const item = el('pOptList').querySelector(`.p-opt-item[data-k="${k}"]`);
+            if (item) item.classList.toggle('opt-sel', sel.includes(k));
+            const btn = el('pMultiSubmit');
+            if (btn) btn.disabled = sel.length === 0;
+            return;
+        }
+        answer(k);
+    }
+
     async function answer(k) {
+        if (state.run.answers[state.run.idx]) return; // 防双击/答后误点导致 answers 错位
         const q = state.run.questions[state.run.idx];
         const no = state.run.idx + 1;
         const ms = 0; // 用时统计：会话整体计时，单题 ms 记 0（保持与整组模式一致）
@@ -313,6 +347,7 @@
     }
 
     async function skipQ() {
+        if (state.run.answers[state.run.idx]) return; // 防双击导致 answers 错位
         const q = state.run.questions[state.run.idx];
         const no = state.run.idx + 1;
         try {
@@ -333,8 +368,11 @@
         items.forEach(x => {
             x.disabled = true;
             const k = x.dataset.k;
-            if (k === correctAnswer) x.classList.add('correct');
-            else if (k === my) x.classList.add('wrong');
+            /* 多选按集合判定，单选/判断按单值 */
+            const correctSet = q.type === 'multi' ? String(correctAnswer || '').split('') : [correctAnswer];
+            const mySet = q.type === 'multi' ? String(my || '').split('') : [my];
+            if (correctSet.includes(k)) x.classList.add('correct');
+            else if (mySet.includes(k)) x.classList.add('wrong');
             else x.classList.add('dim');
         });
         const ab = el('pAnalysis');
@@ -621,6 +659,8 @@
         const stem = q ? q.stem : '';
         const opts = q && Array.isArray(q.options) ? q.options : ['', '', '', ''];
         const answer = q ? q.answer : 'A';
+        state.editType = q ? (q.type || 'single') : 'single';
+        state.editAnswer = answer;
         const diff = q ? String(q.difficulty) : '2';
         const analysis = q ? (q.analysis || '') : '';
         el('pFStem').value = stem;
@@ -629,6 +669,8 @@
         const sel = el('pFAnswer');
         sel.innerHTML = opts.map((_, j) => `<option value="${String.fromCharCode(65 + j)}">${String.fromCharCode(65 + j)}</option>`).join('');
         sel.value = answer;
+        /* 多选/判断题：本弹窗不支持改答案/题型，禁用下拉并保留原值，防止保存时被覆盖成单选 */
+        sel.disabled = state.editType === 'multi' || state.editType === 'judge';
         state.editStemImgs = (q && Array.isArray(q.stem_img)) ? q.stem_img.map(String) : [];
         state.editOptImgs = opts.map(o => (o && typeof o === 'object' ? (o.img || '') : ''));
         state.editOptCount = opts.length;
@@ -720,15 +762,17 @@
 
     async function saveQ() {
         const stem = el('pFStem').value.trim();
-        const stemImg = state.editStemImgs.filter(s => s && /^data:image\//.test(s));
+        /* 保留存量 URL 图（如 /qi-bank/ 行测图），仅剔除非法 data: 串 */
+        const stemImg = state.editStemImgs.filter(s => s && (/^data:image\//.test(s) || !/^data:/.test(s)));
         if (!stem && !stemImg.length) { U.showToast('请填写题干或上传题干图', 'warning'); return; }
         const opts = [...el('pFOpts').querySelectorAll('input[data-oi]')].map(x => x.value.trim());
         const optImgs = state.editOptImgs;
         if (opts.some((o, i) => !o && !optImgs[i])) { U.showToast('请填写所有选项（文字或图片至少一项）', 'warning'); return; }
         const options = opts.map((text, i) => optImgs[i] ? (text ? { text, img: optImgs[i] } : { img: optImgs[i] }) : text);
+        const isSet = state.editType === 'multi' || state.editType === 'judge';
         const body = {
-            bankId: state.curBank, type: 'single', stem, stemImg,
-            options, answer: el('pFAnswer').value,
+            bankId: state.curBank, type: state.editType || 'single', stem, stemImg,
+            options, answer: isSet ? state.editAnswer : el('pFAnswer').value,
             analysis: el('pFAnalysis').value.trim(), difficulty: Number(el('pFDiff').value), source: ''
         };
         try {
@@ -850,7 +894,7 @@
         state.recTotal = data.total;
         const inner = el('pRecListInner');
         if (!inner) return;
-        inner.innerHTML = data.list.map(r => `
+        const html = data.list.map(r => `
             <div class="p-rec-card" data-id="${r.id}">
                 <div class="p-rec-head">
                     <div class="p-rec-title">${U.escapeHtml(r.bank_name)}<span class="p-rec-sub">${MODE_NAMES[r.mode] || r.mode} · ${r.cat_name || ''}${r.sub_name ? ' / ' + r.sub_name : ''} · ${r.started_at || ''}</span></div>
@@ -861,14 +905,22 @@
                     <div class="p-rec-loading">加载明细…</div>
                 </div>
             </div>`).join('');
-        inner.querySelectorAll('.p-rec-head').forEach(h => h.addEventListener('click', () => {
+        /* 翻页追加而非整表替换（否则前页记录消失）；追加前移除旧「加载更多」按钮 */
+        const oldMore = inner.querySelector('.p-rec-more');
+        if (oldMore) oldMore.remove();
+        if (page > 1 && !reset) inner.insertAdjacentHTML('beforeend', html);
+        else inner.innerHTML = html;
+        inner.querySelectorAll('.p-rec-head:not([data-bound])').forEach(h => {
+            h.dataset.bound = '1';
+            h.addEventListener('click', () => {
             const card = h.parentElement;
             const open = !card.classList.contains('open');
             card.classList.toggle('open', open);
             const body = card.querySelector('.p-rec-body');
             body.hidden = !open;
             if (open) loadRecDetail(card);
-        }));
+            });
+        });
         if (data.total > page * 20) {
             const more = document.createElement('div');
             more.className = 'p-rec-more';
@@ -965,8 +1017,12 @@
                 const label = String.fromCharCode(65 + i);
                 const text = isObj(o) ? (o.text || '') : String(o || '');
                 const img = isObj(o) ? (o.img || '') : '';
-                const cls = label === d.correctAnswer ? 'correct'
-                    : (label === d.userAnswer && d.result !== 'ok') ? 'wrong' : 'dim';
+                /* 答案多于 1 个字母按多选集合判定 */
+                const isMulti = String(d.correctAnswer || '').length > 1;
+                const correctSet = isMulti ? String(d.correctAnswer || '').split('') : [d.correctAnswer];
+                const mySet = isMulti && d.userAnswer ? String(d.userAnswer).split('') : (d.userAnswer ? [d.userAnswer] : []);
+                const cls = correctSet.includes(label) ? 'correct'
+                    : (mySet.includes(label) && d.result !== 'ok') ? 'wrong' : 'dim';
                 return `<div class="p-rv-opt ${cls}"><span class="p-rv-opt-label">${label}</span>${img ? `<img src="${img}" data-src="${img}" class="p-rv-opt-img" alt="选项${label}">` : `<span>${U.escapeHtml(text)}</span>`}</div>`;
             }).join('')}</div>` : '';
         const imgsHtml = (Array.isArray(d.stemImg) && d.stemImg.length)

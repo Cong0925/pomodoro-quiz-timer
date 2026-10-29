@@ -63,7 +63,9 @@ async function pickQuestions(qtype, difficulty, count, exclude, fillOnly) {
         where.push('difficulty=?');
         params.push(difficulty);
     }
-    if (fillOnly) where.push('fillable=1');
+    /* 填空模式只抽可填空题（fillable=1）；选择模式只抽有真实选项的题——
+       单选项题（百化分）选项即答案文本，作选择题会泄露答案 */
+    where.push(fillOnly ? 'fillable=1' : 'JSON_LENGTH(options) >= 2');
     const types = qtype === 'mixed' ? ['percent', 'compare', 'estimate'] : [qtype];
     const per = qtype === 'mixed' ? Math.ceil(count / 3) : count;
     const excl = exclude && exclude.size ? exclude : null;
@@ -192,8 +194,8 @@ router.get('/admin/questions', asyncHandler(async (req, res) => {
     const kw = str(req.query.kw, 100).trim();
     if (kw) { where.push('(stem LIKE ? OR tip LIKE ? OR tag LIKE ?)'); params.push('%' + kw + '%', '%' + kw + '%', '%' + kw + '%'); }
     const whereSql = where.join(' AND ');
-    const page = num(req.query.page);
-    const pageSize = num(req.query.pageSize);
+    const page = Math.floor(num(req.query.page));
+    const pageSize = Math.floor(num(req.query.pageSize));
     const mapper = r => ({
         id: r.id, qtype: r.qtype, difficulty: r.difficulty, stem: r.stem,
         options: fmtRecordOpts(r.options), answer: str(r.answer, 50), tip: r.tip || '',
@@ -281,10 +283,14 @@ router.put('/admin/questions/:id', asyncHandler(async (req, res) => {
     }
     const tip = str(req.body && req.body.tip, 20000).trim();
     const tag = str(req.body && req.body.tag, 50).trim();
-    const active = req.body && req.body.active === false ? 0 : 1;
+    // active 未传时保持原值（避免编辑停用题被静默激活）；显式传 false/0/'0' 视为停用
+    const hasActive = req.body && req.body.active !== undefined;
+    const activeVal = hasActive
+        ? ((req.body.active === false || req.body.active === 0 || req.body.active === '0') ? 0 : 1)
+        : null;
     const [r] = await pool.query(
-        `UPDATE mental_questions SET qtype=?, difficulty=?, stem=?, options=?, answer=?, tip=?, tag=?, active=?, fillable=? WHERE id=?`,
-        [qtype, difficulty, stem, JSON.stringify(options), answer, tip, tag, active, fillable, id]
+        `UPDATE mental_questions SET qtype=?, difficulty=?, stem=?, options=?, answer=?, tip=?, tag=?, active=IFNULL(?, active), fillable=? WHERE id=?`,
+        [qtype, difficulty, stem, JSON.stringify(options), answer, tip, tag, activeVal, fillable, id]
     );
     if (r.affectedRows === 0) return res.status(404).json({ error: '题目不存在' });
     res.json({ ok: true });
@@ -351,6 +357,7 @@ router.post('/:id/more', asyncHandler(async (req, res) => {
     const sessionId = num(req.params.id);
     const [s] = await pool.query('SELECT * FROM mental_sessions WHERE id=?', [sessionId]);
     if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
+    if (s[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再追加题目' });
     if (s[0].total_count !== 0) return res.status(400).json({ error: '定量会话无需追加题目' });
 
     const [used] = await pool.query('SELECT question_id FROM mental_records WHERE session_id=?', [sessionId]);
@@ -373,8 +380,9 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
     const questionId = num(req.body && req.body.questionId);
     if (!no) return res.status(400).json({ error: '缺少题号' });
 
-    const [sRows] = await pool.query('SELECT id, answer_mode FROM mental_sessions WHERE id=?', [sessionId]);
+    const [sRows] = await pool.query('SELECT id, answer_mode, finished_at FROM mental_sessions WHERE id=?', [sessionId]);
     if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
+    if (sRows[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再作答' });
     const fillMode = sRows[0].answer_mode === 'fill';
     const [ex] = await pool.query('SELECT id FROM mental_records WHERE session_id=? AND no=?', [sessionId, no]);
     if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
@@ -424,8 +432,10 @@ router.post('/:id/skip', asyncHandler(async (req, res) => {
     const [ex] = await pool.query('SELECT id FROM mental_records WHERE session_id=? AND no=?', [sessionId, no]);
     if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
 
-    const [sRows] = await pool.query('SELECT id, answer_mode FROM mental_sessions WHERE id=?', [sessionId]);
-    const fillMode = sRows.length > 0 && sRows[0].answer_mode === 'fill';
+    const [sRows] = await pool.query('SELECT id, answer_mode, finished_at FROM mental_sessions WHERE id=?', [sessionId]);
+    if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
+    if (sRows[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再操作' });
+    const fillMode = sRows[0].answer_mode === 'fill';
     const [q] = await pool.query(
         'SELECT id, qtype, stem, options, answer, tip, tag FROM mental_questions WHERE id=?', [questionId]);
     if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
@@ -541,16 +551,22 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
 
 /* ---------- 历史 / 统计 ---------- */
 
-/* GET /api/mental/history?page=1&limit=20 */
+/* GET /api/mental/history?page=1&limit=20&qtype=&difficulty= */
 router.get('/history', asyncHandler(async (req, res) => {
-    const page = Math.max(1, num(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, num(req.query.limit) || 20));
+    const page = Math.max(1, Math.floor(num(req.query.page)) || 1);
+    const limit = Math.min(50, Math.max(1, Math.floor(num(req.query.limit)) || 20));
     const offset = (page - 1) * limit;
-    const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM mental_sessions');
+    const where = [];
+    const params = [];
+    if (req.query.qtype && VALID_TYPES.includes(req.query.qtype)) { where.push('qtype=?'); params.push(req.query.qtype); }
+    const diff = num(req.query.difficulty);
+    if (diff >= 1 && diff <= 3) { where.push('difficulty=?'); params.push(diff); }
+    const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+    const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM mental_sessions ${whereSql}`, params);
     const [rows] = await pool.query(
         `SELECT id, qtype, qtype_name, difficulty, total_count, done_count, correct_count,
                 wrong_count, skipped_count, rate, total_ms, started_at, finished_at
-         FROM mental_sessions ORDER BY id DESC LIMIT ? OFFSET ?`, [limit, offset]
+         FROM mental_sessions ${whereSql} ORDER BY id DESC LIMIT ? OFFSET ?`, [...params, limit, offset]
     );
     res.json({ total, page, limit, list: rows });
 }));

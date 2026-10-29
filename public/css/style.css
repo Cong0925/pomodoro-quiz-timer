@@ -2246,6 +2246,11 @@ button:hover {
 .p-opt-item.wrong { border-color: #dc2626; background: #fef2f2; }
 .p-opt-item.wrong .p-opt-label { background: #dc2626; border-color: #dc2626; color: #fff; }
 .p-opt-item.dim { opacity: .55; }
+/* 多选题：已勾选高亮 + 提交按钮 */
+.p-opt-item.opt-sel { border-color: #2563eb; background: #eff6ff; }
+.p-opt-item.opt-sel .p-opt-label { background: #2563eb; border-color: #2563eb; color: #fff; }
+.p-multi-submit { margin: 12px 0 4px; padding: 9px 22px; border: none; border-radius: 9px; background: #2563eb; color: #fff; font-size: 13.5px; cursor: pointer; }
+.p-multi-submit:disabled { background: #93c5fd; cursor: default; }
 /* 图片题目（方案C）：题干多图 + 图片选项 */
 .p-stem-imgs { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 14px; }
 .p-stem-imgs img { max-height: 110px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: zoom-in; }

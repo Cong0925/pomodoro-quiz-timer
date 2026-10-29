@@ -380,7 +380,7 @@
                 if (PQ.app) PQ.app.updateBadges();
                 U.showToast(`已取消收藏 第${r.no}题`);
             } else {
-                await D.addFavorite({
+                const fav = await D.addFavorite({
                     roundId: h.id,
                     no: r.no,
                     title: h.title || '未命名轮次',
@@ -392,7 +392,8 @@
                     subId: h.subId || '',
                     subName: h.subName || ''
                 });
-                h.favNos = (h.favNos || []).concat([{ no: r.no, id: Date.now() }]);
+                /* 用接口返回的真实收藏 id（假 id 会导致同会话内取消收藏 404） */
+                h.favNos = (h.favNos || []).concat([{ no: r.no, id: fav && fav.id ? fav.id : Date.now() }]);
                 if (PQ.app) PQ.app.updateBadges();
                 U.showToast(`已收藏错题 第${r.no}题`);
             }

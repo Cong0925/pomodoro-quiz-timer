@@ -12,7 +12,11 @@ const VALID_TYPES = new Set(['exam', 'meeting', 'study', 'sport', 'birthday', 't
 
 /* GET /api/memos?month=YYYY-MM 某月全部备忘 */
 router.get('/', asyncHandler(async (req, res) => {
-        const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : null;
+        /* month 传了但格式非法 → 400（防止静默放大为返回全部）；未传 → 返回全部 */
+        if (req.query.month !== undefined && !/^\d{4}-\d{2}$/.test(req.query.month || '')) {
+            return res.status(400).json({ error: 'month 格式应为 YYYY-MM' });
+        }
+        const month = req.query.month || null;
         let rows;
         if (month) {
             [rows] = await pool.query(
@@ -27,6 +31,9 @@ router.get('/', asyncHandler(async (req, res) => {
 
 /* GET /api/memos/:date 某日备忘 */
 router.get('/:date', asyncHandler(async (req, res) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(req.params.date || '')) {
+            return res.status(400).json({ error: '日期格式应为 YYYY-MM-DD' });
+        }
         const [rows] = await pool.query(
             'SELECT DATE_FORMAT(memo_date,"%Y-%m-%d") AS date, type, title, content FROM memos WHERE memo_date=?',
             [req.params.date]

@@ -30,7 +30,7 @@ async function exportHistory() {
     );
     const [recs] = await pool.query(
         `SELECT round_id, JSON_ARRAYAGG(JSON_OBJECT(
-            'no', no, 'ms', ms, 'cumMs', cum_ms, 'timeStr', time_str, 'result', result))
+            'no', no, 'ms', ms, 'cumMs', cum_ms, 'timeStr', time_str, 'result', result, 'note', note))
             AS records
          FROM records GROUP BY round_id`
     );
@@ -130,7 +130,7 @@ async function exportMental() {
         options: x.options, answer: x.answer, tip: x.tip, tag: x.tag, active: !!x.active, fillable: !!x.fillable
     }));
     const [ms] = await pool.query(
-        `SELECT id, qtype, qtype_name, difficulty, total_count, done_count, correct_count,
+        `SELECT id, qtype, qtype_name, difficulty, answer_mode, total_count, done_count, correct_count,
                 wrong_count, skipped_count, rate, total_ms, started_at, finished_at
          FROM mental_sessions ORDER BY id`);
     const [mr] = await pool.query(
@@ -142,7 +142,7 @@ async function exportMental() {
     const mrMap = {};
     (mr || []).forEach(x => { mrMap[x.session_id] = parseJsonArray(x.recs); });
     const mentalSessions = ms.map(x => ({
-        id: x.id, qtype: x.qtype, qtypeName: x.qtype_name, difficulty: x.difficulty,
+        id: x.id, qtype: x.qtype, qtypeName: x.qtype_name, difficulty: x.difficulty, answerMode: x.answer_mode,
         totalCount: x.total_count, doneCount: x.done_count, correctCount: x.correct_count,
         wrongCount: x.wrong_count, skippedCount: x.skipped_count, rate: x.rate, totalMs: x.total_ms,
         startedAt: x.started_at, finishedAt: x.finished_at, records: mrMap[x.id] || []

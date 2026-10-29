@@ -188,10 +188,16 @@
         return U.todayKey(new Date());
     }
 
+    let carryStudyMs = 0; // 上报失败待重试的时长（下次上报一并补传）
     function reportStudy(addMs) {
-        if (!addMs || addMs <= 0) return;
-        sessionStudyMs += addMs;
-        A.post('/api/study-daily', { date: todayKeyStr(), addMs }).catch(() => { });
+        if (addMs > 0) sessionStudyMs += addMs;
+        const sendMs = (addMs > 0 ? addMs : 0) + carryStudyMs;
+        if (sendMs <= 0) return;
+        carryStudyMs = 0;
+        A.post('/api/study-daily', { date: todayKeyStr(), addMs: sendMs }).catch((e) => {
+            carryStudyMs += sendMs; // 失败回队，避免时长丢失
+            console.error('【学习时长上报失败，已回队待重试】', e);
+        });
     }
 
     /* ---- 单实例计时锁 ----
@@ -280,10 +286,27 @@
         const addMs = Date.now() - lastTick;
         if (addMs <= 0) return;
         try {
-            navigator.sendBeacon('/api/study-daily',
+            const ok = navigator.sendBeacon('/api/study-daily',
                 new Blob([JSON.stringify({ date: todayKeyStr(), addMs })], { type: 'application/json' }));
-        } catch (e) { /* 忽略 */ }
+            if (!ok) {
+                /* beacon 入队失败（队列满）时降级 keepalive fetch，尽量不丢尾量 */
+                fetch('/api/study-daily', {
+                    method: 'POST', keepalive: true,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: todayKeyStr(), addMs })
+                }).catch((e) => console.error('【学习时长 fetch 补尾失败】', e));
+            }
+        } catch (e) {
+            console.error('【学习时长 beacon 上报失败】', e);
+        }
+        /* 推进起点：bfcache 恢复后不重复计已上报区间 */
+        lastTick = Date.now();
     }
+
+    /* bfcache 恢复：重新锚定计时起点，防止把已上报区间重复计 */
+    window.addEventListener('pageshow', (e) => {
+        if (e.persisted && studyRunning) lastTick = Date.now();
+    });
 
     /* 本次会话尚未上报的时长（仅计时中有效，暂停时为 0） */
     function pendingStudyMs() {

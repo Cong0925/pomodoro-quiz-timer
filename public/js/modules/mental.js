@@ -504,7 +504,7 @@
         state.recTotal = data.total;
         const inner = el('mRecListInner');
         if (!inner) return;
-        inner.innerHTML = data.list.map(r => `
+        const html = data.list.map(r => `
             <div class="m-session-item" data-id="${r.id}">
                 <div class="m-si-main">
                     <div class="m-si-title">${U.escapeHtml(r.qtype_name)}${r.answer_mode === 'fill' ? ' · 填空题' : ''}<span class="p-rec-sub"> · ${DIFF_NAMES[r.difficulty] || '不限难度'} · ${r.started_at || ''}</span></div>
@@ -513,7 +513,13 @@
                 <span class="m-si-rate ${r.rate < 60 ? 'low' : ''}">${r.rate}%</span>
                 <svg class="p-rec-toggle" viewBox="0 0 24 24" width="18" height="18"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>`).join('');
-        inner.querySelectorAll('.m-session-item').forEach(x => {
+        /* 翻页追加而非整表替换（否则前页记录消失）；追加前移除旧「加载更多」按钮 */
+        const oldMore = inner.querySelector('.p-rec-more');
+        if (oldMore) oldMore.remove();
+        if (page > 1 && !reset) inner.insertAdjacentHTML('beforeend', html);
+        else inner.innerHTML = html;
+        inner.querySelectorAll('.m-session-item:not([data-bound])').forEach(x => {
+            x.dataset.bound = '1';
             /* 折叠/展开只响应头部点击；明细区点击不触发 */
             const head = x.querySelector('.m-si-main');
             if (head) head.addEventListener('click', () => toggleRecDetail(x));
@@ -805,6 +811,8 @@
     function syncMgAnswerSel() {
         const sel = el('mFAnswerSel');
         if (!sel || sel.hidden) return;
+        /* 填空题的规范答案文本（如 50%）不是选项下标，禁止在此覆盖（否则被改成 '0'） */
+        if (!/^\d+$/.test(String(state.mg.editAnswer))) return;
         const cur = Number(state.mg.editAnswer);
         sel.innerHTML = state.mg.editOpts.map((_, j) => `<option value="${j}">${String.fromCharCode(65 + j)}</option>`).join('');
         sel.value = state.mg.editOpts[cur] !== undefined ? cur : 0;

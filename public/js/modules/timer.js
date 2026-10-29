@@ -149,7 +149,9 @@
         roundTotalMs = 0;
         batchResults = [];
         roundMeta.title = defaultRoundTitle();
+        roundMeta.desc = ''; // 描述随轮清空，防止上一轮描述串入下一轮归档
         roundTitleInput.value = roundMeta.title;
+        if (roundDescInput) roundDescInput.value = '';
         renderRecords();
         updateStat();
         newRoundBtn.style.display = 'none';
@@ -348,20 +350,26 @@
     roundDescInput.addEventListener('input', () => { roundMeta.desc = roundDescInput.value; });
 
     /* ---- 整组题量选择 ---- */
+    /* 题量钳制：整数 1~200（小数会让 new Array 报错，超大值会卡死渲染） */
+    function clampCount(v) {
+        if (!isFinite(v) || v <= 0) return MAX_ROUND;
+        return Math.min(200, Math.max(1, Math.floor(v)));
+    }
     batchCountSelect.onchange = function () {
         if (this.value === 'custom') {
             customBatchInput.style.display = 'inline-block';
             return;
         }
         customBatchInput.style.display = 'none';
-        MAX_ROUND = Number(this.value);
-        newRound();
+        MAX_ROUND = clampCount(Number(this.value));
+        /* 本轮已有记录时只改题量上限，不重开（防止中途改题量丢弃整轮记录） */
+        if (roundRecords.length === 0) newRound();
     };
 
     customBatchInput.addEventListener('input', () => {
         const val = Number(customBatchInput.value);
-        if (val > 0) MAX_ROUND = val;
-        newRound();
+        if (val > 0) MAX_ROUND = clampCount(val);
+        if (roundRecords.length === 0) newRound();
     });
 
     /* ---- 模式切换 ---- */

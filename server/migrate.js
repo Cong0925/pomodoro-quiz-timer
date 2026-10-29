@@ -49,12 +49,14 @@ const FALLBACK_SRC = 'C:\\Users\\run\\Desktop\\新建文件夹\\pomodoro-quiz-ti
         dateStrings: true
     });
 
-    /* 3. 检查库中现有数据（防止旧文件覆盖新数据） */
-    const [cnt] = await conn.query('SELECT COUNT(*) AS n FROM rounds');
+    /* 3. 检查库中现有数据（防止旧文件覆盖新数据；任一业务表非空即视为非空库） */
+    const [cnt] = await conn.query(`SELECT
+        (SELECT COUNT(*) FROM rounds) + (SELECT COUNT(*) FROM question_banks) + (SELECT COUNT(*) FROM questions)
+        + (SELECT COUNT(*) FROM mental_questions) + (SELECT COUNT(*) FROM memos) + (SELECT COUNT(*) FROM study_daily) AS n`);
     const existing = cnt[0].n;
     const force = process.argv.includes('--force');
     if (existing > 0 && !force) {
-        console.error('[STOP] 数据库中已有 ' + existing + ' 轮历史数据！');
+        console.error('[STOP] 数据库中已有 ' + existing + ' 条业务数据！');
         console.error('       导入会【替换】历史与收藏，若确认要覆盖，请加 --force 参数：');
         console.error('       npm run migrate <路径> -- --force');
         await conn.end();

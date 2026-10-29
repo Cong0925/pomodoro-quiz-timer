@@ -53,8 +53,10 @@ const { exportAll } = require('./exportData');
         dateStrings: true
     });
 
-    /* 3. 恢复前自动备份当前库（防止误操作丢数据） */
-    const [cnt] = await conn.query('SELECT COUNT(*) AS n FROM rounds');
+    /* 3. 恢复前自动备份当前库（防止误操作丢数据；任一业务表非空即视为非空库） */
+    const [cnt] = await conn.query(`SELECT
+        (SELECT COUNT(*) FROM rounds) + (SELECT COUNT(*) FROM question_banks) + (SELECT COUNT(*) FROM questions)
+        + (SELECT COUNT(*) FROM mental_questions) + (SELECT COUNT(*) FROM memos) + (SELECT COUNT(*) FROM study_daily) AS n`);
     if (cnt[0].n > 0) {
         const backupDir = path.join(__dirname, '..', 'data');
         fs.mkdirSync(backupDir, { recursive: true });
