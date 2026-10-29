@@ -54,7 +54,7 @@ web-app/
     └── package.json   npm run dev / start / init-db / backup / restore / migrate
 ```
 
-## 四、当前进度（截至 2026-10-29 17:19）
+## 四、当前进度（截至 2026-10-29 19:02）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -90,7 +90,12 @@ web-app/
 26. ✅ **练习记录切 tab 不刷新修复（2026-10-29，用户反馈）**：做完题切到练习记录新记录不显示、需刷新页面——根因 web-app `PracticeView` tab 用 `v-show` 常驻，`PracticeRecords` 仅 onMounted 加载一次；修复：子组件抽 `refresh()`（统计+列表，保留当前页）并 defineExpose，父组件 `watch(tab)` 切到 records 时调用；主版本每次切 tab 本就重载无此问题；build 全绿；**未提交（等用户指令）**
 27. ✅ **单题/整组模式大类默认「公务员考试」（2026-10-29，用户要求）**：计时视图大类默认选择——原为记忆上次/无记忆时为空，现无记忆或记忆失效时默认回退「公务员考试」（categories id=`gk`），手动选择仍记忆优先；双端（web-app `TimerView` / 主版本 `categories.js`）；build 全绿 + node --check 过；**未提交（等用户指令）**
 28. ✅ **速算填空自动聚焦输入框（2026-10-29，用户反馈）**：主版本 mental.js 已有每题 renderQ 后 focus（无此问题）；web-app `MentalFillInput` 缺聚焦逻辑——修复：组件挂载即 nextTick 聚焦 el-input（每题 v-if 重挂载自动覆盖），键盘流程=输入→回车提交→回车下一题→自动聚焦→输入，全程无鼠标；build 全绿；**已随 15:54 两次 commit 提交（见提交状态）**
-29. ✅ **web-app 一键启动/停止脚本（2026-10-29 17:19，方案B 单窗口）**：新增 4 文件——`web-app/启动.bat`+`start-webapp.ps1`、`web-app/停止服务.bat`+`stop-webapp.ps1`；.bat 纯 ASCII 入口（规避 cmd UTF-8 解析断行 bug），逻辑全在 .ps1（UTF-8 BOM）；单窗口方案：服务进程隐藏运行，主窗口只显示状态 + 15 秒心跳；日志写 `docs/错误日志/web-app-{backend,frontend}.log`（每次启动覆盖+时间头，交给大模型解读）；启动流程=装依赖→端口探测跳过已运行→拉起→就绪轮询≤30s（超时打日志尾 15 行）→开浏览器 8889→心跳（双 DOWN 2 轮自动退出）；停止三层=关「web-app 服务」窗口整树→按端口 8888/8889 杀→兜底清 node --watch/vite 残留；全链路闭环验证通过（含 .bat 入口复测两轮）；**未提交（等用户指令）**
+29. ✅ **web-app 一键启动/停止脚本（2026-10-29 17:19，方案B 单窗口）**：新增 4 文件——`web-app/启动.bat`+`start-webapp.ps1`、`web-app/停止服务.bat`+`stop-webapp.ps1`；.bat 纯 ASCII 入口（规避 cmd UTF-8 解析断行 bug），逻辑全在 .ps1（UTF-8 BOM）；单窗口方案：服务进程隐藏运行，主窗口只显示状态 + 15 秒心跳；日志写 `docs/错误日志/web-app-{backend,frontend}.log`（每次启动覆盖+时间头，交给大模型解读）；启动流程=装依赖→端口探测跳过已运行→拉起→就绪轮询≤30s（超时打日志尾 15 行）→开浏览器 8889→心跳（双 DOWN 2 轮自动退出）；停止三层=关「web-app 服务」窗口整树→按端口 8888/8889 杀→兜底清 node --watch/vite 残留；全链路闭环验证通过（含 .bat 入口复测两轮）；**已随 `8c239697` 提交（17:28 用户指令）**
+30. ✅ **速算开始界面难度选项（2026-10-29 18:18，方案A 单选）**：`MentalSetupPane.vue` 题型下方/题量上方加「难度」行（不限/简单/中等/困难 → 0/1/2/3，el-check-tag 与题量同款），`MentalView.vue` 传 `diff` prop + startTip 追加难度说明；题量不足沿用循环补齐逻辑；vue-tsc 通过；**未提交（等用户指令）**
+31. ✅ **速算按难度抽题 400 修复（2026-10-29 18:28，用户反馈）**：双因——① `pickQuestions` SQL 占位符错位（`qtype=? … difficulty=?` 实参传成 `[difficulty, qtype]`），难度过滤恒查空（此前前端恒传 0 故 dormant，难度 UI 上线首日触发）；② 百化分「中等」档 10 题（1/11~1/15 及反向）题干在库但难度被历史改到 1/3 档。修复：实参改 `[t, ...params]`；按种子恢复该 10 题 difficulty=2；`/start` 抽空时区分「所选难度无题」与「题型整体无题」提示；验证：20 组合（5 题型 × 难度 0~3）+ 填空模式冒烟全过（测试会话已清理）；**未提交（等用户指令）**
+32. ✅ **主版本同步难度抽题（2026-10-29 18:34，方案A，用户追问「主版本检查了吗」）**：主版本后端同款占位符错位 bug（此前因前端锁「不限难度」dormant）——修复 `[t, ...params]` + `/start` 抽空提示同款区分；前端 renderDiffs 删 filter 开放四档（DIFFS/HTML 难度行本就预留）+ 开始提示语追加难度说明；验证：node --check ×2 + 临时起主版本后端（从仓库根，.env 在根目录）20 组合冒烟全 201、测后 3000 已释放；**未提交（等用户指令）**
+33. ✅ **速算题库管理双端筛选+状态列（2026-10-29 18:51，方案A 三态对齐题库模式）**：双端 mental 列表接口加 `status=normal|deleted|all`（旧 inactive=1 兼容）；web-app MentalManage 加难度下拉+状态三态下拉（换掉含停用勾选）+状态列（el-tag sortable）；主版本 index.html/mental.js 勾选改三态 select+表头状态列+行 tag（复用 p-q-ok/del-tag）；主版本难度筛选原有保留；验证：node --check ×3、vue-tsc、build 全绿，双端三态冒烟（normal 179/deleted 1/all 180 含 legacy 兼容）过、临时题已清理、主版本 3000 测后释放；**附带观察：18:39 有人将百化分 8 题难度改回 3（中等档现剩 2 题），疑用户手改未干预，待确认**；**未提交（等用户指令）**
+34. ✅ **题库管理分页器翻页失效修复（2026-10-29 19:02，方案A，用户反馈）**：根因——`PracticeManage.vue` watch 以 qPage 为监听源却在回调内无条件 `qPage.value=1`，点下一页被打回第 1 页；修复：watch 删重置（事件点重置对齐 MentalManage/主版本：切题库点击、状态 @change 已有，补 `@size-change="qPage=1"`、题库自动回落路径补重置）、`qPage` 声明移到 immediate watcher 之前防 TDZ；同款排查：Records 两组件为事件点模式无此 bug、全库仅此一处；build 全绿；**未提交（等用户指令）**
 
 **待办（建议优先级）**：
 0. ⬜ **2 处点击删除无确认弹窗（2026-10-28 排查发现，方案 A/B 待用户选择）**：`CalendarView.vue clear()` 清空当日备忘直接删；`useTimer.ts cancelBatchRound()` 取消本轮丢弃未归档记录——均无 ElMessageBox.confirm，存在数据丢失风险
@@ -112,7 +117,7 @@ web-app/
 
 **提交状态**：2026-10-28 已将 web-app 全部代码 + docs + CLAUDE.md 一次性提交到 `main`（用户指令「传入 main」，方案A），`version-vue+node` 分支已删除；同日 15:57 追加 2 次提交（`139ba20` web-app 前端全量视图、`aec5db6` docs）；同日 20:xx 用户指令「提交所有修改」再追加 3 次提交：`2b72025` feat(web-app) 界面排版优化与弹窗样式规范修复（27 文件，含第 9~18 条全部改动）、`ad651de` docs 备忘录/修改记录/界面对齐差异清单、`23a6cf5` chore .shots 对比截图 33 张、`2a70117` docs 提交状态记录；**已 push**（2026-10-28 用户指令「推送」，`584281a..2a70117` → origin/main，本机 7897 代理未开经 `git -c http.proxy= -c https.proxy=` 绕过直连成功）。
 **2026-10-29 17:28 提交状态（用户指令「提交所有修改,然后推送」）**：`dd8cd21f` docs 备忘录+修改记录+gitignore 排除 zip（3 文件）、`8c239697` feat(web-app) 一键启停脚本 4 文件；已 push `72778271..8c239697 → origin/main`，工作区干净（仅本条回执与修改记录回执为推送后新增、待下次提交）。
-**当前未提交改动（等用户指令）**：docs 回执记录 2 处（本次推送后新增）；`xingcezhenti-main.zip` 已在 .gitignore 排除（用户 10-29 手动添加），本地保留不入库。
+**当前未提交改动（等用户指令）**：速算难度功能与题库管理筛选双端——web-app 前端难度 UI（第 30 条）+ 双端后端 400 修复（第 31 条）+ 主版本难度 UI 同步（第 32 条）+ 题库管理双端难度/状态筛选+状态列（第 33 条）+ 题库管理分页器翻页修复（第 34 条：PracticeManage.vue）+ 数据库数据修复（不入 git）；docs 回执记录（修改记录 + 本备忘录）；`xingcezhenti-main.zip` 已在 .gitignore 排除（用户 10-29 手动添加），本地保留不入库。
 **2026-10-29 15:54 提交状态（用户指令「提交并推送」）**：`8aa14893` feat(主版本) is_deleted+导出导入适配+界面优化（11 文件含 docs，覆盖进度第 21~25 条主版本部分）、`72778271` feat(web-app) is_deleted+体验优化+速算记录实时刷新（15 文件，覆盖第 21~28 条 web-app 部分）；已 push `46a04764..72778271 → origin/main`。注：第 21~28 条条目内「未提交」字样为提交前写入，实际已随上述两 commit 入库。
 
 **2026-10-29 提交状态（用户指令「提交所有未提交内容」，方案A 拆 2 次）**：`e6b76cb4` feat(主版本) 练习模块图片题支持 + 行测真题题库与导入工具入库（42441 文件，含 `xingcezhenti-main/` 464M 题库数据、`tools/import-xingce/`、demos、docs）、`46a04764` feat(web-app) 练习模块图片题支持（13 文件）；安全处理：`tools/import-xingce/config.js` 明文 MySQL 密码改 `process.env.DB_PASSWORD || ''`（密码未进历史，`git log -S` 已验证）；**已 push**（13:22 用户指令「直接推送」，首次因 7897 代理未开失败，代理启动后 `03e050ec..46a04764` → origin/main 成功）；用户明确不追加 docs commit（本文件与 10-29 修改记录保持未提交）。
