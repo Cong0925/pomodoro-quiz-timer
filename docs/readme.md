@@ -1,7 +1,7 @@
 ---
 description: Claude 会话备忘：项目理解、多版本架构、web-app 当前进度与待办（每次会话开始读取，任务完成后更新）
 created: 2026-10-28
-last_modified: 2026-10-28
+last_modified: 2026-10-29
 ---
 
 # Claude 会话备忘（project memo）
@@ -54,7 +54,7 @@ web-app/
     └── package.json   npm run dev / start / init-db / backup / restore / migrate
 ```
 
-## 四、当前进度（截至 2026-10-29 19:02）
+## 四、当前进度（截至 2026-10-29 21:46）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -97,7 +97,16 @@ web-app/
 33. ✅ **速算题库管理双端筛选+状态列（2026-10-29 18:51，方案A 三态对齐题库模式）**：双端 mental 列表接口加 `status=normal|deleted|all`（旧 inactive=1 兼容）；web-app MentalManage 加难度下拉+状态三态下拉（换掉含停用勾选）+状态列（el-tag sortable）；主版本 index.html/mental.js 勾选改三态 select+表头状态列+行 tag（复用 p-q-ok/del-tag）；主版本难度筛选原有保留；验证：node --check ×3、vue-tsc、build 全绿，双端三态冒烟（normal 179/deleted 1/all 180 含 legacy 兼容）过、临时题已清理、主版本 3000 测后释放；**附带观察：18:39 有人将百化分 8 题难度改回 3（中等档现剩 2 题），疑用户手改未干预，待确认**；**未提交（等用户指令）**
 34. ✅ **题库管理分页器翻页失效修复（2026-10-29 19:02，方案A，用户反馈）**：根因——`PracticeManage.vue` watch 以 qPage 为监听源却在回调内无条件 `qPage.value=1`，点下一页被打回第 1 页；修复：watch 删重置（事件点重置对齐 MentalManage/主版本：切题库点击、状态 @change 已有，补 `@size-change="qPage=1"`、题库自动回落路径补重置）、`qPage` 声明移到 immediate watcher 之前防 TDZ；同款排查：Records 两组件为事件点模式无此 bug、全库仅此一处；build 全绿；**未提交（等用户指令）**
 
+35. ✅ **双端全量代码逻辑审查（2026-10-29 20:40，方案A 只报告不改码）**：6 路并行审查（web-app 后端/主版本 server/双端契约/前端核心/前端视图/主版本前端），5 路完成、主版本前端 public/js 一路被系统拦截已重派补查（进行中）；高危 finding 人工抽查复核属实；产出分级清单（致命 3 / 严重 10 / 一般 25+）：致命=①主版本 practice GET /history/:id 漏 WHERE session_id（待办2 升级）②双端 GET /api/export 的 records JSON_OBJECT 漏 note（导出→导入丢知识点备注，exportData.js 有而 data.js 缺）③双端 data.js 导出 mentalSessions 漏 answer_mode（填空场次导入降级）；严重=random 抽题不随机+review 补题缩水（双端 pickQuestions）、多选题全链路缺失（无多选交互/编辑硬编码 type:'single'/judge T-F 不匹配/后端裸全等判分）、计时模式切换与改题量直接 newRound 丢本轮+归档失败仍清空、HistoryView 收藏假 id（Date.now()）取消必败、MentalManage 编辑停用题保存被静默激活、TimerView keydown keep-alive 跨页泄漏、studyStore beacon lastTick 不推进 bfcache 重复计+上报失败丢时长、stats 接口契约双端分叉（主版本缺 sum/分页）、importData 缺 id 回退不一致整包回滚、收藏 mode 压成 single+重复收藏 uk_round_no 500；**零代码改动，修复按批次等用户指令**
+
+36. ✅ **审查批次1+2 修复（2026-10-29 21:26，用户指令「开始按照你的计划修复」）**：批次1 致命 3 项（主版本 history/:id 补 WHERE、双端导出补 note/answerMode）+ 批次2 严重 11 项（多选题全链路双端判分/交互/编辑保型、速算选择模式不再下发单选项泄露题、计时归档失败不清空+题量不丢记录+keydown 跨页守卫、收藏真实 id、停用题编辑不被激活、random 真随机+review 补题补足、stats 契约对齐主版本补 sum/可选分页、importData 回退 id 一致、favorites mode 白名单+409+本地时间、beacon 不重复计/失败回队、主版本 URL 题干图保留）；冒烟 11 用例全 PASS、build 全绿、node --check 全过、临时进程已清；**未提交（等用户指令）**
+
+37. ✅ **审查批次3 一般项修复（2026-10-29 21:46，用户指令「继续推进」）**：双端择优 23 项——web-app（单题解析定位、跳过题误标红、Enter 抢占、ESC 悬挂、备忘残留、页容量重置、finish 失败恢复、6 处列表请求序号守卫、重练同步选题区、formatTime 边界、图片压缩超限报错、MentalStartQuestion 类型收敛）+ 后端双端（分页非整数钳制、skip/answer/more 会话与结算校验、批量导入 40MB 校验生效、practice stats Number、归档时间 UTC 兜底）+ 主版本（题量键入丢记录/MAX_ROUND 1~200 钳制/desc 串轮、记录加载更多改追加、学习时长失败回队+beacon 降级+bfcache 防重计、未分类二级分类拦截、memos 参数校验、history 筛选补齐、restore/migrate 空库判断扩表）；冒烟 9/9 PASS、build 全绿、node --check 全过、临时进程已清；**未提交（等用户指令）**
+
+38. ✅ **下一题回车键失效修复（2026-10-29 21:53，用户反馈）**：批次3 Enter 守卫回归——MentalView 删 INPUT 守卫（填空「回车提交→回车下一题」流程恢复）、弹窗判断改可见性检查（el-overlay 关闭后仍在 DOM 致恒真拦截）；build 全绿；**未提交（等用户指令）**
+
 **待办（建议优先级）**：
+0.8. ⬜ **审查遗留待定项（2026-10-29 21:46）**：① v-html 题干/解析 XSS 面——需引入 DOMPurify 依赖做白名单过滤，待用户决策是否加依赖；② CatSelect 换大类双发 reload（正确性已由请求序号守卫兜底，仅剩一次冗余请求可优化）；③ 修复批次全部完成待用户人工验收（重点：多选题作答、速算抽题、计时改题量、收藏/取消收藏、导出导入往返）
 0. ⬜ **2 处点击删除无确认弹窗（2026-10-28 排查发现，方案 A/B 待用户选择）**：`CalendarView.vue clear()` 清空当日备忘直接删；`useTimer.ts cancelBatchRound()` 取消本轮丢弃未归档记录——均无 ElMessageBox.confirm，存在数据丢失风险
 0.5. ✅ **图片题目（图形推理）存储（方案C，2026-10-28 实现完成）**：`questions` 加 `stem_img JSON` + `options[].img`，base64 内嵌 ≤300KB/图、前端 canvas 压缩、批量导入/备份透传；web-app 与主版本双端同步实现，冒烟 12/12、build 全绿；**已随 2026-10-29 两次 commit 入库（见提交状态）**
 0.6. ✅ **行测真题导入（2026-10-28 完成，见进度第 20 条）**：27460 题入库 9 库 + 39461 张图落盘 `data/qi-images/` + `/qi-bank` 双端静态服务 + 前端渲染改造；**`xingcezhenti-main/` 源仓库与 tools/ 已随 2026-10-29 主版本 commit 入库（用户指定不忽略）**
@@ -117,7 +126,8 @@ web-app/
 
 **提交状态**：2026-10-28 已将 web-app 全部代码 + docs + CLAUDE.md 一次性提交到 `main`（用户指令「传入 main」，方案A），`version-vue+node` 分支已删除；同日 15:57 追加 2 次提交（`139ba20` web-app 前端全量视图、`aec5db6` docs）；同日 20:xx 用户指令「提交所有修改」再追加 3 次提交：`2b72025` feat(web-app) 界面排版优化与弹窗样式规范修复（27 文件，含第 9~18 条全部改动）、`ad651de` docs 备忘录/修改记录/界面对齐差异清单、`23a6cf5` chore .shots 对比截图 33 张、`2a70117` docs 提交状态记录；**已 push**（2026-10-28 用户指令「推送」，`584281a..2a70117` → origin/main，本机 7897 代理未开经 `git -c http.proxy= -c https.proxy=` 绕过直连成功）。
 **2026-10-29 17:28 提交状态（用户指令「提交所有修改,然后推送」）**：`dd8cd21f` docs 备忘录+修改记录+gitignore 排除 zip（3 文件）、`8c239697` feat(web-app) 一键启停脚本 4 文件；已 push `72778271..8c239697 → origin/main`，工作区干净（仅本条回执与修改记录回执为推送后新增、待下次提交）。
-**当前未提交改动（等用户指令）**：速算难度功能与题库管理筛选双端——web-app 前端难度 UI（第 30 条）+ 双端后端 400 修复（第 31 条）+ 主版本难度 UI 同步（第 32 条）+ 题库管理双端难度/状态筛选+状态列（第 33 条）+ 题库管理分页器翻页修复（第 34 条：PracticeManage.vue）+ 数据库数据修复（不入 git）；docs 回执记录（修改记录 + 本备忘录）；`xingcezhenti-main.zip` 已在 .gitignore 排除（用户 10-29 手动添加），本地保留不入库。
+**2026-10-29 19:11 提交状态（用户指令「提交所有修改并推送」）**：按跨版本禁混提拆 3 个 commit——`e58c9720` feat(web-app) 速算难度抽题+题库管理筛选状态列+分页器翻页修复（6 文件）、`51f7fcac` feat(主版本) 速算开放难度抽题+状态三态筛选与状态列（3 文件）、`09feed9f` docs 备忘录+10-29 修改记录（2 文件）；已 push `a32d1afc..09feed9f → origin/main`（常规推送因代理未开 SSL 失败，经 `git -c http.proxy= -c https.proxy=` 绕过直连成功），工作区干净。
+**当前未提交改动（等用户指令）**：本条推送回执与 10-29 修改记录推送回执（19:11 提交后新增）；`xingcezhenti-main.zip` 已在 .gitignore 排除（用户 10-29 手动添加），本地保留不入库；数据库数据修复（百化分中等档难度恢复）不入 git。
 **2026-10-29 15:54 提交状态（用户指令「提交并推送」）**：`8aa14893` feat(主版本) is_deleted+导出导入适配+界面优化（11 文件含 docs，覆盖进度第 21~25 条主版本部分）、`72778271` feat(web-app) is_deleted+体验优化+速算记录实时刷新（15 文件，覆盖第 21~28 条 web-app 部分）；已 push `46a04764..72778271 → origin/main`。注：第 21~28 条条目内「未提交」字样为提交前写入，实际已随上述两 commit 入库。
 
 **2026-10-29 提交状态（用户指令「提交所有未提交内容」，方案A 拆 2 次）**：`e6b76cb4` feat(主版本) 练习模块图片题支持 + 行测真题题库与导入工具入库（42441 文件，含 `xingcezhenti-main/` 464M 题库数据、`tools/import-xingce/`、demos、docs）、`46a04764` feat(web-app) 练习模块图片题支持（13 文件）；安全处理：`tools/import-xingce/config.js` 明文 MySQL 密码改 `process.env.DB_PASSWORD || ''`（密码未进历史，`git log -S` 已验证）；**已 push**（13:22 用户指令「直接推送」，首次因 7897 代理未开失败，代理启动后 `03e050ec..46a04764` → origin/main 成功）；用户明确不追加 docs commit（本文件与 10-29 修改记录保持未提交）。
