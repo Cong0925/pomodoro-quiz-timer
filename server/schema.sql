@@ -191,6 +191,7 @@ CREATE TABLE IF NOT EXISTS questions (
     analysis    TEXT         NULL                    COMMENT '答案解析',
     difficulty  TINYINT      NOT NULL DEFAULT 2      COMMENT '难度 1易 2中 3难',
     source      VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '题目来源（可选）',
+    is_deleted  TINYINT(1)   NOT NULL DEFAULT 0      COMMENT '逻辑删除/停用 0=正常 1=已停用(软删,可恢复)',
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -355,3 +356,7 @@ PREPARE st2 FROM @s2; EXECUTE st2; DEALLOCATE PREPARE st2;
 SET @c3 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'questions' AND column_name = 'stem_img');
 SET @s3 := IF(@c3 = 0, 'ALTER TABLE questions ADD COLUMN stem_img JSON NULL COMMENT ''题干图片(base64数组，图推多图)'' AFTER stem', 'SELECT 1');
 PREPARE st3 FROM @s3; EXECUTE st3; DEALLOCATE PREPARE st3;
+
+SET @c4 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'questions' AND column_name = 'is_deleted');
+SET @s4 := IF(@c4 = 0, 'ALTER TABLE questions ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT ''逻辑删除/停用 0=正常 1=已停用(软删,可恢复)'' AFTER source', 'SELECT 1');
+PREPARE st4 FROM @s4; EXECUTE st4; DEALLOCATE PREPARE st4;

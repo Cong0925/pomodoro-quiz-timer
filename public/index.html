@@ -322,11 +322,13 @@
                             </div>
                         </div>
                         <div class="p-q-no" id="pQNo"></div>
+                        <div class="p-review-nav" id="pReviewNav" hidden></div>
                         <div class="p-q-stem" id="pQStem"></div>
                         <div class="p-stem-imgs" id="pQStemImgs" hidden></div>
                         <div class="p-opt-list" id="pOptList"></div>
                         <div class="p-analysis" id="pAnalysis" hidden></div>
                         <div class="p-q-actions">
+                            <button class="df-btn p-skip-btn" id="pPrevBtn" hidden>上一题</button>
                             <button class="df-btn p-skip-btn" id="pSkipBtn">跳过本题</button>
                             <button class="df-btn primary" id="pNextBtn" hidden>下一题</button>
                         </div>
@@ -344,6 +346,7 @@
                             <div><b class="p-c-skip" id="pResSkip"></b><span>跳过</span></div>
                             <div><b id="pResTime"></b><span>用时</span></div>
                         </div>
+                        <div class="p-finish-dots" id="pFinishDots"></div>
                         <div class="p-result-actions">
                             <button class="df-btn" id="pReplayBtn">再练一次</button>
                             <button class="df-btn" id="pReviewBtn">回看全部解析</button>
@@ -381,10 +384,17 @@
                                     </div>
                                     <div class="p-manage-stat" id="pManageStat"></div>
                                 </div>
-                                <button class="pq-btn pq-btn--primary pq-btn--small" id="pAddQBtn">+ 新增题目</button>
+                                <div class="p-manage-ops">
+                                    <select id="pQStatusSel" title="按题目状态筛选" style="padding:4px 6px;border:1px solid var(--bd,#dde3ea);border-radius:6px;background:var(--bg2,#fff);color:var(--fg,#24344b);font-size:13px">
+                                        <option value="normal">仅正常</option>
+                                        <option value="deleted">仅已停用</option>
+                                        <option value="all">全部状态</option>
+                                    </select>
+                                    <button class="pq-btn pq-btn--primary pq-btn--small" id="pAddQBtn">+ 新增题目</button>
+                                </div>
                             </div>
                             <table class="p-q-table">
-                                <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:70px">答案</th><th style="width:70px">难度</th><th style="width:90px">操作</th></tr></thead>
+                                <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:90px">答案</th><th style="width:90px">难度</th><th style="width:90px" class="p-q-sortable" id="pQSortStatus">状态<span class="p-q-sort-arrow" id="pQSortStatusArrow"></span></th><th style="width:110px">操作</th></tr></thead>
                                 <tbody id="pQTbody"></tbody>
                             </table>
                             <div class="p-pager" id="pQPager" hidden>
@@ -751,6 +761,20 @@
             <div class="modal-buttons">
                 <button id="pBankCancel">取消</button>
                 <button id="pBankSave">保存题库</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 练习记录：回顾解析弹窗（整场/单题共用，题号导航条 + 完整题干含图 + 解析，支持 ← → 翻题） -->
+    <div class="modal-mask" id="pRecReviewMask">
+        <div class="modal-box p-rv-modal">
+            <p class="p-q-modal-title" id="pRvTitle">回顾解析</p>
+            <div class="p-rv-nav" id="pRvNav"></div>
+            <div class="p-rv-body" id="pRvBody"></div>
+            <div class="modal-buttons">
+                <button class="pq-btn" id="pRvPrev">上一题</button>
+                <button class="pq-btn pq-btn--primary" id="pRvNext">下一题</button>
+                <button class="pq-btn" id="pRvClose">关闭</button>
             </div>
         </div>
     </div>

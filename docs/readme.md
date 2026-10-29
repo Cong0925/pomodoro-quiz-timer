@@ -54,7 +54,7 @@ web-app/
     └── package.json   npm run dev / start / init-db / backup / restore / migrate
 ```
 
-## 四、当前进度（截至 2026-10-28 22:40）
+## 四、当前进度（截至 2026-10-29 13:32）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -82,11 +82,19 @@ web-app/
 18. ✅ **ElMessageBox/ElMessage 样式缺失修复（2026-10-28 20:00，方案A）**：根因=按需 resolver 不给服务式 API 注入样式（产物 CSS 中 .el-message-box/.el-message 均为 0），确认框裸渲染左上角无遮罩；main.ts 手动引入 message-box/message 的 style/css（保持按需），产物已验证含规则；build 全绿；未提交
 19. ✅ **图片题目存储方案C 全量实现（2026-10-28 20:55）**：`questions` 表加 `stem_img JSON` + `options[].img`；web-app 后端全链路透传+校验（单图 ≤300KB、题干图 ≤20、整包 ≤40MB）+备份兼容；前端 canvas 压缩 `utils/image.ts`、录入多图上传、答题多图渲染+图片选项、回看缩略图；主版本同款同步；冒烟 12/12、build 全绿；**注意：stem_img 约定——GET /banks/:id/questions 返回原始列名下划线 `stem_img`，start/answer/history 映射接口为驼峰 `stemImg`**
 20. ✅ **行测真题全量导入（2026-10-28 22:20，仓库 ERRRC/xingcezhenti）**：图片落盘 `data/qi-images/{题目图(6152张), 公式图(33309张)}`（文件名保持仓库原哈希名，部署同构）；DB 存 `/qi-bank/<子目录>/<文件名>`（一次写好永不改）；解析导入工具 `tools/import-xingce/`（parser+import，md5 去重、断点续跑、--force 幂等）；**58890 题 → 去重后 27460 题**入库 9 个「行测真题·」题库（图推50:1818/定义51:1550/类比52:2170/逻辑53:2204/政治54:1084/常识55:4849/言语56:6956/数量57:3223/资料58:3606，分类沿用 gk 大类）；双端 `/qi-bank` 静态服务 + vite proxy；前端渲染改造（web-app PracticeView 题干/解析 v-html + :deep img 约束、PracticeRecords stripHtml；主版本 practice.js innerHTML + stripHtml + style.css img 约束）；build 全绿、node --check 通过、双端已重启（8888 PID 22208 / 8889 PID 16332）、端到端冒烟与数据抽查全过
+21. ✅ **题库题逻辑删除 is_deleted（2026-10-29 13:32）**：`questions` 加 `is_deleted TINYINT(1) DEFAULT 0`（0=正常 1=已停用可恢复）；双端 schema 同步并已 ALTER；web-app + 主版本后端全部读题/抽题/题量过滤 `is_deleted=0`、`DELETE /questions[/:id|/batch]` 改软删、新增 `POST /questions/:id/restore`、列表接口加 `includeDeleted=1` 参数；前端「删除」改「停用」+「显示已停用」开关 + 恢复按钮（行灰化/已停用 tag）；历史回看不过滤（已停用题仍正常显示）；build 全绿、node --check 通过、后端已重启（8888 pid 2292）、停用/恢复端到端冒烟 7/7 全过；**该改动在 13:22 push 之后，未提交**
+22. ✅ **双端导出/导入链路 is_deleted + stem_img 适配（2026-10-29，适配检查+修复）**：检查结论——业务读写路径与验收脚本均已适配无需改；缺口=导出/导入 6 文件（双端 `routes/data.js`、`exportData.js`、`importData.js`）未含 `is_deleted`，主版本另缺方案C 遗留的 `stem_img`（备份恢复丢图片题）、主版本 mental 导出缺 `fillable`；修复：6 文件补字段（导出 JSON 驼峰 `stemImg`/`isDeleted`，导入读驼峰，旧备份兼容=无字段→`stem_img=[]`/`is_deleted=0`）；双端 backup/restore/migrate 复用 importData/exportData 本体自动受益；验证：web-app `GET /api/export`（27500 题）与主版本 backup.js 命令行导出 + 临时启动 `:3000/api/export` 字段全在（图推题 id=15620 stemImg 保留）、双端 importData 事务回滚验证 PASS（isDeleted=1 写回、旧备份兼容）；后端已重启 8888（pid 21068）、主版本临时进程验证后已停；**未提交（等用户指令）**
+23. ✅ **题库模式用户体验优化（2026-10-29，A1+B1+建议1~4 全做）**：① 回看解析自由选题——回看模式题号导航条（对/错/跳着色、点击跳题、当前高亮、上一题/下一题/返回结算）+ 结算页对错分布条（点击色块进该题回看）+ ← → 方向键翻题；② 练习记录回顾——行操作「回顾本场」整场逐题解析弹窗（新组件 PracticeReviewDialog，web-app）/主版本 pRecReviewMask 弹层，展开行每题「解析」单题弹窗；③ 展开行「只看错题」开关；④ 本场错题重练——后端新接口 `POST /api/practice/:id/replay-errors`（双端，取该会话错题开 review 新会话，无错题 400，错题已停用提示），记录行「重练错题」按钮注入会话直接开练（无错题禁用）；验证：web-app build 全绿、主版本 practice.js node --check、后端重启 8888（pid 6388）、replay-errors 冒烟 3 用例 PASS（201/400/404，测试会话已清理）、主版本 3000 临时验证后停；**未提交（等用户指令）**
+24. ✅ **回顾解析弹窗限高修复（2026-10-29，截图验收）**：web-app 弹窗（el-dialog）默认 top:15vh + 内容超高无上限 → 撑出全屏滚动条。修复：弹窗 `class="rv-dialog"`（height:96vh、margin:2vh auto 0、flex column，header 固定、body 内部滚动），顶部留白 2vh、不再全屏滚动；主版本弹层已有 max-height 86vh 无此问题；build 全绿；**未提交（等用户指令）**
+25. ✅ **题库管理表格状态列 + 三态筛选（2026-10-29，截图验收）**：后端 `GET /banks/:id/questions`（双端）新增 `status` 参数（normal=仅正常默认/deleted=仅已停用/all=全部带 is_deleted，兼容 includeDeleted=1）；web-app 答案列 70→90、难度 80→90 防表头挤行，新增独立「状态」列（正常绿/已停用灰 tag），筛选改 el-select 三态（后端分页过滤）；主版本同步（select 三态、表头加状态列、列宽、p-q-ok-tag 样式）；已停用行操作列「恢复」按钮保留；补充：恢复题目加确认弹窗（双端）、状态列支持排序（web-app el-table sortable / 主版本表头点击排序 ▲▼）；验证：build 全绿、双端 node --check、8888 重启（修复误删 page/pageSize 定义）后冒烟 6 用例 + 停用→过滤→恢复全链路 PASS（临时测试题已删）、主版本 3000 临时验证 4 用例 PASS 后已停；**未提交（等用户指令）**
+26. ✅ **练习记录切 tab 不刷新修复（2026-10-29，用户反馈）**：做完题切到练习记录新记录不显示、需刷新页面——根因 web-app `PracticeView` tab 用 `v-show` 常驻，`PracticeRecords` 仅 onMounted 加载一次；修复：子组件抽 `refresh()`（统计+列表，保留当前页）并 defineExpose，父组件 `watch(tab)` 切到 records 时调用；主版本每次切 tab 本就重载无此问题；build 全绿；**未提交（等用户指令）**
+27. ✅ **单题/整组模式大类默认「公务员考试」（2026-10-29，用户要求）**：计时视图大类默认选择——原为记忆上次/无记忆时为空，现无记忆或记忆失效时默认回退「公务员考试」（categories id=`gk`），手动选择仍记忆优先；双端（web-app `TimerView` / 主版本 `categories.js`）；build 全绿 + node --check 过；**未提交（等用户指令）**
+28. ✅ **速算填空自动聚焦输入框（2026-10-29，用户反馈）**：主版本 mental.js 已有每题 renderQ 后 focus（无此问题）；web-app `MentalFillInput` 缺聚焦逻辑——修复：组件挂载即 nextTick 聚焦 el-input（每题 v-if 重挂载自动覆盖），键盘流程=输入→回车提交→回车下一题→自动聚焦→输入，全程无鼠标；build 全绿；**未提交（等用户指令）**
 
 **待办（建议优先级）**：
 0. ⬜ **2 处点击删除无确认弹窗（2026-10-28 排查发现，方案 A/B 待用户选择）**：`CalendarView.vue clear()` 清空当日备忘直接删；`useTimer.ts cancelBatchRound()` 取消本轮丢弃未归档记录——均无 ElMessageBox.confirm，存在数据丢失风险
-0.5. ✅ **图片题目（图形推理）存储（方案C，2026-10-28 实现完成）**：`questions` 加 `stem_img JSON` + `options[].img`，base64 内嵌 ≤300KB/图、前端 canvas 压缩、批量导入/备份透传；web-app 与主版本双端同步实现，冒烟 12/12、build 全绿；**注意：8888 后端运行中为旧代码，需重启后生效；git 未提交**
-0.6. ✅ **行测真题导入（2026-10-28 完成，见进度第 20 条）**：27460 题入库 9 库 + 39461 张图落盘 `data/qi-images/` + `/qi-bank` 双端静态服务 + 前端渲染改造；**git 未提交**
+0.5. ✅ **图片题目（图形推理）存储（方案C，2026-10-28 实现完成）**：`questions` 加 `stem_img JSON` + `options[].img`，base64 内嵌 ≤300KB/图、前端 canvas 压缩、批量导入/备份透传；web-app 与主版本双端同步实现，冒烟 12/12、build 全绿；**已随 2026-10-29 两次 commit 入库（见提交状态）**
+0.6. ✅ **行测真题导入（2026-10-28 完成，见进度第 20 条）**：27460 题入库 9 库 + 39461 张图落盘 `data/qi-images/` + `/qi-bank` 双端静态服务 + 前端渲染改造；**`xingcezhenti-main/` 源仓库与 tools/ 已随 2026-10-29 主版本 commit 入库（用户指定不忽略）**
 1. ⬜ 浏览器人工验收：与主版本并排对照操作各模块（键位/弹窗/边界行为），修复体验差异
 2. ⬜ main 主版本 practice `GET /history/:id` SQL 缺陷修复（须在该文件所属的 main 历史中单独处理，web-app 版已修）
 3. ✅ 已提交（2026-10-28 15:57，方案A 分 2 次）：`139ba20` feat(web-app) 前端全量视图+分层、`aec5db6` docs 备忘录与修改记录；`docs/imgs/` 2 张 Snipaste 截图未入库（未跟踪，待用户决定删除）
@@ -102,7 +110,10 @@ web-app/
 - 后端实际监听端口以 backend/.env 的 PORT 为准（当前 **8888**）
 
 **提交状态**：2026-10-28 已将 web-app 全部代码 + docs + CLAUDE.md 一次性提交到 `main`（用户指令「传入 main」，方案A），`version-vue+node` 分支已删除；同日 15:57 追加 2 次提交（`139ba20` web-app 前端全量视图、`aec5db6` docs）；同日 20:xx 用户指令「提交所有修改」再追加 3 次提交：`2b72025` feat(web-app) 界面排版优化与弹窗样式规范修复（27 文件，含第 9~18 条全部改动）、`ad651de` docs 备忘录/修改记录/界面对齐差异清单、`23a6cf5` chore .shots 对比截图 33 张、`2a70117` docs 提交状态记录；**已 push**（2026-10-28 用户指令「推送」，`584281a..2a70117` → origin/main，本机 7897 代理未开经 `git -c http.proxy= -c https.proxy=` 绕过直连成功）。
-**当前未提交改动（等用户指令）**：20:55 之后的全部改动——方案C 全量实现（web-app 前后端 + 主版本 + demos/demo-question-image.html）、行测真题导入全套（data/qi-images 图片 256MB、tools/import-xingce/、双端 /qi-bank 静态服务、前端渲染改造）、docs 修改记录与备忘录更新；`xingcezhenti-main/` 源仓库目录也未入库（建议后续 gitignore 或仅保留 tools 依赖说明）。
+**当前未提交改动（等用户指令）**：仅剩 `xingcezhenti-main.zip`（264MB 题库压缩包，用户指定不忽略、不提交，保留本地）；另本次为记录进度新产生的 docs 修改记录/备忘录更新待下次提交。
+
+**2026-10-29 提交状态（用户指令「提交所有未提交内容」，方案A 拆 2 次）**：`e6b76cb4` feat(主版本) 练习模块图片题支持 + 行测真题题库与导入工具入库（42441 文件，含 `xingcezhenti-main/` 464M 题库数据、`tools/import-xingce/`、demos、docs）、`46a04764` feat(web-app) 练习模块图片题支持（13 文件）；安全处理：`tools/import-xingce/config.js` 明文 MySQL 密码改 `process.env.DB_PASSWORD || ''`（密码未进历史，`git log -S` 已验证）；**已 push**（13:22 用户指令「直接推送」，首次因 7897 代理未开失败，代理启动后 `03e050ec..46a04764` → origin/main 成功）；用户明确不追加 docs commit（本文件与 10-29 修改记录保持未提交）。
+**13:22 push 之后的新未提交改动**：题库题逻辑删除 is_deleted（见进度第 21 条）与双端导出/导入链路适配（第 22 条）与题库模式用户体验优化（第 23 条，含新接口 replay-errors）与弹窗限高修复（第 24 条）与题库管理状态列三态筛选（第 25 条）与记录切 tab 刷新修复（第 26 条）与计时模式大类默认公务员考试（第 27 条）与速算填空自动聚焦（第 28 条），等用户指令提交。
 
 ## 五、关键约定（给下次会话的 Claude）
 

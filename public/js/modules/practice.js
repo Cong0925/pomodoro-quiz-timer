@@ -29,6 +29,8 @@
         curBank: 1, editIdx: -1, mgCat: 'all', mgSub: 'all',  // 题库管理（两层下拉筛选：大类→二级分类）
         editStemImgs: [], editOptImgs: [], editOptCount: 4,   // 图片题目（方案C）：编辑弹窗题干图数组/选项图数组/选项数量
         mgQPage: 1, mgQPageSize: 10,   // 题库管理题目列表分页
+        mgQStatus: 'normal',        // 题库管理题目状态筛选：normal/deleted/all
+        mgStatusSort: 0,             // 状态列排序：0=不排 1=正常在前 -1=停用在前
         recPage: 1, recTotal: 0,  // 练习记录分页
         stats: null,              // 练习统计
         timer: null
@@ -197,22 +199,27 @@
             const r = await api.post('/api/practice/start', {
                 bankId: state.selBank, mode: state.mode, count: state.count
             });
-            state.run = {
-                sessionId: r.sessionId, bank: r.bank, mode: r.mode,
-                questions: r.questions, idx: 0, ok: 0, ng: 0, skip: 0,
-                answers: [], startTs: Date.now(), review: false, finished: false, phase: 'run'
-            };
-            el('pPaneStart').hidden = true;
-            el('pPaneResult').hidden = true;
-            el('pPaneRun').hidden = false;
-            el('pRunTitle').textContent = r.bank.name;
-            el('pRunMeta').textContent = (r.bank.catName || '') + (r.bank.subName ? ' / ' + r.bank.subName : '') + ' · ' +
-                (MODE_NAMES[r.mode] || r.mode);
-            startClock();
-            renderQ();
+            enterSession(r);
         } catch (e) {
             U.showToast(e.message, 'error');
         }
+    }
+
+    /* 注入会话进入答题（start / 记录页本场错题重练共用） */
+    function enterSession(r) {
+        state.run = {
+            sessionId: r.sessionId, bank: r.bank, mode: r.mode,
+            questions: r.questions, idx: 0, ok: 0, ng: 0, skip: 0,
+            answers: [], startTs: Date.now(), review: false, finished: false, phase: 'run'
+        };
+        el('pPaneStart').hidden = true;
+        el('pPaneResult').hidden = true;
+        el('pPaneRun').hidden = false;
+        el('pRunTitle').textContent = r.bank.name;
+        el('pRunMeta').textContent = (r.bank.catName || '') + (r.bank.subName ? ' / ' + r.bank.subName : '') + ' · ' +
+            (MODE_NAMES[r.mode] || r.mode);
+        startClock();
+        renderQ();
     }
 
     function startClock() {
@@ -225,6 +232,8 @@
     function renderQ() {
         const q = state.run.questions[state.run.idx];
         el('pQNo').textContent = `第 ${state.run.idx + 1} / ${state.run.questions.length} 题`;
+        /* 回看模式：题号导航条（对/错/跳着色，点击跳题，当前高亮） */
+        renderReviewNav();
         /* 真题导入题 stem 为 HTML（含内嵌题目图/公式图）；手录题为纯文本，innerHTML 同样安全渲染 */
         el('pQStem').innerHTML = q.stem || '';
         el('pRunBar').style.width = (state.run.idx / state.run.questions.length * 100) + '%';
@@ -253,12 +262,36 @@
             const prev = state.run.answers[state.run.idx];
             if (prev) renderResult(prev.my, prev.correctAnswer, prev.analysis, prev.result);
             el('pSkipBtn').hidden = true;
+            el('pPrevBtn').hidden = false;
+            el('pPrevBtn').disabled = state.run.idx === 0;
             el('pNextBtn').hidden = false;
+            el('pNextBtn').textContent = state.run.idx + 1 >= state.run.questions.length ? '返回结算' : '下一题';
             return;
         }
         el('pSkipBtn').hidden = false;
+        el('pPrevBtn').hidden = true;
         el('pNextBtn').hidden = true;
         el('pAnalysis').hidden = true;
+    }
+
+    /* 回看题号导航条：ok=绿 ng=红 skip=灰 todo=描边；非回看模式隐藏 */
+    function renderReviewNav() {
+        const nav = el('pReviewNav');
+        const r = state.run;
+        nav.hidden = !r.review;
+        if (!r.review) return;
+        nav.innerHTML = r.questions.map((_, i) => {
+            const a = r.answers[i];
+            const cls = !a ? 'todo' : a.result;
+            return `<button type="button" class="p-rv-item ${cls}${i === r.idx ? ' cur' : ''}" data-i="${i}" title="第 ${i + 1} 题">${i + 1}</button>`;
+        }).join('');
+        nav.querySelectorAll('button').forEach(b => b.addEventListener('click', () => jumpTo(Number(b.dataset.i))));
+    }
+
+    function jumpTo(i) {
+        if (!state.run || i < 0 || i >= state.run.questions.length) return;
+        state.run.idx = i;
+        renderQ();
     }
 
     async function answer(k) {
@@ -347,6 +380,8 @@
             el('pResNg').textContent = r.wrong;
             el('pResSkip').textContent = r.skipped;
             el('pResTime').textContent = U.formatMs(r.totalMs);
+            /* 对错分布条：点击色块直接进入该题回看 */
+            renderFinishDots();
         } catch (e) {
             U.showToast('结束练习失败：' + e.message, 'error');
         }
@@ -359,10 +394,22 @@
         el('pPaneResult').hidden = false;
     }
 
-    function enterReview() {
+    /* 结算页对错分布条（复用题号着色，点击进入该题回看） */
+    function renderFinishDots() {
+        const box = el('pFinishDots');
+        if (!state.run || !state.run.answers.length) { box.innerHTML = ''; return; }
+        box.innerHTML = state.run.questions.map((_, i) => {
+            const a = state.run.answers[i];
+            const cls = !a ? 'todo' : a.result;
+            return `<button type="button" class="p-fd-item ${cls}" data-i="${i}" title="第 ${i + 1} 题">${i + 1}</button>`;
+        }).join('');
+        box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => enterReview(Number(b.dataset.i))));
+    }
+
+    function enterReview(i) {
         if (!state.run || !state.run.answers.length) { U.showToast('没有可回看的题目', 'warning'); return; }
         state.run.review = true;
-        state.run.idx = 0;
+        state.run.idx = i ? Math.min(Math.max(0, i), state.run.questions.length - 1) : 0;
         el('pPaneResult').hidden = true;
         el('pPaneRun').hidden = false;
         renderQ();
@@ -460,33 +507,52 @@
             el('pManagePath').textContent = '';
             el('pManageStat').textContent = '';
         }
-        /* 后端分页加载当前页题目 */
-        const data = await loadQuestionsPage(state.curBank, state.mgQPage, state.mgQPageSize);
+        /* 题目状态三态筛选（仅正常 / 仅已停用 / 全部状态） */
+        const statusSel = el('pQStatusSel');
+        if (statusSel) {
+            statusSel.value = state.mgQStatus;
+            statusSel.onchange = () => { state.mgQStatus = statusSel.value; state.mgQPage = 1; renderManage(); };
+        }
+        /* 后端分页加载当前页题目（按状态参数） */
+        const data = await loadQuestionsPage(state.curBank, state.mgQPage, state.mgQPageSize, state.mgQStatus);
         const qs = data.list;
         const total = data.total;
         const diffMap = { 1: ['简单', 'p-diff-1'], 2: ['中等', 'p-diff-2'], 3: ['困难', 'p-diff-3'] };
         /* 删除当前页最后一条后页码越界回退 */
         if (qs.length === 0 && total > 0 && state.mgQPage > 1) {
             state.mgQPage--;
-            const data2 = await loadQuestionsPage(state.curBank, state.mgQPage, state.mgQPageSize);
+            const data2 = await loadQuestionsPage(state.curBank, state.mgQPage, state.mgQPageSize, state.mgQStatus);
             qs.length = 0; qs.push(...data2.list);
         }
         const totalPages = Math.max(1, Math.ceil(total / state.mgQPageSize));
+        /* 状态列排序（本地，当前页；与 web-app el-table sortable 行为一致） */
+        const sortTh = el('pQSortStatus');
+        if (sortTh) {
+            sortTh.onclick = () => { state.mgStatusSort = state.mgStatusSort === 1 ? -1 : 1; renderManage(); };
+            const arrow = el('pQSortStatusArrow');
+            if (arrow) arrow.textContent = state.mgStatusSort ? (state.mgStatusSort === 1 ? ' ▲' : ' ▼') : '';
+        }
+        if (state.mgStatusSort) qs.sort((a, b) => ((a.is_deleted || 0) - (b.is_deleted || 0)) * state.mgStatusSort);
         el('pQTbody').innerHTML = qs.map((q, i) => {
             const dm = diffMap[q.difficulty] || diffMap[2];
-            return `<tr>
+            const deleted = q.is_deleted === 1;
+            return `<tr class="${deleted ? 'p-q-row-deleted' : ''}">
                 <td class="p-q-no">${(state.mgQPage - 1) * state.mgQPageSize + i + 1}</td>
                 <td class="p-q-stem-cell" title="${U.escapeHtml(stripHtml(q.stem))}">${U.escapeHtml(stripHtml(q.stem).slice(0, 60))}</td>
                 <td><span class="p-ans-badge">${U.escapeHtml(q.answer)}</span></td>
                 <td><span class="p-diff ${dm[1]}"><i></i>${dm[0]}</span></td>
+                <td>${deleted ? '<span class="p-q-del-tag">已停用</span>' : '<span class="p-q-ok-tag">正常</span>'}</td>
                 <td class="p-q-ops">
                     <button class="p-op-btn" data-act="edit" data-qid="${q.id}" title="编辑题目">${editSvg}</button>
-                    <button class="p-op-btn danger" data-act="del" data-qid="${q.id}" title="删除题目">${delSvg}</button>
+                    ${deleted
+                        ? `<button class="p-op-btn ok" data-act="restore" data-qid="${q.id}" title="恢复题目">↺</button>`
+                        : `<button class="p-op-btn danger" data-act="del" data-qid="${q.id}" title="停用题目">${delSvg}</button>`}
                 </td>
             </tr>`;
         }).join('');
         el('pQTbody').querySelectorAll('.p-op-btn').forEach(x => x.addEventListener('click', () => {
             if (x.dataset.act === 'edit') openQModal(Number(x.dataset.qid));
+            else if (x.dataset.act === 'restore') restoreQ(Number(x.dataset.qid));
             else delQ(Number(x.dataset.qid));
         }));
         const eb = el('pQEmptyAddBtn');
@@ -495,10 +561,10 @@
         renderQPager(total, totalPages);
     }
 
-    /* 后端分页请求题目：返回 { total, list } */
-    async function loadQuestionsPage(bankId, page, pageSize) {
+    /* 后端分页请求题目：返回 { total, list }；status=normal|deleted|all */
+    async function loadQuestionsPage(bankId, page, pageSize, status) {
         try {
-            return await api.get(`/api/practice/banks/${bankId}/questions?page=${page}&pageSize=${pageSize}`);
+            return await api.get(`/api/practice/banks/${bankId}/questions?page=${page}&pageSize=${pageSize}&status=${status || 'normal'}`);
         } catch (e) { U.showToast('题目加载失败：' + e.message, 'error'); return { total: 0, list: [] }; }
     }
 
@@ -514,20 +580,32 @@
         });
     }
 
-    async function loadQuestions(bankId) {
+    async function loadQuestions(bankId, includeDeleted) {
         try {
-            return await api.get(`/api/practice/banks/${bankId}/questions`);
+            const delParam = includeDeleted ? '?includeDeleted=1' : '';
+            return await api.get(`/api/practice/banks/${bankId}/questions${delParam}`);
         } catch (e) { U.showToast('题目加载失败：' + e.message, 'error'); return []; }
     }
 
     async function delQ(qid) {
-        const ok = await PQ.ui.confirm({ title: '删除题目', message: '删除后无法恢复，确定删除该题目？', confirmText: '删除', danger: true });
+        const ok = await PQ.ui.confirm({ title: '停用题目', message: '停用后该题不再被抽到，题目与作答记录保留，可随时恢复。确定停用该题目？', confirmText: '停用', danger: true });
         if (!ok) return;
         try {
             await api.del('/api/practice/questions/' + qid);
             state.banks = await api.get('/api/practice/banks');
             renderManage();
-            U.showToast('题目已删除', 'success');
+            U.showToast('题目已停用', 'success');
+        } catch (e) { U.showToast(e.message, 'error'); }
+    }
+
+    async function restoreQ(qid) {
+        const ok = await PQ.ui.confirm({ title: '恢复题目', message: '恢复后该题将重新进入抽取范围，作答记录仍保留。确定恢复该题目？', confirmText: '恢复' });
+        if (!ok) return;
+        try {
+            await api.post('/api/practice/questions/' + qid + '/restore');
+            state.banks = await api.get('/api/practice/banks');
+            renderManage();
+            U.showToast('题目已恢复', 'success');
         } catch (e) { U.showToast(e.message, 'error'); }
     }
 
@@ -536,7 +614,8 @@
         el('pQModalTitle').textContent = qid ? '编辑题目' : '新增题目';
         let q = null;
         if (qid) {
-            const qs = await loadQuestions(state.curBank);
+            /* includeDeleted=1：编辑已停用题目也能回填数据 */
+            const qs = await loadQuestions(state.curBank, true);
             q = qs.find(x => x.id === qid) || null;
         }
         const stem = q ? q.stem : '';
@@ -805,21 +884,116 @@
         try {
             const r = await api.get('/api/practice/history/' + id);
             const s = r.session;
+            card.dataset.records = '1';
             body.innerHTML = `
-                <div class="p-rec-summary">共 ${s.total_count} 题 · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 用时 ${U.formatMs(s.total_ms)}</div>
+                <div class="p-rec-summary">共 ${s.total_count} 题 · 对 ${s.correct_count} · 错 ${s.wrong_count} · 跳 ${s.skipped_count} · 用时 ${U.formatMs(s.total_ms)}
+                    <label class="p-rec-only-wrong"><input type="checkbox" class="p-rec-ow"> 只看错题</label>
+                </div>
+                <div class="p-rec-detail-list">
                 ${r.records.map(d => {
                     const imgHtml = (Array.isArray(d.stemImg) && d.stemImg.length)
                         ? `<img src="${d.stemImg[0]}" data-src="${d.stemImg[0]}" class="p-rd-img" alt="题干图">` : '';
-                    return `<div class="p-rec-row">
+                    return `<div class="p-rec-row" data-result="${d.result}">
                         <span class="p-rd-no p-rd-${d.result}">${d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗'}</span>
                         ${imgHtml}
                         <span class="p-rd-stem" title="${U.escapeHtml(stripHtml(d.stem))}">${U.escapeHtml(stripHtml(d.stem) || (d.stemImg && d.stemImg.length ? '[图片题]' : ''))}</span>
                         <span class="p-rd-ans">我的 <b>${d.userAnswer || '—'}</b> · 答案 <b>${U.escapeHtml(d.correctAnswer) || '—'}</b></span>
+                        <button type="button" class="p-rec-detail-btn" data-no="${d.no}">解析</button>
                     </div>`;
-                }).join('')}`;
+                }).join('')}
+                </div>
+                <div class="p-rec-ops">
+                    <button type="button" class="df-btn small" data-act="review">回顾本场</button>
+                    <button type="button" class="df-btn small" data-act="replay" ${s.wrong_count === 0 ? 'disabled' : ''}>重练错题</button>
+                </div>`;
             body.querySelectorAll('img.p-rd-img').forEach(x => x.addEventListener('click', () => openLightbox(x.dataset.src)));
+            /* 只看错题：过滤非错题行 */
+            const ow = body.querySelector('.p-rec-ow');
+            if (ow) ow.addEventListener('change', () => {
+                body.querySelectorAll('.p-rec-row').forEach(row => {
+                    row.hidden = ow.checked && row.dataset.result !== 'ng';
+                });
+            });
+            /* 单题解析 → 回顾弹层定位该题 */
+            body.querySelectorAll('.p-rec-detail-btn').forEach(b => b.addEventListener('click', () => openRecReview(id, Number(b.dataset.no))));
+            /* 回顾本场 / 重练错题 */
+            body.querySelectorAll('.p-rec-ops button').forEach(b => b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (b.dataset.act === 'review') openRecReview(id, 1);
+                else if (b.dataset.act === 'replay') doReplay(id, s);
+            }));
         } catch (e) {
             body.innerHTML = '<div class="p-rec-loading">明细加载失败：' + U.escapeHtml(e.message) + '</div>';
+        }
+    }
+
+    /* ---------- 记录回顾弹层（整场/单题共用） ---------- */
+
+    let rvState = { records: [], idx: 0 };
+
+    async function openRecReview(sessionId, no) {
+        const mask = el('pRecReviewMask');
+        if (!rvState.records.length || rvState.sid !== sessionId) {
+            try {
+                const r = await api.get('/api/practice/history/' + sessionId);
+                rvState = { sid: sessionId, records: r.records, idx: Math.min(Math.max(0, no - 1), r.records.length - 1) };
+            } catch (e) {
+                U.showToast('明细加载失败：' + e.message, 'error');
+                return;
+            }
+        } else {
+            rvState.idx = Math.min(Math.max(0, no - 1), rvState.records.length - 1);
+        }
+        mask.classList.add('show');
+        renderRv();
+    }
+
+    function closeRecReview() {
+        el('pRecReviewMask').classList.remove('show');
+    }
+
+    function renderRv() {
+        const d = rvState.records[rvState.idx];
+        if (!d) return;
+        el('pRvTitle').textContent = `回顾解析 · 第 ${rvState.idx + 1} / ${rvState.records.length} 题`;
+        el('pRvNav').innerHTML = rvState.records.map((r, i) =>
+            `<button type="button" class="p-rv-item ${r.result}${i === rvState.idx ? ' cur' : ''}" data-i="${i}" title="第 ${r.no} 题">${r.no}</button>`).join('');
+        el('pRvNav').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { rvState.idx = Number(b.dataset.i); renderRv(); }));
+        const isObj = o => o && typeof o === 'object';
+        const optsHtml = (Array.isArray(d.options) && d.options.length)
+            ? `<div class="p-rv-opts">${d.options.map((o, i) => {
+                const label = String.fromCharCode(65 + i);
+                const text = isObj(o) ? (o.text || '') : String(o || '');
+                const img = isObj(o) ? (o.img || '') : '';
+                const cls = label === d.correctAnswer ? 'correct'
+                    : (label === d.userAnswer && d.result !== 'ok') ? 'wrong' : 'dim';
+                return `<div class="p-rv-opt ${cls}"><span class="p-rv-opt-label">${label}</span>${img ? `<img src="${img}" data-src="${img}" class="p-rv-opt-img" alt="选项${label}">` : `<span>${U.escapeHtml(text)}</span>`}</div>`;
+            }).join('')}</div>` : '';
+        const imgsHtml = (Array.isArray(d.stemImg) && d.stemImg.length)
+            ? `<div class="p-rv-imgs">${d.stemImg.map(s => `<img src="${s}" data-src="${s}" class="p-rv-img" alt="题干图">`).join('')}</div>` : '';
+        const head = d.result === 'ok' ? '回答正确' : d.result === 'skip' ? '本题跳过' : '回答错误';
+        el('pRvBody').innerHTML = `
+            <div class="p-rv-meta"><span class="p-rv-mark p-rd-${d.result}">${head}</span><span>用时 ${U.formatMs(d.ms)}</span></div>
+            <div class="p-rv-stem">${d.stem || ''}</div>
+            ${imgsHtml}
+            ${optsHtml}
+            <div class="p-rv-ans">我的答案 <b>${d.userAnswer || '—'}</b> · 正确答案 <b>${U.escapeHtml(d.correctAnswer) || '—'}</b></div>
+            <div class="p-rv-at">解析</div>
+            <div class="p-rv-analysis">${d.analysis || '（暂无解析）'}</div>`;
+        el('pRvBody').querySelectorAll('img').forEach(x => x.addEventListener('click', () => openLightbox(x.dataset.src)));
+        el('pRvPrev').disabled = rvState.idx === 0;
+        el('pRvNext').disabled = rvState.idx >= rvState.records.length - 1;
+    }
+
+    /* 本场错题重练：取该会话错题开新会话（mode=review） */
+    async function doReplay(sessionId, s) {
+        try {
+            const r = await api.post(`/api/practice/${sessionId}/replay-errors`, {});
+            U.showToast(`已创建错题重练（${r.total} 题）`, 'success');
+            switchTab('start');
+            enterSession(r);
+        } catch (e) {
+            U.showToast(e.message, 'error');
         }
     }
 
@@ -830,7 +1004,28 @@
     el('pSkipBtn').addEventListener('click', skipQ);
     el('pNextBtn').addEventListener('click', nextQ);
     el('pReplayBtn').addEventListener('click', () => { el('pPaneResult').hidden = true; startPractice(); });
-    el('pReviewBtn').addEventListener('click', enterReview);
+    el('pReviewBtn').addEventListener('click', () => enterReview(0));
+    el('pPrevBtn').addEventListener('click', () => { if (state.run && state.run.review && state.run.idx > 0) jumpTo(state.run.idx - 1); });
+    el('pRvPrev').addEventListener('click', () => { if (rvState.idx > 0) { rvState.idx--; renderRv(); } });
+    el('pRvNext').addEventListener('click', () => { if (rvState.idx < rvState.records.length - 1) { rvState.idx++; renderRv(); } });
+    el('pRvClose').addEventListener('click', closeRecReview);
+    el('pRecReviewMask').addEventListener('click', e => { if (e.target === e.currentTarget) closeRecReview(); });
+
+    /* 方向键翻题：回顾弹层优先；答题回看模式 ← → 翻题（避开输入框） */
+    window.addEventListener('keydown', (e) => {
+        const t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        if (el('pRecReviewMask').classList.contains('show')) {
+            if (e.key === 'ArrowLeft' && rvState.idx > 0) { rvState.idx--; renderRv(); e.preventDefault(); }
+            else if (e.key === 'ArrowRight' && rvState.idx < rvState.records.length - 1) { rvState.idx++; renderRv(); e.preventDefault(); }
+            return;
+        }
+        if (state.run && state.run.review && !el('pPaneRun').hidden) {
+            if (e.key === 'ArrowLeft' && state.run.idx > 0) { jumpTo(state.run.idx - 1); e.preventDefault(); }
+            else if (e.key === 'ArrowRight' && state.run.idx < state.run.questions.length - 1) { jumpTo(state.run.idx + 1); e.preventDefault(); }
+        }
+    });
     el('pBackBtn').addEventListener('click', () => {
         if (state.timer) { clearInterval(state.timer); state.timer = null; }
         state.run = null;

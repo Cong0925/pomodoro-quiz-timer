@@ -116,9 +116,10 @@
 
     function renderCatSelects() {
         const last = loadLastSel();
-        const catExists = !!findCat(last.catId);
-        fillCatSelect(catSelect, catExists ? last.catId : '', { withNone: true, noneLabel: '未选择大类' });
-        const curCat = catExists ? last.catId : '';
+        /* 无记忆/记忆失效时默认公务员考试（gk） */
+        const DEFAULT_CAT_ID = 'gk';
+        const curCat = findCat(last.catId) ? last.catId : DEFAULT_CAT_ID;
+        fillCatSelect(catSelect, curCat, { withNone: true, noneLabel: '未选择大类' });
         const subExists = curCat ? !!findSub(curCat, last.subId) : false;
         fillSubSelect(subSelect, curCat, subExists ? last.subId : '', { withNone: true, noneLabel: '未选择小类' });
     }

@@ -2336,6 +2336,9 @@ button:hover {
 .p-op-btn:hover { background: #eef2f7; color: #2563eb; }
 .p-op-btn.danger:hover { background: #fef2f2; color: #dc2626; }
 .p-manage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; padding: 4px 2px 14px; border-bottom: 1px solid #f0f2f5; }
+.p-manage-ops { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.p-deleted-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #6b7280; cursor: pointer; user-select: none; }
+.p-deleted-toggle input { accent-color: #2563eb; cursor: pointer; }
 .p-manage-info { min-width: 0; }
 .p-manage-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .p-manage-title { font-size: 18px; font-weight: 800; color: #111827; }
@@ -2355,6 +2358,18 @@ button:hover {
 .p-diff-2 { color: #d97706; } .p-diff-2 i { background: #f59e0b; }
 .p-diff-3 { color: #dc2626; } .p-diff-3 i { background: #ef4444; }
 .p-q-ops { white-space: nowrap; }
+/* 已停用（逻辑删除）题目：行灰化 + 状态标签 + 恢复按钮 */
+.p-q-row-deleted { opacity: .55; background: #f8fafc; }
+.p-q-row-deleted:hover { background: #f1f5f9; }
+.p-q-del-tag { display: inline-block; margin-left: 6px; font-size: 10.5px; color: #9ca3af; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 1px 5px; vertical-align: 1px; }
+/* 正常状态标签（独立状态列） */
+.p-q-ok-tag { display: inline-block; font-size: 10.5px; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 1px 5px; }
+/* 状态列表头排序 */
+.p-q-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.p-q-sortable:hover { color: #2563eb; background: #f8fafc; }
+.p-q-sort-arrow { font-size: 10px; }
+.p-op-btn.ok:hover { background: #f0fdf4; color: #16a34a; }
+.p-op-btn.ok { font-weight: 700; color: #16a34a; }
 .p-empty { text-align: center; color: #9ca3af; font-size: 13px; padding: 36px 0; }
 .p-empty p { margin: 10px 0 14px; }
 
@@ -2516,4 +2531,193 @@ button:hover {
     .m-type-grid { grid-template-columns: repeat(2, 1fr); }
     .m-manual-grid { grid-template-columns: 1fr; }
     .m-si-rate { text-align: left; }
+}
+
+/* ===== 题库模式体验优化：回看导航条 / 结算分布条 / 记录回顾弹层（2026-10-29） ===== */
+.p-review-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 14px;
+}
+.p-rv-item {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    line-height: 1;
+}
+.p-rv-item.ok { background: #16a34a; border-color: #16a34a; color: #fff; }
+.p-rv-item.ng { background: #dc2626; border-color: #dc2626; color: #fff; }
+.p-rv-item.skip { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+.p-rv-item.todo { color: #9ca3af; }
+.p-rv-item.cur { outline: 2px solid #2563eb; outline-offset: 1px; }
+
+.p-finish-dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin: 14px 0 0;
+}
+.p-fd-item {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    line-height: 1;
+}
+.p-fd-item.ok { background: #16a34a; border-color: #16a34a; color: #fff; }
+.p-fd-item.ng { background: #dc2626; border-color: #dc2626; color: #fff; }
+.p-fd-item.skip { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+.p-fd-item.todo { color: #9ca3af; }
+
+/* 记录明细：只看错题 / 单题解析 / 操作行 */
+.p-rec-only-wrong {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 16px;
+    cursor: pointer;
+    color: #374151;
+}
+.p-rec-detail-btn {
+    flex-shrink: 0;
+    border: 1px solid #dbeafe;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 12px;
+    border-radius: 5px;
+    padding: 3px 10px;
+    cursor: pointer;
+}
+.p-rec-detail-btn:hover { background: #dbeafe; }
+.p-rec-ops {
+    display: flex;
+    gap: 8px;
+    padding: 10px 0 4px;
+}
+.p-rec-ops .df-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* 回顾弹层（大盒子，复用 .modal-mask 遮罩） */
+.p-rv-modal {
+    width: min(760px, 92vw);
+    max-height: 86vh;
+    overflow-y: auto;
+    text-align: left;
+    padding: 20px 22px;
+}
+.p-rv-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+.p-rv-body {
+    border: 1px solid #f3f4f6;
+    border-radius: 10px;
+    background: #fafbfd;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+.p-rv-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+.p-rv-mark {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #fff;
+}
+.p-rv-mark.p-rd-ok { background: #16a34a; }
+.p-rv-mark.p-rd-ng { background: #dc2626; }
+.p-rv-mark.p-rd-skip { background: #f59e0b; }
+.p-rv-stem {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.7;
+    color: #111827;
+    white-space: pre-wrap;
+}
+.p-rv-stem img,
+.p-rv-analysis img {
+    max-width: 100%;
+    height: auto;
+    display: inline-block;
+    vertical-align: middle;
+    border-radius: 6px;
+}
+.p-rv-imgs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+.p-rv-img {
+    max-width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+.p-rv-opts {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+.p-rv-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 14px;
+    color: #374151;
+}
+.p-rv-opt.correct { border-color: #16a34a; background: #f0fdf4; }
+.p-rv-opt.wrong { border-color: #dc2626; background: #fef2f2; }
+.p-rv-opt.dim { color: #9ca3af; }
+.p-rv-opt-label { font-weight: 700; flex-shrink: 0; }
+.p-rv-opt-img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+.p-rv-ans {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #6b7280;
+}
+.p-rv-at {
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #374151;
+}
+.p-rv-analysis {
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #374151;
+    white-space: pre-wrap;
 }

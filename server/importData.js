@@ -193,14 +193,14 @@ async function importData(conn, data) {
             const chunk = qs.slice(i, i + BATCH);
             const vals = [], params = [];
             chunk.forEach(q => {
-                vals.push('(?,?,?,?,?,?,?,?,?)');
+                vals.push('(?,?,?,?,?,?,?,?,?,?,?)');
                 params.push(num(q.id) || 0, num(q.bankId) || 0, str(q.type, 10) || 'single',
-                    str(q.stem, 20000), JSON.stringify(q.options || []), str(q.answer, 50),
+                    str(q.stem, 20000), JSON.stringify(q.stemImg || []), JSON.stringify(q.options || []), str(q.answer, 50),
                     str(q.analysis, 20000), Math.min(3, Math.max(1, num(q.difficulty) || 2)),
-                    str(q.source, 100));
+                    str(q.source, 100), q.isDeleted ? 1 : 0);
             });
             await conn.query(
-                `INSERT INTO questions (id, bank_id, type, stem, options, answer, analysis, difficulty, source)
+                `INSERT INTO questions (id, bank_id, type, stem, stem_img, options, answer, analysis, difficulty, source, is_deleted)
                  VALUES ` + vals.join(','), params);
         }
         pQuestions = qs.length;
