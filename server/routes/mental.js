@@ -71,7 +71,7 @@ async function pickQuestions(qtype, difficulty, count, exclude, fillOnly) {
     for (const t of types) {
         const [rows] = await pool.query(
             `SELECT id FROM mental_questions WHERE qtype=? AND ${where.join(' AND ')} ORDER BY RAND() LIMIT 200`,
-            [...params, t]
+            [t, ...params]
         );
         const all = rows.map(r => r.id);
         if (!all.length) continue;
@@ -165,7 +165,7 @@ function fmtRecordOpts(opts) {
    管理列表可含停用题，恢复即置 active=1 */
 const MG_TYPES = ['percent', 'compare', 'estimate', 'square'];
 
-/* GET /api/mental/admin/questions?qtype=&tag=&diff=&kw=&inactive=1&page=&pageSize=
+/* GET /api/mental/admin/questions?qtype=&tag=&diff=&kw=&status=normal|deleted|all&page=&pageSize=
    后端分页：返回 { total, list, groups, allTotal }
    - total   当前筛选下总条数
    - list    当前页数据
@@ -180,8 +180,15 @@ router.get('/admin/questions', asyncHandler(async (req, res) => {
     if (tag) { where.push('tag=?'); params.push(tag); }
     const diff = num(req.query.diff);
     if (diff >= 1 && diff <= 3) { where.push('difficulty=?'); params.push(diff); }
-    const inactive = str(req.query.inactive, 2) === '1';
-    if (!inactive) where.push('active=1');
+    /* 状态三态筛选：normal=仅正常（默认）/ deleted=仅已停用 / all=全部；
+       旧参数 inactive=1 兼容等价 all（保留向后兼容） */
+    const status = str(req.query.status, 10);
+    let statusAll = false;
+    if (status === 'deleted') { where.push('active=0'); }
+    else if (status === 'all') { statusAll = true; }
+    else if (status === 'normal') { where.push('active=1'); }
+    else if (str(req.query.inactive, 2) === '1') { statusAll = true; }
+    else { where.push('active=1'); }
     const kw = str(req.query.kw, 100).trim();
     if (kw) { where.push('(stem LIKE ? OR tip LIKE ? OR tag LIKE ?)'); params.push('%' + kw + '%', '%' + kw + '%', '%' + kw + '%'); }
     const whereSql = where.join(' AND ');
@@ -201,7 +208,7 @@ router.get('/admin/questions', asyncHandler(async (req, res) => {
         );
         const [all] = await pool.query('SELECT COUNT(*) c FROM mental_questions');
         const [g] = await pool.query(
-            `SELECT qtype, tag, COUNT(*) c FROM mental_questions WHERE ${inactive ? '1=1' : 'active=1'} GROUP BY qtype, tag`
+            `SELECT qtype, tag, COUNT(*) c FROM mental_questions WHERE ${statusAll ? '1=1' : 'active=1'} GROUP BY qtype, tag`
         );
         const groups = {};
         g.forEach(x => {
@@ -307,7 +314,18 @@ router.post('/start', asyncHandler(async (req, res) => {
     const fillOnly = answerMode === 'fill';
 
     const ids = await pickQuestions(qtype, difficulty, want, null, fillOnly);
-    if (ids.length === 0) return res.status(400).json({ error: '该题型暂无题目，请联系开发者补充内置题库' });
+    if (ids.length === 0) {
+        /* 区分「题型整体无题」与「所选难度下无题」，给出可操作的提示 */
+        const types = qtype === 'mixed' ? ['percent', 'compare', 'estimate'] : [qtype];
+        const conds = types.map(() => 'qtype=?').join(' OR ');
+        const fillCond = fillOnly ? ' AND fillable=1' : '';
+        const [[{ n }]] = await pool.query(
+            `SELECT COUNT(*) AS n FROM mental_questions WHERE active=1 AND (${conds})${fillCond}`,
+            types
+        );
+        if (n > 0) return res.status(400).json({ error: '该题型在所选难度下暂无题目，请切换难度，或到「题库管理」补充该难度的题' });
+        return res.status(400).json({ error: '该题型暂无题目，请联系开发者补充内置题库' });
+    }
 
     const [r] = await pool.query(
         `INSERT INTO mental_sessions (qtype, qtype_name, difficulty, answer_mode, total_count)

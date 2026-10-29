@@ -80,7 +80,7 @@
         stats: null,
         timer: null,
         /* 题库管理状态 */
-        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', inactive: true, editId: 0, page: 1, pageSize: 10, total: 0, groups: {}, allTotal: 0, tagBox: null },
+        mg: { all: [], typeSel: 'all', tagSel: 'all', diffSel: 'all', kw: '', status: 'normal', editId: 0, page: 1, pageSize: 10, total: 0, groups: {}, allTotal: 0, tagBox: null },
         mgKwTimer: null
     };
 
@@ -153,8 +153,8 @@
 
     function renderDiffs() {
         const row = el('mDiffRow');
-        /* 当前仅开放「不限难度」，简单/中等/困难隐藏（保留定义便于后续恢复） */
-        const diffs = DIFFS.filter(d => d.k === 0);
+        /* 四档全开放（2026-10-29 与 web-app 对齐）：不限/简单/中等/困难按难度抽题 */
+        const diffs = DIFFS;
         if (!diffs.find(d => d.k === state.diff)) state.diff = 0;
         row.innerHTML = diffs.map(d => `
             <div class="p-mode-chip ${state.diff === d.k ? 'selected' : ''}" data-k="${d.k}">
@@ -167,9 +167,10 @@
 
     function updateStartBtn() {
         const fillNote = (state.type === 'percent' || state.type === 'square') ? '（填空题：直接填数字）' : '';
+        const diffNote = state.diff >= 1 && state.diff <= 3 ? ` · 难度${DIFF_NAMES[state.diff]}` : '';
         el('mStartTip').textContent = state.count === INFINITE
-            ? `「${TYPES[state.type].n}」不限题量 · 循环随机抽题，答完自动续题，随时可结束${fillNote}`
-            : `将抽取 ${state.count} 道「${TYPES[state.type].n}」题，答完即时判对错并给出技巧${fillNote}`;
+            ? `「${TYPES[state.type].n}」${diffNote}不限题量 · 循环随机抽题，答完自动续题，随时可结束${fillNote}`
+            : `将抽取 ${state.count} 道「${TYPES[state.type].n}」${diffNote}题，答完即时判对错并给出技巧${fillNote}`;
     }
 
     async function startRun() {
@@ -588,7 +589,7 @@
             if (mg.tagSel !== 'all') q.set('tag', mg.tagSel);
             if (mg.diffSel !== 'all') q.set('diff', mg.diffSel);
             if (mg.kw.trim()) q.set('kw', mg.kw.trim());
-            if (mg.inactive) q.set('inactive', '1');
+            q.set('status', mg.status || 'normal');
             q.set('page', String(mg.page));
             q.set('pageSize', String(mg.pageSize));
             const data = await api.get('/api/mental/admin/questions?' + q.toString());
@@ -614,7 +615,7 @@
         };
     }
 
-    /* 左侧：按题型分组 → 按标签聚合（服务端 groups，随 inactive 过滤） */
+    /* 左侧：按题型分组 → 按标签聚合（服务端 groups，随状态筛选过滤：normal/deleted 仅统计对应状态，all 全量） */
     function mgGroupsHtml() {
         const mg = state.mg;
         const g = mg.groups || {};
@@ -660,8 +661,8 @@
             clearTimeout(state.mgKwTimer);
             state.mgKwTimer = setTimeout(() => { mg.page = 1; renderManage(); }, 300);
         };
-        el('mMgInactive').checked = mg.inactive;
-        el('mMgInactive').onchange = () => { mg.inactive = el('mMgInactive').checked; mg.page = 1; renderManage(); };
+        el('mMgStatusSel').value = mg.status;
+        el('mMgStatusSel').onchange = () => { mg.status = el('mMgStatusSel').value; mg.page = 1; renderManage(); };
         renderManageFilter();
     }
 
@@ -688,6 +689,7 @@
                 <td><span class="p-diff ${dm[1]}"><i></i>${dm[0]}</span></td>
                 <td class="m-mg-ans">${U.escapeHtml(ansTxt)}</td>
                 <td>${q.fillable ? '填空' : '选择'}</td>
+                <td>${q.active ? '<span class="p-q-ok-tag">正常</span>' : '<span class="p-q-del-tag">已停用</span>'}</td>
                 <td class="p-q-ops">
                     <button class="p-op-btn" data-act="edit" data-qid="${q.id}" title="编辑题目">${mgEditSvg}</button>
                     ${q.active

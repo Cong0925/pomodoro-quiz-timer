@@ -489,12 +489,16 @@
                                         <option value="2">中等</option>
                                         <option value="3">困难</option>
                                     </select>
+                                    <select id="mMgStatusSel" title="按状态筛选">
+                                        <option value="normal">仅正常</option>
+                                        <option value="deleted">仅已停用</option>
+                                        <option value="all">全部状态</option>
+                                    </select>
                                     <input type="search" id="mMgKw" placeholder="搜索题干 / 技巧 / 标签">
-                                    <label class="m-mg-inactive"><input type="checkbox" class="pq-checkbox" id="mMgInactive"> 含停用</label>
                                 </div>
                             </div>
                             <table class="p-q-table">
-                                <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:100px">题型</th><th style="width:64px">难度</th><th style="width:130px">答案</th><th style="width:64px">类型</th><th style="width:96px">操作</th></tr></thead>
+                                <thead><tr><th style="width:44px">#</th><th>题干</th><th style="width:100px">题型</th><th style="width:64px">难度</th><th style="width:130px">答案</th><th style="width:64px">类型</th><th style="width:70px">状态</th><th style="width:96px">操作</th></tr></thead>
                                 <tbody id="mMgTbody"></tbody>
                             </table>
                             <div class="p-pager" id="mMgPager">
