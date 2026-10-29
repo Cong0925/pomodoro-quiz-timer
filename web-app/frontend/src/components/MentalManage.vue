@@ -10,8 +10,10 @@ const MG_TYPES = ['percent', 'compare', 'estimate', 'square']
 
 const typeSel = ref('all')
 const tagSel = ref('all')
+const diffSel = ref('all')
 const kw = ref('')
-const inactive = ref(true)
+/* 状态三态筛选：仅正常（默认）/ 仅已停用 / 全部 */
+const statusSel = ref<'normal' | 'deleted' | 'all'>('normal')
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
@@ -28,8 +30,9 @@ async function load(): Promise<void> {
     const data = await mentalApi.fetchAdminQuestions({
       qtype: typeSel.value !== 'all' ? typeSel.value : undefined,
       tag: tagSel.value !== 'all' ? tagSel.value : undefined,
+      diff: diffSel.value !== 'all' ? diffSel.value : undefined,
       kw: kw.value.trim() || undefined,
-      inactive: inactive.value,
+      status: statusSel.value,
       page: page.value,
       pageSize: pageSize.value,
     })
@@ -50,7 +53,7 @@ async function load(): Promise<void> {
   }
 }
 
-watch([typeSel, tagSel, inactive, page, pageSize], () => load())
+watch([typeSel, tagSel, diffSel, statusSel, page, pageSize], () => load())
 watch(kw, () => {
   if (kwTimer) clearTimeout(kwTimer)
   kwTimer = window.setTimeout(() => {
@@ -273,8 +276,18 @@ onMounted(() => load())
             <el-option value="all" label="全部标签" />
             <el-option v-for="t in tagOptions" :key="t" :value="t" :label="t" />
           </el-select>
+          <el-select v-model="diffSel" style="width: 120px" @change="page = 1">
+            <el-option value="all" label="全部难度" />
+            <el-option value="1" label="简单" />
+            <el-option value="2" label="中等" />
+            <el-option value="3" label="困难" />
+          </el-select>
+          <el-select v-model="statusSel" style="width: 120px" @change="page = 1">
+            <el-option value="normal" label="仅正常" />
+            <el-option value="deleted" label="仅已停用" />
+            <el-option value="all" label="全部状态" />
+          </el-select>
           <el-input v-model="kw" style="width: 180px" placeholder="搜索题干/技巧/标签" clearable />
-          <el-checkbox v-model="inactive" @change="page = 1">含停用</el-checkbox>
           <el-button type="primary" @click="openDialog(0)">+ 新增题目</el-button>
         </div>
 
@@ -285,7 +298,7 @@ onMounted(() => load())
 
         <el-table v-loading="loading" :data="list" size="default" stripe :height="list.length ? 500 : undefined">
           <el-table-column type="index" label="#" width="55" align="center" :index="(i: number) => (page - 1) * pageSize + i + 1" />
-          <el-table-column prop="stem" label="题干" min-width="240">
+          <el-table-column prop="stem" label="题干" min-width="200">
             <template #default="{ row }">
               <span class="stem-cell" :class="{ inactive: !row.active }">{{ row.stem.split('\n')[0] }}</span>
             </template>
@@ -293,7 +306,7 @@ onMounted(() => load())
           <el-table-column prop="qtype" label="题型" width="100" sortable>
             <template #default="{ row }">{{ TYPE_NAMES[row.qtype] || row.qtype }}</template>
           </el-table-column>
-          <el-table-column prop="difficulty" label="难度" width="70" align="center" sortable>
+          <el-table-column prop="difficulty" label="难度" width="100" align="center" sortable>
             <template #default="{ row }">{{ diffText(row.difficulty) }}</template>
           </el-table-column>
           <el-table-column label="答案" min-width="90">
@@ -301,6 +314,11 @@ onMounted(() => load())
           </el-table-column>
           <el-table-column label="形式" width="60" align="center">
             <template #default="{ row }">{{ row.fillable ? '填空' : '选择' }}</template>
+          </el-table-column>
+          <el-table-column prop="active" label="状态" width="80" align="center" sortable>
+            <template #default="{ row }">
+              <el-tag :type="row.active ? 'success' : 'info'" size="small">{{ row.active ? '正常' : '已停用' }}</el-tag>
+            </template>
           </el-table-column>
           <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">

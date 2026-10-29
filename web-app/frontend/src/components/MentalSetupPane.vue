@@ -1,7 +1,7 @@
-<!-- 速算·开始练习面板：题型卡片 + 题量 + 开始按钮（纯展示，状态由父组件持有） -->
+<!-- 速算·开始练习面板：题型卡片 + 难度 + 题量 + 开始按钮（纯展示，状态由父组件持有） -->
 <script setup lang="ts">
-defineProps<{ type: string; count: number; tip: string }>()
-const emit = defineEmits<{ (e: 'update:type', v: string): void; (e: 'update:count', v: number): void; (e: 'start'): void }>()
+defineProps<{ type: string; diff: number; count: number; tip: string }>()
+const emit = defineEmits<{ (e: 'update:type', v: string): void; (e: 'update:diff', v: number): void; (e: 'update:count', v: number): void; (e: 'start'): void }>()
 
 const TYPES = [
   { k: 'percent', n: '百化分', d: '分化百分/百分化分：分数↔百分数互化，除转乘秒出' },
@@ -11,6 +11,13 @@ const TYPES = [
   { k: 'mixed', n: '综合练习', d: '多类题型混合，全面检验' },
 ] as const
 const COUNT_OPTIONS = [10, 15, 20, 0]
+/* 难度映射后端 difficulty 字段：0=不限，1/2/3=简单/中等/困难 */
+const DIFF_OPTIONS = [
+  { v: 0, n: '不限' },
+  { v: 1, n: '简单' },
+  { v: 2, n: '中等' },
+  { v: 3, n: '困难' },
+] as const
 </script>
 
 <template>
@@ -21,6 +28,11 @@ const COUNT_OPTIONS = [10, 15, 20, 0]
         <div class="tc-name">{{ t.n }}</div>
         <div class="tc-desc">{{ t.d }}</div>
       </div>
+    </div>
+
+    <div class="section-title">难度</div>
+    <div class="count-row">
+      <el-check-tag v-for="d in DIFF_OPTIONS" :key="d.v" :checked="diff === d.v" @change="emit('update:diff', d.v)">{{ d.n }}</el-check-tag>
     </div>
 
     <div class="section-title">题量</div>

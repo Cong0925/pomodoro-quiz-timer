@@ -39,17 +39,21 @@ const subFilterOptions = computed(() => {
 
 /* ---- 当前题库与题目分页 ---- */
 const curBank = ref(0)
+/* qPage 需声明在下方 banks watcher 之前：immediate 回调同步执行，内部会重置 qPage */
+const qPage = ref(1)
 watch(
   () => filteredBanks.value,
   (list) => {
-    if (!list.find((b) => b.id === curBank.value)) curBank.value = list.length ? list[0].id : 0
+    if (!list.find((b) => b.id === curBank.value)) {
+      curBank.value = list.length ? list[0].id : 0
+      qPage.value = 1 /* 题库删除等原因自动回落到其他题库时回第 1 页 */
+    }
   },
   { immediate: true }
 )
 
 const curBankInfo = computed(() => props.banks.find((b) => b.id === curBank.value) || null)
 
-const qPage = ref(1)
 const qPageSize = ref(10)
 const qTotal = ref(0)
 const questions = ref<PracticeQuestion[]>([])
@@ -80,8 +84,10 @@ async function loadQuestions(): Promise<void> {
   }
 }
 
+/* 翻页/改页容量/筛选变化统一走此 watcher 重新加载；
+   页码重置放在各筛选事件点（切题库点击、状态 @change、size-change），
+   禁止在此回调内重置 qPage——qPage 自身是监听源，重置会把翻页打回第 1 页 */
 watch([curBank, qPage, qPageSize, statusFilter], () => {
-  qPage.value = 1
   loadQuestions()
 }, { immediate: true })
 
@@ -369,7 +375,7 @@ async function restoreQ(id: number): Promise<void> {
         </div>
 
         <el-table v-loading="qLoading" :data="questions" size="default" stripe :row-class-name="({ row }: { row: PracticeQuestion }) => (row.is_deleted ? 'row-deleted' : '')" :height="questions.length ? 500 : undefined">
-          <el-table-column type="index" label="#" width="55" align="center" :index="(i: number) => (qPage - 1) * qPageSize + i + 1" />
+          <el-table-column type="index" label="#" width="80" align="center" :index="(i: number) => (qPage - 1) * qPageSize + i + 1" />
           <el-table-column prop="stem" label="题干" min-width="240">
             <template #default="{ row }">
               <div class="stem-cell-wrap">
@@ -408,6 +414,7 @@ async function restoreQ(id: number): Promise<void> {
             layout="total, sizes, prev, pager, next"
             background
             size="small"
+            @size-change="qPage = 1"
           />
         </div>
       </div>

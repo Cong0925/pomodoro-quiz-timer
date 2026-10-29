@@ -142,6 +142,9 @@ export interface MentalAdminQuery {
   tag?: string
   diff?: string
   kw?: string
+  /** 状态三态筛选：normal=仅正常（默认）/ deleted=仅已停用 / all=全部 */
+  status?: 'normal' | 'deleted' | 'all'
+  /** @deprecated 旧二态参数（含停用=全部），保留兼容 */
   inactive?: boolean
   page?: number
   pageSize?: number
@@ -163,7 +166,8 @@ export function fetchAdminQuestions(q: MentalAdminQuery): Promise<{
   if (q.tag) p.set('tag', q.tag)
   if (q.diff) p.set('diff', q.diff)
   if (q.kw) p.set('kw', q.kw)
-  if (q.inactive) p.set('inactive', '1')
+  if (q.status) p.set('status', q.status)
+  else if (q.inactive) p.set('inactive', '1')
   p.set('page', String(q.page || 1))
   p.set('pageSize', String(q.pageSize || 10))
   return http.get(`/mental/admin/questions?${p.toString()}`)

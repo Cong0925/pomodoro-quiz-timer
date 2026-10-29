@@ -48,10 +48,11 @@ const diff = ref(0)
 
 const startTip = computed(() => {
   const name = TYPE_NAMES[type.value] || type.value
+  const diffNote = diff.value >= 1 && diff.value <= 3 ? ` · 难度${['', '简单', '中等', '困难'][diff.value]}` : ''
   const fillNote = answerModeFor(type.value) === 'fill' ? '（填空题：直接填数字）' : ''
   return count.value === 0
-    ? `「${name}」不限题量 · 循环随机抽题，答完自动续题，随时可结束${fillNote}`
-    : `将抽取 ${count.value} 道「${name}」题，答完即时判对错并给出技巧${fillNote}`
+    ? `「${name}」${diffNote}不限题量 · 循环随机抽题，答完自动续题，随时可结束${fillNote}`
+    : `将抽取 ${count.value} 道「${name}」${diffNote}题，答完即时判对错并给出技巧${fillNote}`
 })
 
 /** 结算错题回顾数据（答错+跳过） */
@@ -343,9 +344,11 @@ onUnmounted(() => {
         <MentalSetupPane
           v-if="phase === 'setup'"
           :type="type"
+          :diff="diff"
           :count="count"
           :tip="startTip"
           @update:type="type = $event"
+          @update:diff="diff = $event"
           @update:count="count = $event"
           @start="startRun"
         />
