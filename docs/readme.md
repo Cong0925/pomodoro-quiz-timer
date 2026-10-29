@@ -54,7 +54,7 @@ web-app/
     └── package.json   npm run dev / start / init-db / backup / restore / migrate
 ```
 
-## 四、当前进度（截至 2026-10-29 13:32）
+## 四、当前进度（截至 2026-10-29 17:19）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -89,7 +89,8 @@ web-app/
 25. ✅ **题库管理表格状态列 + 三态筛选（2026-10-29，截图验收）**：后端 `GET /banks/:id/questions`（双端）新增 `status` 参数（normal=仅正常默认/deleted=仅已停用/all=全部带 is_deleted，兼容 includeDeleted=1）；web-app 答案列 70→90、难度 80→90 防表头挤行，新增独立「状态」列（正常绿/已停用灰 tag），筛选改 el-select 三态（后端分页过滤）；主版本同步（select 三态、表头加状态列、列宽、p-q-ok-tag 样式）；已停用行操作列「恢复」按钮保留；补充：恢复题目加确认弹窗（双端）、状态列支持排序（web-app el-table sortable / 主版本表头点击排序 ▲▼）；验证：build 全绿、双端 node --check、8888 重启（修复误删 page/pageSize 定义）后冒烟 6 用例 + 停用→过滤→恢复全链路 PASS（临时测试题已删）、主版本 3000 临时验证 4 用例 PASS 后已停；**未提交（等用户指令）**
 26. ✅ **练习记录切 tab 不刷新修复（2026-10-29，用户反馈）**：做完题切到练习记录新记录不显示、需刷新页面——根因 web-app `PracticeView` tab 用 `v-show` 常驻，`PracticeRecords` 仅 onMounted 加载一次；修复：子组件抽 `refresh()`（统计+列表，保留当前页）并 defineExpose，父组件 `watch(tab)` 切到 records 时调用；主版本每次切 tab 本就重载无此问题；build 全绿；**未提交（等用户指令）**
 27. ✅ **单题/整组模式大类默认「公务员考试」（2026-10-29，用户要求）**：计时视图大类默认选择——原为记忆上次/无记忆时为空，现无记忆或记忆失效时默认回退「公务员考试」（categories id=`gk`），手动选择仍记忆优先；双端（web-app `TimerView` / 主版本 `categories.js`）；build 全绿 + node --check 过；**未提交（等用户指令）**
-28. ✅ **速算填空自动聚焦输入框（2026-10-29，用户反馈）**：主版本 mental.js 已有每题 renderQ 后 focus（无此问题）；web-app `MentalFillInput` 缺聚焦逻辑——修复：组件挂载即 nextTick 聚焦 el-input（每题 v-if 重挂载自动覆盖），键盘流程=输入→回车提交→回车下一题→自动聚焦→输入，全程无鼠标；build 全绿；**未提交（等用户指令）**
+28. ✅ **速算填空自动聚焦输入框（2026-10-29，用户反馈）**：主版本 mental.js 已有每题 renderQ 后 focus（无此问题）；web-app `MentalFillInput` 缺聚焦逻辑——修复：组件挂载即 nextTick 聚焦 el-input（每题 v-if 重挂载自动覆盖），键盘流程=输入→回车提交→回车下一题→自动聚焦→输入，全程无鼠标；build 全绿；**已随 15:54 两次 commit 提交（见提交状态）**
+29. ✅ **web-app 一键启动/停止脚本（2026-10-29 17:19，方案B 单窗口）**：新增 4 文件——`web-app/启动.bat`+`start-webapp.ps1`、`web-app/停止服务.bat`+`stop-webapp.ps1`；.bat 纯 ASCII 入口（规避 cmd UTF-8 解析断行 bug），逻辑全在 .ps1（UTF-8 BOM）；单窗口方案：服务进程隐藏运行，主窗口只显示状态 + 15 秒心跳；日志写 `docs/错误日志/web-app-{backend,frontend}.log`（每次启动覆盖+时间头，交给大模型解读）；启动流程=装依赖→端口探测跳过已运行→拉起→就绪轮询≤30s（超时打日志尾 15 行）→开浏览器 8889→心跳（双 DOWN 2 轮自动退出）；停止三层=关「web-app 服务」窗口整树→按端口 8888/8889 杀→兜底清 node --watch/vite 残留；全链路闭环验证通过（含 .bat 入口复测两轮）；**未提交（等用户指令）**
 
 **待办（建议优先级）**：
 0. ⬜ **2 处点击删除无确认弹窗（2026-10-28 排查发现，方案 A/B 待用户选择）**：`CalendarView.vue clear()` 清空当日备忘直接删；`useTimer.ts cancelBatchRound()` 取消本轮丢弃未归档记录——均无 ElMessageBox.confirm，存在数据丢失风险
@@ -110,7 +111,8 @@ web-app/
 - 后端实际监听端口以 backend/.env 的 PORT 为准（当前 **8888**）
 
 **提交状态**：2026-10-28 已将 web-app 全部代码 + docs + CLAUDE.md 一次性提交到 `main`（用户指令「传入 main」，方案A），`version-vue+node` 分支已删除；同日 15:57 追加 2 次提交（`139ba20` web-app 前端全量视图、`aec5db6` docs）；同日 20:xx 用户指令「提交所有修改」再追加 3 次提交：`2b72025` feat(web-app) 界面排版优化与弹窗样式规范修复（27 文件，含第 9~18 条全部改动）、`ad651de` docs 备忘录/修改记录/界面对齐差异清单、`23a6cf5` chore .shots 对比截图 33 张、`2a70117` docs 提交状态记录；**已 push**（2026-10-28 用户指令「推送」，`584281a..2a70117` → origin/main，本机 7897 代理未开经 `git -c http.proxy= -c https.proxy=` 绕过直连成功）。
-**当前未提交改动（等用户指令）**：仅剩 `xingcezhenti-main.zip`（264MB 题库压缩包，用户指定不忽略、不提交，保留本地）；另本次为记录进度新产生的 docs 修改记录/备忘录更新待下次提交。
+**当前未提交改动（等用户指令）**：① `web-app/启动.bat`、`停止服务.bat`、`start-webapp.ps1`、`stop-webapp.ps1` 一键启停 4 文件（进度第 29 条）；② docs 修改记录/备忘录更新；③ `xingcezhenti-main.zip`（264MB 题库压缩包，用户指定不忽略、不提交，保留本地）。
+**2026-10-29 15:54 提交状态（用户指令「提交并推送」）**：`8aa14893` feat(主版本) is_deleted+导出导入适配+界面优化（11 文件含 docs，覆盖进度第 21~25 条主版本部分）、`72778271` feat(web-app) is_deleted+体验优化+速算记录实时刷新（15 文件，覆盖第 21~28 条 web-app 部分）；已 push `46a04764..72778271 → origin/main`。注：第 21~28 条条目内「未提交」字样为提交前写入，实际已随上述两 commit 入库。
 
 **2026-10-29 提交状态（用户指令「提交所有未提交内容」，方案A 拆 2 次）**：`e6b76cb4` feat(主版本) 练习模块图片题支持 + 行测真题题库与导入工具入库（42441 文件，含 `xingcezhenti-main/` 464M 题库数据、`tools/import-xingce/`、demos、docs）、`46a04764` feat(web-app) 练习模块图片题支持（13 文件）；安全处理：`tools/import-xingce/config.js` 明文 MySQL 密码改 `process.env.DB_PASSWORD || ''`（密码未进历史，`git log -S` 已验证）；**已 push**（13:22 用户指令「直接推送」，首次因 7897 代理未开失败，代理启动后 `03e050ec..46a04764` → origin/main 成功）；用户明确不追加 docs commit（本文件与 10-29 修改记录保持未提交）。
 **13:22 push 之后的新未提交改动**：题库题逻辑删除 is_deleted（见进度第 21 条）与双端导出/导入链路适配（第 22 条）与题库模式用户体验优化（第 23 条，含新接口 replay-errors）与弹窗限高修复（第 24 条）与题库管理状态列三态筛选（第 25 条）与记录切 tab 刷新修复（第 26 条）与计时模式大类默认公务员考试（第 27 条）与速算填空自动聚焦（第 28 条），等用户指令提交。

@@ -9,6 +9,7 @@ node_modules/
 
 # 数据备份与本地数据（含个人学习数据，勿提交；跨电脑迁移请用 npm run backup 导出、npm run restore 导入）
 data/
+xingcezhenti-main.zip
 
 # 运行时产物
 *.log
