@@ -1,13 +1,21 @@
-<!-- 速算·填空输入行：1/ 前缀（填分母）/ % 后缀（填百分数）+ 提交 -->
+<!-- 速算·填空输入行：1/ 前缀（填分母）/ % 后缀（填百分数）+ 提交；挂载即聚焦输入框（每题自动聚焦，全程键盘操作） -->
 <script setup lang="ts">
+import { nextTick, onMounted, ref } from 'vue'
+import { ElInput } from 'element-plus'
 defineProps<{ modelValue: string; fillDir?: string }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'submit'): void }>()
+
+const inputRef = ref<InstanceType<typeof ElInput> | null>(null)
+onMounted(() => {
+  nextTick(() => inputRef.value?.focus())
+})
 </script>
 
 <template>
   <div class="fill-row">
     <span v-if="fillDir === 'den' || fillDir === 'frac'" class="fill-prefix">1/</span>
     <el-input
+      ref="inputRef"
       :model-value="modelValue"
       class="fill-input"
       :placeholder="

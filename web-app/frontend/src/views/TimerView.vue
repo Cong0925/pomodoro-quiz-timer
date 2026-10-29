@@ -16,9 +16,10 @@ const route = useRoute()
 const historyStore = useHistoryStore()
 const catStore = useCategoriesStore()
 
-/* ---- 刷题分类选择（记忆上次） ---- */
+/* ---- 刷题分类选择（记忆上次，无记忆/失效时默认公务员考试 gk） ---- */
+const DEFAULT_CAT_ID = 'gk'
 const lastSel = catStore.loadLastSel()
-const selCatId = ref(catStore.findCat(lastSel.catId) ? lastSel.catId : '')
+const selCatId = ref(catStore.findCat(lastSel.catId) ? lastSel.catId : DEFAULT_CAT_ID)
 const selSubId = ref(catStore.findSub(selCatId.value, lastSel.subId) ? lastSel.subId : '')
 
 watch(selCatId, (v) => {

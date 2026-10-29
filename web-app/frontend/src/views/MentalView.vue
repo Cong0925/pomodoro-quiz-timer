@@ -1,6 +1,6 @@
 <!-- 速算练习：4 题型 + 填空/选择 + 无限流 + 结算错题回顾 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MentalManage from '../components/MentalManage.vue'
 import MentalRecords from '../components/MentalRecords.vue'
@@ -36,6 +36,12 @@ function answerModeFor(t: string): 'choice' | 'fill' {
 }
 
 const tab = ref<'start' | 'records' | 'manage' | 'manual'>('start')
+const recordsRef = ref<InstanceType<typeof MentalRecords> | null>(null)
+
+/* 切到速算记录 tab 时刷新（v-show 常驻组件不会自动重新挂载，否则新完成记录要刷新页面才出现） */
+watch(tab, (v) => {
+  if (v === 'records') recordsRef.value?.refresh()
+})
 const type = ref<string>('percent')
 const count = ref(10)
 const diff = ref(0)
@@ -430,7 +436,7 @@ onUnmounted(() => {
 
     <!-- ========== 练习记录 ========== -->
     <div v-show="tab === 'records'">
-      <MentalRecords />
+      <MentalRecords ref="recordsRef" />
     </div>
 
     <!-- ========== 技巧手册 ========== -->

@@ -54,6 +54,8 @@ const qPageSize = ref(10)
 const qTotal = ref(0)
 const questions = ref<PracticeQuestion[]>([])
 const qLoading = ref(false)
+/* 题目状态筛选：normal=仅正常 deleted=仅已停用 all=全部（后端分页过滤） */
+const statusFilter = ref<practiceApi.QuestionStatus>('normal')
 
 async function loadQuestions(): Promise<void> {
   if (!curBank.value) {
@@ -63,7 +65,7 @@ async function loadQuestions(): Promise<void> {
   }
   qLoading.value = true
   try {
-    const data = await practiceApi.fetchQuestionsPage(curBank.value, qPage.value, qPageSize.value)
+    const data = await practiceApi.fetchQuestionsPage(curBank.value, qPage.value, qPageSize.value, statusFilter.value)
     qTotal.value = data.total
     questions.value = data.list
     /* 删除后页码越界回退 */
@@ -78,7 +80,10 @@ async function loadQuestions(): Promise<void> {
   }
 }
 
-watch([curBank, qPage, qPageSize], () => loadQuestions(), { immediate: true })
+watch([curBank, qPage, qPageSize, statusFilter], () => {
+  qPage.value = 1
+  loadQuestions()
+}, { immediate: true })
 
 function diffText(d: number): string {
   return d === 1 ? '简单' : d === 3 ? '困难' : '中等'
@@ -260,23 +265,45 @@ async function saveQuestion(): Promise<void> {
 
 async function delQuestion(id: number): Promise<void> {
   try {
-    await ElMessageBox.confirm('删除后无法恢复，确定删除该题目？', '删除题目', {
+    await ElMessageBox.confirm('停用后该题不再被抽到，题目与作答记录保留，可随时恢复。确定停用该题目？', '停用题目', {
       type: 'warning',
-      confirmButtonText: '删除',
+      confirmButtonText: '停用',
       cancelButtonText: '取消',
     })
   } catch (e) {
     /* 用户取消确认，非业务错误 */
-    if (e !== 'cancel' && e !== 'close') console.error('【删除题目确认弹窗异常】', e)
+    if (e !== 'cancel' && e !== 'close') console.error('【停用题目确认弹窗异常】', e)
     return
   }
   try {
     await practiceApi.deleteQuestion(id)
     emit('refresh-banks')
     loadQuestions()
-    ElMessage.success('题目已删除')
+    ElMessage.success('题目已停用')
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '删除题目失败')
+    ElMessage.error(e instanceof Error ? e.message : '停用题目失败')
+  }
+}
+
+async function restoreQ(id: number): Promise<void> {
+  try {
+    await ElMessageBox.confirm('恢复后该题将重新进入抽取范围，作答记录仍保留。确定恢复该题目？', '恢复题目', {
+      type: 'warning',
+      confirmButtonText: '恢复',
+      cancelButtonText: '取消',
+    })
+  } catch (e) {
+    /* 用户取消确认，非业务错误 */
+    if (e !== 'cancel' && e !== 'close') console.error('【恢复题目确认弹窗异常】', e)
+    return
+  }
+  try {
+    await practiceApi.restoreQuestion(id)
+    emit('refresh-banks')
+    loadQuestions()
+    ElMessage.success('题目已恢复')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '恢复题目失败')
   }
 }
 </script>
@@ -334,11 +361,16 @@ async function delQuestion(id: number): Promise<void> {
             <div class="q-sub">{{ curBankInfo ? `${curBankInfo.catName || ''}${curBankInfo.subName ? ' / ' + curBankInfo.subName : ''} · ${curBankInfo.count} 道题` : '' }}</div>
           </div>
           <el-button type="primary" :disabled="!curBank" @click="openQDialog(0)">+ 新增题目</el-button>
+          <el-select v-model="statusFilter" style="width: 130px" @change="qPage = 1">
+            <el-option value="normal" label="仅正常" />
+            <el-option value="deleted" label="仅已停用" />
+            <el-option value="all" label="全部状态" />
+          </el-select>
         </div>
 
-        <el-table v-loading="qLoading" :data="questions" size="default" stripe :height="questions.length ? 500 : undefined">
+        <el-table v-loading="qLoading" :data="questions" size="default" stripe :row-class-name="({ row }: { row: PracticeQuestion }) => (row.is_deleted ? 'row-deleted' : '')" :height="questions.length ? 500 : undefined">
           <el-table-column type="index" label="#" width="55" align="center" :index="(i: number) => (qPage - 1) * qPageSize + i + 1" />
-          <el-table-column prop="stem" label="题干" min-width="260">
+          <el-table-column prop="stem" label="题干" min-width="240">
             <template #default="{ row }">
               <div class="stem-cell-wrap">
                 <el-image v-if="row.stem_img && row.stem_img.length" :src="row.stem_img[0]" :preview-src-list="row.stem_img" fit="contain" class="table-stem-img" />
@@ -346,16 +378,23 @@ async function delQuestion(id: number): Promise<void> {
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="answer" label="答案" width="70" align="center" sortable>
+          <el-table-column prop="answer" label="答案" width="90" align="center" sortable>
             <template #default="{ row }"><el-tag size="small">{{ row.answer }}</el-tag></template>
           </el-table-column>
-          <el-table-column prop="difficulty" label="难度" width="80" align="center" sortable>
+          <el-table-column prop="difficulty" label="难度" width="90" align="center" sortable>
             <template #default="{ row }">{{ diffText(row.difficulty) }}</template>
+          </el-table-column>
+          <el-table-column prop="is_deleted" label="状态" width="90" align="center" sortable>
+            <template #default="{ row }">
+              <el-tag v-if="row.is_deleted" type="info" size="small">已停用</el-tag>
+              <el-tag v-else type="success" size="small">正常</el-tag>
+            </template>
           </el-table-column>
           <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">
               <el-button size="small" text type="primary" @click="openQDialog(row.id)">编辑</el-button>
-              <el-button size="small" text type="danger" @click="delQuestion(row.id)">删除</el-button>
+              <el-button v-if="row.is_deleted" size="small" text type="success" @click="restoreQ(row.id)">恢复</el-button>
+              <el-button v-else size="small" text type="danger" @click="delQuestion(row.id)">停用</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -528,6 +567,17 @@ async function delQuestion(id: number): Promise<void> {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 10px;
+}
+.q-head-ops {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+/* 已停用（逻辑删除）题目：行灰化 */
+:deep(.el-table .row-deleted) {
+  opacity: 0.55;
+  background: var(--el-fill-color-light);
 }
 .q-title {
   font-size: 16px;

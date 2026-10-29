@@ -105,9 +105,16 @@ function detailOf(id: number): { kind: 'list'; data: MentalDetailRecord[] } | { 
 }
 
 onMounted(() => {
-  loadStats()
-  loadPage(true)
+  refresh()
 })
+
+/* 切换到速算记录 tab 时由父组件调用：统计条 + 列表刷新（保留当前页） */
+function refresh(): void {
+  loadStats()
+  loadPage()
+}
+
+defineExpose({ refresh })
 </script>
 
 <template>

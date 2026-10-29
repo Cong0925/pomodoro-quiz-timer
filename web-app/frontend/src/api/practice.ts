@@ -54,6 +54,8 @@ export interface PracticeQuestion {
   analysis?: string | null
   difficulty: number
   source?: string
+  /** 逻辑删除/停用 0=正常 1=已停用（仅 includeDeleted=1 时返回） */
+  is_deleted?: number
 }
 
 export interface QuestionPayload {
@@ -72,13 +74,16 @@ export function fetchQuestionsAll(bankId: number): Promise<PracticeQuestion[]> {
   return http.get<PracticeQuestion[]>(`/practice/banks/${bankId}/questions`)
 }
 
+export type QuestionStatus = 'normal' | 'deleted' | 'all'
+
 export function fetchQuestionsPage(
   bankId: number,
   page: number,
-  pageSize: number
+  pageSize: number,
+  status: QuestionStatus = 'normal'
 ): Promise<{ total: number; list: PracticeQuestion[] }> {
   return http.get<{ total: number; list: PracticeQuestion[] }>(
-    `/practice/banks/${bankId}/questions?page=${page}&pageSize=${pageSize}`
+    `/practice/banks/${bankId}/questions?page=${page}&pageSize=${pageSize}&status=${status}`
   )
 }
 
@@ -91,7 +96,12 @@ export function updateQuestion(id: number, payload: QuestionPayload): Promise<{ 
 }
 
 export function deleteQuestion(id: number): Promise<{ ok: boolean }> {
+  /* 后端为逻辑删除（停用），数据保留可恢复 */
   return http.del<{ ok: boolean }>(`/practice/questions/${id}`)
+}
+
+export function restoreQuestion(id: number): Promise<{ ok: boolean }> {
+  return http.post<{ ok: boolean }>(`/practice/questions/${id}/restore`)
 }
 
 /* ---- 会话 ---- */
@@ -203,4 +213,9 @@ export function fetchPracticeStats(): Promise<PracticeStats> {
 
 export function deletePracticeSession(id: number): Promise<{ ok: boolean }> {
   return http.del<{ ok: boolean }>(`/practice/history/${id}`)
+}
+
+/* 本场错题重练：取该会话错题开新会话（返回结构与 start 一致） */
+export function replayErrors(sessionId: number): Promise<StartResult> {
+  return http.post<StartResult>(`/practice/${sessionId}/replay-errors`)
 }

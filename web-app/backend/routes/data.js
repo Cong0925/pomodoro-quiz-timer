@@ -96,10 +96,10 @@ async function exportPractice() {
     const [qb] = await pool.query('SELECT id, name, cat_id, sub_id, description FROM question_banks ORDER BY id');
     const questionBanks = qb.map(x => ({ id: x.id, name: x.name, catId: x.cat_id, subId: x.sub_id, description: x.description }));
     const [qs] = await pool.query(
-        'SELECT id, bank_id, type, stem, options, answer, analysis, difficulty, source FROM questions ORDER BY id');
+        'SELECT id, bank_id, type, stem, stem_img, options, answer, analysis, difficulty, source, is_deleted FROM questions ORDER BY id');
     const questions = qs.map(x => ({
-        id: x.id, bankId: x.bank_id, type: x.type, stem: x.stem, options: x.options,
-        answer: x.answer, analysis: x.analysis, difficulty: x.difficulty, source: x.source
+        id: x.id, bankId: x.bank_id, type: x.type, stem: x.stem, stemImg: x.stem_img, options: x.options,
+        answer: x.answer, analysis: x.analysis, difficulty: x.difficulty, source: x.source, isDeleted: x.is_deleted
     }));
     const [ps] = await pool.query(
         `SELECT id, bank_id, bank_name, mode, total_count, done_count, correct_count, wrong_count,
@@ -124,10 +124,10 @@ async function exportPractice() {
 /* ---- 速算练习数据 ---- */
 async function exportMental() {
     const [mq] = await pool.query(
-        'SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active FROM mental_questions ORDER BY id');
+        'SELECT id, qtype, difficulty, stem, options, answer, tip, tag, active, fillable FROM mental_questions ORDER BY id');
     const mentalQuestions = mq.map(x => ({
         id: x.id, qtype: x.qtype, difficulty: x.difficulty, stem: x.stem,
-        options: x.options, answer: x.answer, tip: x.tip, tag: x.tag, active: !!x.active
+        options: x.options, answer: x.answer, tip: x.tip, tag: x.tag, active: !!x.active, fillable: !!x.fillable
     }));
     const [ms] = await pool.query(
         `SELECT id, qtype, qtype_name, difficulty, total_count, done_count, correct_count,

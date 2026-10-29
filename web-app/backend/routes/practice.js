@@ -11,12 +11,12 @@ const router = express.Router();
 
 /* ---------- 题库 ---------- */
 
-/* 题库列表（含分类名称快照 + 题量） */
+/* 题库列表（含分类名称快照 + 题量；题量只计未停用题目） */
 async function listBanks() {
     const [rows] = await pool.query(`
         SELECT b.id, b.name, b.cat_id, b.sub_id, b.description, b.created_at,
                c.name AS cat_name, s.name AS sub_name,
-               (SELECT COUNT(*) FROM questions q WHERE q.bank_id = b.id) AS count
+               (SELECT COUNT(*) FROM questions q WHERE q.bank_id = b.id AND q.is_deleted = 0) AS count
         FROM question_banks b
         LEFT JOIN categories c ON c.id = b.cat_id
         LEFT JOIN category_subs s ON s.id = b.sub_id
@@ -73,12 +73,12 @@ router.delete('/banks/:id', asyncHandler(async (req, res) => {
 
 /* ---------- 题目 ---------- */
 
-/* GET /api/practice/banks/:id 单个题库详情 */
+/* GET /api/practice/banks/:id 单个题库详情（题量只计未停用题目） */
 router.get('/banks/:id', asyncHandler(async (req, res) => {
         const [rows] = await pool.query(`
             SELECT b.id, b.name, b.cat_id, b.sub_id, b.description, b.created_at,
                    c.name AS cat_name, s.name AS sub_name,
-                   (SELECT COUNT(*) FROM questions q WHERE q.bank_id = b.id) AS count
+                   (SELECT COUNT(*) FROM questions q WHERE q.bank_id = b.id AND q.is_deleted = 0) AS count
             FROM question_banks b
             LEFT JOIN categories c ON c.id = b.cat_id
             LEFT JOIN category_subs s ON s.id = b.sub_id
@@ -92,23 +92,31 @@ router.get('/banks/:id', asyncHandler(async (req, res) => {
         });
 }));
 
-/* GET /api/practice/banks/:id/questions?page=&pageSize=
-   后端分页：传 page/pageSize 返回 { total, list }，否则返回全量数组（供编辑弹窗使用） */
+/* GET /api/practice/banks/:id/questions?page=&pageSize=&includeDeleted=1
+   后端分页：传 page/pageSize 返回 { total, list }，否则返回全量数组（供编辑弹窗使用）
+   默认只返回未停用题目（is_deleted=0）；includeDeleted=1 时返回全部并带 is_deleted 字段（管理已停用列表用） */
 router.get('/banks/:id/questions', asyncHandler(async (req, res) => {
         const bankId = num(req.params.id);
+        /* status: normal=仅正常(默认) deleted=仅已停用 all=全部(带 is_deleted)；兼容旧参数 includeDeleted=1（等价 all） */
+        let status = str(req.query.status) || 'normal';
+        if (req.query.includeDeleted === '1') status = 'all';
+        if (!['normal', 'deleted', 'all'].includes(status)) status = 'normal';
+        const showIsDeleted = status !== 'normal';
+        const statusWhere = status === 'normal' ? 'AND q.is_deleted = 0' : status === 'deleted' ? 'AND q.is_deleted = 1' : '';
         const page = num(req.query.page);
         const pageSize = num(req.query.pageSize);
+        const cols = 'q.id, q.bank_id, q.type, q.stem, q.stem_img, q.options, q.answer, q.analysis, q.difficulty, q.source' + (showIsDeleted ? ', q.is_deleted' : '');
         if (page >= 1 && pageSize >= 1) {
-            const [cnt] = await pool.query('SELECT COUNT(*) c FROM questions WHERE bank_id=?', [bankId]);
+            const [cnt] = await pool.query(`SELECT COUNT(*) c FROM questions q WHERE q.bank_id=? ${statusWhere}`, [bankId]);
             const [rows] = await pool.query(
-                `SELECT id, bank_id, type, stem, stem_img, options, answer, analysis, difficulty, source
-                 FROM questions WHERE bank_id=? ORDER BY id ASC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
+                `SELECT ${cols}
+                 FROM questions q WHERE q.bank_id=? ${statusWhere} ORDER BY q.id ASC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
                 [bankId]
             );
             return res.json({ total: cnt[0].c, list: rows });
         }
         const [rows] = await pool.query(
-            'SELECT id, bank_id, type, stem, stem_img, options, answer, analysis, difficulty, source FROM questions WHERE bank_id=? ORDER BY id ASC',
+            `SELECT ${cols} FROM questions q WHERE q.bank_id=? ${statusWhere} ORDER BY q.id ASC`,
             [bankId]
         );
         res.json(rows);
@@ -252,17 +260,24 @@ router.post('/questions/batch', asyncHandler(async (req, res) => {
         }
 }));
 
-/* DELETE /api/practice/questions/batch 批量删除题目
-   body: { ids: [1,2,3] }，返回删除条数 */
+/* DELETE /api/practice/questions/batch 批量停用（逻辑删除）题目
+   body: { ids: [1,2,3] }，返回停用条数 */
 router.delete('/questions/batch', asyncHandler(async (req, res) => {
         let ids = req.body && req.body.ids;
         if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids 必须是非空数组' });
         ids = ids.map(x => num(x)).filter(x => x > 0);
         if (!ids.length) return res.status(400).json({ error: 'ids 中没有有效题目ID' });
-        if (ids.length > 500) return res.status(400).json({ error: '单次最多删除 500 题' });
+        if (ids.length > 500) return res.status(400).json({ error: '单次最多停用 500 题' });
         const ph = ids.map(() => '?').join(',');
-        const [r] = await pool.query(`DELETE FROM questions WHERE id IN (${ph})`, ids);
+        const [r] = await pool.query(`UPDATE questions SET is_deleted = 1 WHERE id IN (${ph})`, ids);
         res.json({ ok: true, deleted: r.affectedRows });
+}));
+
+/* POST /api/practice/questions/:id/restore 恢复（取消停用） */
+router.post('/questions/:id/restore', asyncHandler(async (req, res) => {
+        const [r] = await pool.query('UPDATE questions SET is_deleted = 0 WHERE id=?', [num(req.params.id)]);
+        if (r.affectedRows === 0) return res.status(404).json({ error: '题目不存在' });
+        res.json({ ok: true });
 }));
 
 /* PUT /api/practice/questions/:id */
@@ -292,16 +307,16 @@ router.put('/questions/:id', asyncHandler(async (req, res) => {
         res.json({ ok: true });
 }));
 
-/* DELETE /api/practice/questions/:id */
+/* DELETE /api/practice/questions/:id 停用（逻辑删除）题目，可随时恢复 */
 router.delete('/questions/:id', asyncHandler(async (req, res) => {
-        const [r] = await pool.query('DELETE FROM questions WHERE id=?', [num(req.params.id)]);
+        const [r] = await pool.query('UPDATE questions SET is_deleted = 1 WHERE id=?', [num(req.params.id)]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '题目不存在' });
         res.json({ ok: true });
 }));
 
 /* ---------- 练习会话 ---------- */
 
-/* 抽题：order=顺序 random=随机 review=该题库历史错题（不足补随机） */
+/* 抽题：order=顺序 random=随机 review=该题库历史错题（不足补随机）；只从未停用题目中抽 */
 async function pickQuestions(bankId, mode, count) {
     const bank = await pool.query('SELECT * FROM question_banks WHERE id=?', [bankId]);
     if (bank[0].length === 0) return null;
@@ -312,14 +327,14 @@ async function pickQuestions(bankId, mode, count) {
             SELECT q.id FROM practice_records pr
             JOIN practice_sessions s ON s.id = pr.session_id
             JOIN questions q ON q.id = pr.question_id
-            WHERE s.bank_id = ? AND pr.result = 'ng'
+            WHERE s.bank_id = ? AND pr.result = 'ng' AND q.is_deleted = 0
             GROUP BY q.id ORDER BY MAX(pr.id) DESC LIMIT ?`, [bankId, limit]);
         ids = wrong.map(w => w.id);
     }
     if (ids.length < limit) {
         const need = limit - ids.length;
         const [qs] = await pool.query(
-            'SELECT id FROM questions WHERE bank_id=? ORDER BY id ASC LIMIT ?',
+            'SELECT id FROM questions WHERE bank_id=? AND is_deleted = 0 ORDER BY id ASC LIMIT ?',
             [bankId, need]
         );
         // 排除已选错题
@@ -493,6 +508,44 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
 
 /* ---------- 历史 / 统计 ---------- */
 
+/* POST /api/practice/:id/replay-errors 本场错题重练：取该会话错题开新会话（mode=review），错题已停用则跳过 */
+router.post('/:id/replay-errors', asyncHandler(async (req, res) => {
+        const sessionId = num(req.params.id);
+        const [s] = await pool.query('SELECT * FROM practice_sessions WHERE id=?', [sessionId]);
+        if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
+        const [raw] = await pool.query(
+            'SELECT question_id FROM practice_records WHERE session_id=? AND result = ? ORDER BY no ASC', [sessionId, 'ng']);
+        const rawCount = raw.length;
+        const [wrong] = await pool.query(`
+            SELECT pr.question_id AS id FROM practice_records pr
+            JOIN questions q ON q.id = pr.question_id
+            WHERE pr.session_id = ? AND pr.result = 'ng' AND q.is_deleted = 0
+            ORDER BY pr.no ASC`, [sessionId]);
+        const qIds = wrong.map(w => w.id);
+        if (qIds.length === 0) {
+            return res.status(400).json({ error: rawCount > 0 ? '本场错题已全部停用，无可重练题目' : '本场没有错题' });
+        }
+        const src = s[0];
+        const [r] = await pool.query(
+            `INSERT INTO practice_sessions (bank_id, bank_name, mode, total_count, cat_id, cat_name, sub_id, sub_name)
+             VALUES (?,?,?,?,?,?,?,?)`,
+            [src.bank_id, src.bank_name, 'review', qIds.length, src.cat_id, src.cat_name, src.sub_id, src.sub_name]
+        );
+        const newId = r.insertId;
+        const ph = qIds.map(() => '?').join(',');
+        const [qs] = await pool.query(
+            `SELECT id, type, stem, stem_img, options, difficulty FROM questions WHERE id IN (${ph}) ORDER BY FIELD(id, ${ph})`,
+            [...qIds, ...qIds]
+        );
+        res.status(201).json({
+            sessionId: newId,
+            bank: { id: src.bank_id, name: src.bank_name, catName: src.cat_name, subName: src.sub_name },
+            mode: 'review',
+            questions: qs.map(q => ({ id: q.id, type: q.type, stem: q.stem, stemImg: q.stem_img || null, options: q.options, difficulty: q.difficulty })),
+            total: qs.length
+        });
+}));
+
 /* GET /api/practice/history?page=1&limit=20&bankId=&mode= */
 router.get('/history', asyncHandler(async (req, res) => {
         const page = Math.max(1, num(req.query.page) || 1);
@@ -525,7 +578,7 @@ router.delete('/history', asyncHandler(async (req, res) => {
         res.json({ ok: true });
 }));
 
-/* GET /api/practice/history/:id（含每题明细；题目被删时题干显示占位） */
+/* GET /api/practice/history/:id（含每题明细；题目被真删时题干显示占位，已停用题正常显示） */
 router.get('/history/:id', asyncHandler(async (req, res) => {
         const id = num(req.params.id);
         const [s] = await pool.query('SELECT * FROM practice_sessions WHERE id=?', [id]);

@@ -1,6 +1,6 @@
 <!-- 题库练习：开始练习（大类→小类→题库→方式→题量）+ 答题 + 结算回看 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import PracticeManage from '../components/PracticeManage.vue'
 import PracticeRecords from '../components/PracticeRecords.vue'
@@ -21,6 +21,12 @@ const COUNT_OPTIONS = [5, 10, 15, 20, 25, 30]
 
 const tab = ref<'start' | 'manage' | 'records'>('start')
 const banks = ref<practiceApi.Bank[]>([])
+const recordsRef = ref<InstanceType<typeof PracticeRecords> | null>(null)
+
+/* 切到练习记录 tab 时刷新（v-show 常驻组件不会自动重新挂载，否则新完成的记录要刷新页面才出现） */
+watch(tab, (v) => {
+  if (v === 'records') recordsRef.value?.refresh()
+})
 
 async function loadBanks(): Promise<void> {
   try {
@@ -114,28 +120,39 @@ function startClock(): void {
   }, 500)
 }
 
+/* 注入会话进入答题（start 接口 / 记录页本场错题重练 replay 共用） */
+function enterSession(s: {
+  sessionId: number
+  bank: { id: number; name: string; catName: string; subName: string }
+  mode: string
+  questions: practiceApi.StartResult['questions']
+}): void {
+  run.value = {
+    sessionId: s.sessionId,
+    bank: s.bank,
+    mode: s.mode,
+    questions: s.questions,
+    idx: 0,
+    ok: 0,
+    ng: 0,
+    skip: 0,
+    answers: [],
+    startTs: Date.now(),
+    review: false,
+    finished: false,
+  }
+  phase.value = 'run'
+  tab.value = 'start'
+  startClock()
+}
+
 async function startPractice(): Promise<void> {
   if (!selCat.value) return void ElMessage.warning('请先选择考试大类')
   if (selSub.value === null) return void ElMessage.warning('请先选择二级分类')
   if (!selBank.value) return void ElMessage.warning('请选择题库')
   try {
     const r = await practiceApi.startPractice(selBank.value, mode.value, count.value)
-    run.value = {
-      sessionId: r.sessionId,
-      bank: r.bank,
-      mode: r.mode,
-      questions: r.questions,
-      idx: 0,
-      ok: 0,
-      ng: 0,
-      skip: 0,
-      answers: [],
-      startTs: Date.now(),
-      review: false,
-      finished: false,
-    }
-    phase.value = 'run'
-    startClock()
+    enterSession(r)
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '开始练习失败')
   }
@@ -222,15 +239,37 @@ async function finish(): Promise<void> {
   }
 }
 
-function enterReview(): void {
+function enterReview(i = 0): void {
   const r = run.value
   if (!r || !r.answers.filter(Boolean).length) {
     ElMessage.warning('没有可回看的题目')
     return
   }
   r.review = true
-  r.idx = 0
+  r.idx = Math.min(Math.max(0, i), r.questions.length - 1)
   phase.value = 'run'
+}
+
+/* 题号导航/分布条着色：ok=绿 ng=红 skip=灰 todo=未作答描边 */
+function dotCls(i: number): string {
+  const a = run.value?.answers[i]
+  if (!a) return 'todo'
+  return a.result === 'ok' ? 'ok' : a.result === 'ng' ? 'ng' : 'skip'
+}
+
+/* 回看/回顾模式：← → 翻题 */
+function onKeydown(e: KeyboardEvent): void {
+  const r = run.value
+  if (!r || !r.review || phase.value !== 'run') return
+  const t = e.target as HTMLElement | null
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+  if (e.key === 'ArrowLeft' && r.idx > 0) {
+    r.idx--
+    e.preventDefault()
+  } else if (e.key === 'ArrowRight' && r.idx < r.questions.length - 1) {
+    r.idx++
+    e.preventDefault()
+  }
 }
 
 function backToSetup(): void {
@@ -265,6 +304,12 @@ onMounted(async () => {
     const b = banks.value.find((x) => x.catId === c.id && (x.subId || '') === selSub.value)
     if (b) selBank.value = b.id
   }
+  window.addEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+  if (clockTimer) clearInterval(clockTimer)
 })
 
 onUnmounted(() => {
@@ -328,6 +373,18 @@ onUnmounted(() => {
 
           <template v-if="curQ">
             <div class="q-no">第 {{ run.idx + 1 }} / {{ run.questions.length }} 题</div>
+
+            <!-- 回看模式：题号导航条（对/错/跳着色，点击跳题，当前高亮） -->
+            <div v-if="run.review" class="review-nav">
+              <button
+                v-for="(_, i) in run.questions"
+                :key="i"
+                class="rn-item"
+                :class="[dotCls(i), { cur: i === run.idx }]"
+                :title="`第 ${i + 1} 题`"
+                @click="run.idx = i"
+              >{{ i + 1 }}</button>
+            </div>
             <div class="q-stem" v-html="curQ.stem"></div>
             <div v-if="curQ.stemImg && curQ.stemImg.length" class="stem-imgs">
               <el-image
@@ -362,7 +419,12 @@ onUnmounted(() => {
                 <template v-else>回答错误</template>
               </div>
               <div class="ab-body" v-html="curAnswer.analysis || '（暂无解析）'"></div>
-              <el-button type="primary" @click="nextQ">{{ run.idx + 1 >= run.questions.length ? '完成' : '下一题' }}</el-button>
+              <div class="ab-btns">
+                <el-button v-if="run.review" :disabled="run.idx === 0" @click="run.idx--">上一题</el-button>
+                <el-button type="primary" @click="nextQ">
+                  {{ run.review ? (run.idx + 1 >= run.questions.length ? '返回结算' : '下一题') : (run.idx + 1 >= run.questions.length ? '完成' : '下一题') }}
+                </el-button>
+              </div>
             </div>
             <div v-else class="run-actions">
               <el-button @click="skipQ">跳过</el-button>
@@ -377,9 +439,20 @@ onUnmounted(() => {
               <div class="finish-meta">
                 对 {{ finishInfo.correct }} · 错 {{ finishInfo.wrong }} · 跳 {{ finishInfo.skipped }} · 用时 {{ formatMs(finishInfo.totalMs) }}
               </div>
+              <!-- 对错分布条：点击色块直接进入该题回看 -->
+              <div v-if="run && run.answers.length" class="finish-dots">
+                <button
+                  v-for="(_, i) in run.questions"
+                  :key="i"
+                  class="fd-item"
+                  :class="dotCls(i)"
+                  :title="`第 ${i + 1} 题`"
+                  @click="enterReview(i)"
+                >{{ i + 1 }}</button>
+              </div>
               <div class="finish-btns">
                 <el-button type="primary" @click="replay">再练一次</el-button>
-                <el-button @click="enterReview">回看全部解析</el-button>
+                <el-button @click="enterReview()">回看全部解析</el-button>
                 <el-button @click="backToSetup">返回选题</el-button>
               </div>
             </template>
@@ -394,7 +467,7 @@ onUnmounted(() => {
 
     <!-- ========== 练习记录 ========== -->
     <div v-show="tab === 'records'">
-      <PracticeRecords />
+      <PracticeRecords ref="recordsRef" @replay="enterSession" />
     </div>
   </div>
 </template>
@@ -463,6 +536,58 @@ onUnmounted(() => {
 .q-no {
   font-size: 13px;
   color: var(--el-text-color-secondary);
+}
+/* 回看题号导航条 / 结算分布条（ok=绿 ng=红 skip=灰 todo=描边） */
+.review-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 14px;
+}
+.rn-item {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+  background: var(--el-bg-color);
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  cursor: pointer;
+  line-height: 1;
+}
+.rn-item.ok { background: var(--el-color-success); border-color: var(--el-color-success); color: #fff; }
+.rn-item.ng { background: var(--el-color-danger); border-color: var(--el-color-danger); color: #fff; }
+.rn-item.skip { background: var(--el-color-warning); border-color: var(--el-color-warning); color: #fff; }
+.rn-item.todo { color: var(--el-text-color-placeholder); }
+.rn-item.cur { outline: 2px solid var(--el-color-primary); outline-offset: 1px; }
+.finish-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 4px 0 14px;
+}
+.fd-item {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+  background: var(--el-bg-color);
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  cursor: pointer;
+  line-height: 1;
+}
+.fd-item.ok { background: var(--el-color-success); border-color: var(--el-color-success); color: #fff; }
+.fd-item.ng { background: var(--el-color-danger); border-color: var(--el-color-danger); color: #fff; }
+.fd-item.skip { background: var(--el-color-warning); border-color: var(--el-color-warning); color: #fff; }
+.fd-item.todo { color: var(--el-text-color-placeholder); }
+.ab-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
 }
 .q-stem {
   font-size: 17px;

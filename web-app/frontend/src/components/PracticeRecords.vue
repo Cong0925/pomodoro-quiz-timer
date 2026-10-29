@@ -1,10 +1,13 @@
-<!-- 练习记录：统计条 + 会话表格（展开行显示明细） -->
+<!-- 练习记录：统计条 + 会话表格（展开行显示明细）+ 回顾解析弹窗 + 本场错题重练 -->
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as practiceApi from '../api/practice'
-import type { PracticeDetailRecord, PracticeSessionRow, PracticeStats } from '../api/practice'
+import type { PracticeDetailRecord, PracticeSessionRow, PracticeStats, StartResult } from '../api/practice'
 import { formatMs } from '../utils/format'
+import PracticeReviewDialog from './PracticeReviewDialog.vue'
+
+const emit = defineEmits<{ replay: [s: StartResult] }>()
 
 const MODE_NAMES: Record<string, string> = { order: '顺序', random: '随机', review: '错题重练' }
 
@@ -110,10 +113,66 @@ function detailOf(id: number): { kind: 'list'; data: PracticeDetailRecord[] } | 
   return { kind: 'list', data: d }
 }
 
+/* ---- 回顾解析 ---- */
+const reviewVisible = ref(false)
+const reviewRecords = ref<PracticeDetailRecord[]>([])
+const reviewIdx = ref(0)
+
+/** 打开整场回顾：明细未加载先拉取，再从指定题开始 */
+async function openReview(row: PracticeSessionRow, no = 1): Promise<void> {
+  let list = details.value[row.id]
+  if (typeof list !== 'object') {
+    list = 'loading'
+    details.value[row.id] = list
+    try {
+      const res = await practiceApi.fetchPracticeDetail(row.id)
+      list = res.records
+      details.value[row.id] = list
+    } catch (e) {
+      details.value[row.id] = '明细加载失败：' + (e instanceof Error ? e.message : String(e))
+      ElMessage.error('明细加载失败')
+      return
+    }
+  }
+  reviewRecords.value = list
+  reviewIdx.value = Math.min(Math.max(0, no - 1), list.length - 1)
+  reviewVisible.value = true
+}
+
+/* ---- 只看错题 ---- */
+const onlyWrong = ref(false)
+function visibleRows(id: number): PracticeDetailRecord[] {
+  const d = detailOf(id)
+  if (d?.kind !== 'list') return []
+  return onlyWrong.value ? d.data.filter((x) => x.result === 'ng') : d.data
+}
+
+/* ---- 本场错题重练 ---- */
+const replaying = ref<number | null>(null)
+async function doReplay(s: PracticeSessionRow): Promise<void> {
+  replaying.value = s.id
+  try {
+    const r = await practiceApi.replayErrors(s.id)
+    ElMessage.success(`已创建错题重练（${r.total} 题）`)
+    emit('replay', r)
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '重练失败')
+  } finally {
+    replaying.value = null
+  }
+}
+
 onMounted(() => {
-  loadStats()
-  loadPage(true)
+  refresh()
 })
+
+/* 切换到练习记录 tab 时由父组件调用：统计条 + 列表刷新（保留当前页） */
+function refresh(): void {
+  loadStats()
+  loadPage()
+}
+
+defineExpose({ refresh })
 </script>
 
 <template>
@@ -150,6 +209,10 @@ onMounted(() => {
               错 <span class="c-ng">{{ row.wrong_count }}</span> ·
               跳 <span class="c-skip">{{ row.skipped_count }}</span> ·
               用时 {{ formatMs(row.total_ms) }}
+              <span class="only-wrong">
+                <el-switch v-model="onlyWrong" size="small" />
+                只看错题
+              </span>
             </div>
             <template v-if="detailOf(row.id)?.kind === 'loading'">
               <div class="expand-loading">加载明细…</div>
@@ -158,27 +221,31 @@ onMounted(() => {
               <div class="expand-error">{{ (detailOf(row.id) as { msg: string }).msg }}</div>
             </template>
             <template v-else-if="detailOf(row.id)?.kind === 'list'">
-              <div class="detail-list">
-                <div
-                  v-for="d in (detailOf(row.id) as { kind: 'list'; data: PracticeDetailRecord[] }).data"
-                  :key="d.no"
-                  class="detail-row"
-                >
-                  <span class="rd-mark" :class="'m-' + d.result">{{ d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗' }}</span>
-                  <span class="rd-no">#{{ d.no }}</span>
-                  <span class="rd-stem-wrap">
-                    <el-image
-                      v-if="d.stemImg && d.stemImg.length"
-                      :src="d.stemImg[0]"
-                      :preview-src-list="d.stemImg"
-                      fit="contain"
-                      class="rd-stem-img"
-                    />
-                    <span class="rd-stem" :title="stripHtml(d.stem)">{{ stripHtml(d.stem) || (d.stemImg && d.stemImg.length ? '[图片题]' : '（题目已删除）') }}</span>
-                  </span>
-                  <span class="rd-ans">我的 <b>{{ d.userAnswer || '—' }}</b> · 答案 <b>{{ d.correctAnswer || '—' }}</b></span>
+              <template v-if="visibleRows(row.id).length">
+                <div class="detail-list">
+                  <div
+                    v-for="d in visibleRows(row.id)"
+                    :key="d.no"
+                    class="detail-row"
+                  >
+                    <span class="rd-mark" :class="'m-' + d.result">{{ d.result === 'ok' ? '✓' : d.result === 'skip' ? '○' : '✗' }}</span>
+                    <span class="rd-no">#{{ d.no }}</span>
+                    <span class="rd-stem-wrap">
+                      <el-image
+                        v-if="d.stemImg && d.stemImg.length"
+                        :src="d.stemImg[0]"
+                        :preview-src-list="d.stemImg"
+                        fit="contain"
+                        class="rd-stem-img"
+                      />
+                      <span class="rd-stem" :title="stripHtml(d.stem)">{{ stripHtml(d.stem) || (d.stemImg && d.stemImg.length ? '[图片题]' : '（题目已删除）') }}</span>
+                    </span>
+                    <span class="rd-ans">我的 <b>{{ d.userAnswer || '—' }}</b> · 答案 <b>{{ d.correctAnswer || '—' }}</b></span>
+                    <el-button size="small" text type="primary" @click="openReview(row as PracticeSessionRow, d.no)">解析</el-button>
+                  </div>
                 </div>
-              </div>
+              </template>
+              <div v-else class="expand-loading">没有错题</div>
             </template>
           </div>
         </template>
@@ -221,8 +288,17 @@ onMounted(() => {
         <template #default="{ row }">{{ row.started_at || '—' }}</template>
       </el-table-column>
 
-      <el-table-column label="操作" width="200" align="center" fixed="right">
+      <el-table-column label="操作" width="300" align="center" fixed="right">
         <template #default="{ row }">
+          <el-button size="small" text type="primary" @click="openReview(row as PracticeSessionRow)">回顾本场</el-button>
+          <el-button
+            size="small"
+            text
+            type="warning"
+            :loading="replaying === (row as PracticeSessionRow).id"
+            :disabled="(row as PracticeSessionRow).wrong_count === 0"
+            @click="doReplay(row as PracticeSessionRow)"
+          >重练错题</el-button>
           <el-button size="small" text type="danger" @click="removeSession(row as PracticeSessionRow)">删除</el-button>
         </template>
       </el-table-column>
@@ -239,6 +315,9 @@ onMounted(() => {
       @current-change="onPageChange"
       @size-change="onSizeChange"
     />
+
+    <!-- 回顾解析弹窗 -->
+    <PracticeReviewDialog v-model="reviewVisible" :records="reviewRecords" />
   </div>
 </template>
 
@@ -283,6 +362,13 @@ onMounted(() => {
   font-size: 13px;
   color: var(--el-text-color-secondary);
   margin-bottom: 10px;
+}
+.only-wrong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 18px;
+  font-size: 12px;
 }
 .expand-loading, .expand-error {
   padding: 8px 0;
