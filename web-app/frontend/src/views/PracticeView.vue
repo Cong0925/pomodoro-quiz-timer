@@ -141,6 +141,15 @@ function enterSession(s: {
     review: false,
     finished: false,
   }
+  /* 同步选题区状态：结算页「再练一次」/记录页重练沿用本会话的题库与方式，避免练到别家题库 */
+  const b = banks.value.find((x) => x.id === s.bank.id)
+  if (b) {
+    selCat.value = b.catId || ''
+    selSub.value = b.subId || ''
+    selBank.value = b.id
+  }
+  if (s.mode === 'order' || s.mode === 'random' || s.mode === 'review') mode.value = s.mode
+  count.value = s.questions.length
   phase.value = 'run'
   tab.value = 'start'
   startClock()
@@ -157,6 +166,14 @@ async function startPractice(): Promise<void> {
     ElMessage.error(e instanceof Error ? e.message : '开始练习失败')
   }
 }
+
+const multiSel = ref<string[]>([]) // 多选题已勾选项（提交前暂存）
+watch(
+  () => run.value?.idx,
+  () => {
+    multiSel.value = []
+  }
+)
 
 const curQ = computed(() => run.value?.questions[run.value.idx] || null)
 const curAnswer = computed<RunAnswer | null>(() => {
@@ -191,6 +208,24 @@ async function answer(label: string): Promise<void> {
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '作答失败')
   }
+}
+
+/** 选项点击：多选题切换勾选，其余题型直接提交 */
+function onOptClick(label: string): void {
+  const q = curQ.value
+  if (q?.type === 'multi' && !curAnswer.value) {
+    const i = multiSel.value.indexOf(label)
+    if (i >= 0) multiSel.value.splice(i, 1)
+    else multiSel.value.push(label)
+    return
+  }
+  void answer(label)
+}
+
+/** 多选题提交：勾选项按字母序合并（与判分归一口径一致） */
+function submitMulti(): void {
+  if (!multiSel.value.length) return
+  void answer([...multiSel.value].sort().join(''))
 }
 
 async function skipQ(): Promise<void> {
@@ -235,6 +270,9 @@ async function finish(): Promise<void> {
     reportStudyDelta(todayKey(), ms).catch(() => {})
     studyStore.loadTodayBase().catch(() => {})
   } catch (e) {
+    /* 恢复到末题保持界面可操作（可点「完成」重试结算），避免答题区空白卡死 */
+    r.finished = false
+    r.idx = Math.max(0, r.questions.length - 1)
     ElMessage.error('结束练习失败：' + (e instanceof Error ? e.message : String(e)))
   }
 }
@@ -284,12 +322,15 @@ async function replay(): Promise<void> {
   await startPractice()
 }
 
-/* 选项样式：作答后 正确=绿 / 我的错误=红 / 其余淡化 */
+/* 选项样式：作答后 正确=绿 / 我的错误=红 / 其余淡化；多选按集合判定，未作答时高亮已勾选项 */
 function optClass(label: string): string {
   const a = curAnswer.value
-  if (!a) return ''
-  if (label === a.correctAnswer) return 'correct'
-  if (label === a.my) return 'wrong'
+  const isMulti = curQ.value?.type === 'multi'
+  if (!a) return isMulti && multiSel.value.includes(label) ? 'opt-sel' : ''
+  const correctSet = isMulti ? a.correctAnswer.split('') : [a.correctAnswer]
+  const mySet = isMulti && a.my ? a.my.split('') : a.my ? [a.my] : []
+  if (correctSet.includes(label)) return 'correct'
+  if (mySet.includes(label)) return 'wrong'
   return 'dim'
 }
 
@@ -403,7 +444,7 @@ onUnmounted(() => {
                 :key="i"
                 class="opt-item"
                 :class="optClass(optLabel(i))"
-                @click="answer(optLabel(i))"
+                @click="onOptClick(optLabel(i))"
               >
                 <span class="opt-label">{{ optLabel(i) }}</span>
                 <el-image v-if="optImg(i)" :src="optImg(i)" :preview-src-list="[optImg(i)]" fit="contain" class="opt-img" />
@@ -427,6 +468,7 @@ onUnmounted(() => {
               </div>
             </div>
             <div v-else class="run-actions">
+              <el-button v-if="curQ?.type === 'multi'" type="primary" :disabled="!multiSel.length" @click="submitMulti">提交答案</el-button>
               <el-button @click="skipQ">跳过</el-button>
             </div>
           </template>
@@ -637,6 +679,10 @@ onUnmounted(() => {
 }
 .opt-item:hover {
   border-color: var(--el-color-primary);
+}
+.opt-item.opt-sel {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
 }
 .opt-item.correct {
   border-color: var(--el-color-success);

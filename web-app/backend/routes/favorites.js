@@ -4,7 +4,7 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { str, num, asyncHandler } = require('../utils');
+const { str, num, asyncHandler, nowDateTime } = require('../utils');
 
 const router = express.Router();
 
@@ -70,6 +70,9 @@ router.post('/', asyncHandler(async (req, res) => {
             [roundId]
         );
         const base = h.length ? h[0] : {};
+        // mode 白名单：练习/速算轮次收藏保留原模式，不再压成 single
+        const modeVal = ['single', 'batch', 'practice', 'mental'].includes(b.mode) ? b.mode : 'single';
+        const colAt = b.collectedAt || nowDateTime();
 
         const id = Date.now();
         try {
@@ -83,10 +86,10 @@ router.post('/', asyncHandler(async (req, res) => {
                     roundId,
                     no,
                     str(b.title, 100) || base.title || '',
-                    b.mode === 'batch' ? 'batch' : 'single',
+                    modeVal,
                     str(b.modeName, 20) || base.mode_name || '单题模式',
                     str(b.timeStr, 12),
-                    b.collectedAt || new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    colAt,
                     str(b.catId, 32) || base.cat_id || null,
                     str(b.catName, 100) || base.cat_name || null,
                     str(b.subId, 64) || base.sub_id || null,
@@ -95,18 +98,29 @@ router.post('/', asyncHandler(async (req, res) => {
             );
         } catch (err) {
             if (err.code === 'ER_DUP_ENTRY') {
+                // 重复收藏同一题（uk_round_no）：返回 409，不再冒充主键冲突重试
+                if (String(err.message).includes('uk_round_no')) {
+                    return res.status(409).json({ error: '该题已在收藏中' });
+                }
                 // 同一毫秒重复 id 极小概率：id+1 重试一次
-                await pool.query(
-                    `INSERT INTO favorites
-                        (id, round_id, no, title, mode, mode_name, time_str,
-                         collected_at, cat_id, cat_name, sub_id, sub_name)
-                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-                    [id + 1, roundId, no, str(b.title, 100) || base.title || '',
-                     b.mode === 'batch' ? 'batch' : 'single', str(b.modeName, 20) || base.mode_name || '单题模式',
-                     str(b.timeStr, 12), b.collectedAt || new Date().toISOString().slice(0, 19).replace('T', ' '),
-                     str(b.catId, 32) || base.cat_id || null, str(b.catName, 100) || base.cat_name || null,
-                     str(b.subId, 64) || base.sub_id || null, str(b.subName, 100) || base.sub_name || null]
-                );
+                try {
+                    await pool.query(
+                        `INSERT INTO favorites
+                            (id, round_id, no, title, mode, mode_name, time_str,
+                             collected_at, cat_id, cat_name, sub_id, sub_name)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+                        [id + 1, roundId, no, str(b.title, 100) || base.title || '',
+                         modeVal, str(b.modeName, 20) || base.mode_name || '单题模式',
+                         str(b.timeStr, 12), colAt,
+                         str(b.catId, 32) || base.cat_id || null, str(b.catName, 100) || base.cat_name || null,
+                         str(b.subId, 64) || base.sub_id || null, str(b.subName, 100) || base.sub_name || null]
+                    );
+                } catch (err2) {
+                    if (err2.code === 'ER_DUP_ENTRY' && String(err2.message).includes('uk_round_no')) {
+                        return res.status(409).json({ error: '该题已在收藏中' });
+                    }
+                    throw err2;
+                }
             } else {
                 throw err;
             }

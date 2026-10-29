@@ -103,8 +103,8 @@ router.get('/banks/:id/questions', asyncHandler(async (req, res) => {
         if (!['normal', 'deleted', 'all'].includes(status)) status = 'normal';
         const showIsDeleted = status !== 'normal';
         const statusWhere = status === 'normal' ? 'AND q.is_deleted = 0' : status === 'deleted' ? 'AND q.is_deleted = 1' : '';
-        const page = num(req.query.page);
-        const pageSize = num(req.query.pageSize);
+        const page = Math.floor(num(req.query.page));
+        const pageSize = Math.floor(num(req.query.pageSize));
         const cols = 'q.id, q.bank_id, q.type, q.stem, q.stem_img, q.options, q.answer, q.analysis, q.difficulty, q.source' + (showIsDeleted ? ', q.is_deleted' : '');
         if (page >= 1 && pageSize >= 1) {
             const [cnt] = await pool.query(`SELECT COUNT(*) c FROM questions q WHERE q.bank_id=? ${statusWhere}`, [bankId]);
@@ -163,12 +163,17 @@ function parseOptions(v) {
     return { value: JSON.stringify(arr) };
 }
 
-/* 整包图片载荷估算（题干图 + 选项图 base64 总长度 → KB），超 40MB 拒绝 */
+/* 整包图片载荷估算（题干图 + 选项图 base64 总长度 → KB），超 40MB 拒绝；批量导入遍历 questions[] */
 function totalImgKB(body) {
     let chars = 0;
     const b = body || {};
-    if (Array.isArray(b.stemImg)) for (const s of b.stemImg) chars += s.length;
-    if (Array.isArray(b.options)) for (const o of b.options) if (o && typeof o === 'object' && o.img) chars += o.img.length;
+    const countOne = (x) => {
+        if (!x || typeof x !== 'object') return;
+        if (Array.isArray(x.stemImg)) for (const s of x.stemImg) chars += s.length;
+        if (Array.isArray(x.options)) for (const o of x.options) if (o && typeof o === 'object' && o.img) chars += o.img.length;
+    };
+    countOne(b);
+    if (Array.isArray(b.questions)) for (const q of b.questions) countOne(q);
     return Math.round(chars * 0.75 / 1024);
 }
 
@@ -333,14 +338,14 @@ async function pickQuestions(bankId, mode, count) {
     }
     if (ids.length < limit) {
         const need = limit - ids.length;
+        // 补题：SQL 直接排除已选并补足数量（LIMIT 后再去重会导致补题不足）；order 按题号顺序，random/review 补题随机
+        const excl = ids.length ? ` AND id NOT IN (${ids.map(() => '?').join(',')})` : '';
+        const order = mode === 'order' ? 'ORDER BY id ASC' : 'ORDER BY RAND()';
         const [qs] = await pool.query(
-            'SELECT id FROM questions WHERE bank_id=? AND is_deleted = 0 ORDER BY id ASC LIMIT ?',
-            [bankId, need]
+            `SELECT id FROM questions WHERE bank_id=? AND is_deleted = 0${excl} ${order} LIMIT ?`,
+            [bankId, ...ids, need]
         );
-        // 排除已选错题
-        const exist = new Set(ids);
-        const add = qs.filter(q => !exist.has(q.id)).map(q => q.id);
-        ids = ids.concat(add);
+        ids = ids.concat(qs.map(q => q.id));
     }
     return { bank: bank[0][0], ids };
 }
@@ -392,6 +397,7 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
 
         const [sRows] = await pool.query('SELECT * FROM practice_sessions WHERE id=?', [sessionId]);
         if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
+        if (sRows[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再作答' });
         // 防止重复作答同号题
         const [ex] = await pool.query('SELECT id FROM practice_records WHERE session_id=? AND no=?', [sessionId, no]);
         if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
@@ -400,7 +406,14 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
         const [q] = await pool.query('SELECT id, answer, analysis, stem, stem_img, options, type FROM questions WHERE id=?', [questionId]);
         if (q.length === 0) return res.status(400).json({ error: '题目不存在' });
 
-        const correct = userAnswer === str(q[0].answer, 50);
+        /* 判分归一：多选按字母集合比较（容忍顺序差异），判断题 A/B 与 T/F 互通，其余严格全等 */
+        const normAns = (t, a) => {
+            const s = String(a == null ? '' : a).replace(/\s+/g, '').toUpperCase();
+            if (t === 'judge') return (s === 'A' || s === 'T' || s === '1') ? 'T' : (s === 'B' || s === 'F' || s === '0') ? 'F' : s;
+            if (t === 'multi') return s.split('').filter(c => c >= 'A' && c <= 'Z').sort().join('');
+            return s;
+        };
+        const correct = normAns(q[0].type, userAnswer) === normAns(q[0].type, q[0].answer);
         const result = correct ? 'ok' : 'ng';
         const now = nowDateTime();
         await pool.query(
@@ -421,6 +434,9 @@ router.post('/:id/skip', asyncHandler(async (req, res) => {
         const no = num(req.body && req.body.no);
         const ms = num(req.body && req.body.ms);
         if (!no) return res.status(400).json({ error: '缺少题号' });
+        const [sRows] = await pool.query('SELECT id, finished_at FROM practice_sessions WHERE id=?', [sessionId]);
+        if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
+        if (sRows[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再操作' });
         const [ex] = await pool.query('SELECT id FROM practice_records WHERE session_id=? AND no=?', [sessionId, no]);
         if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
         const questionId = num(req.body && req.body.questionId);
@@ -548,8 +564,8 @@ router.post('/:id/replay-errors', asyncHandler(async (req, res) => {
 
 /* GET /api/practice/history?page=1&limit=20&bankId=&mode= */
 router.get('/history', asyncHandler(async (req, res) => {
-        const page = Math.max(1, num(req.query.page) || 1);
-        const limit = Math.min(50, Math.max(1, num(req.query.limit) || 20));
+        const page = Math.max(1, Math.floor(num(req.query.page)) || 1);
+        const limit = Math.min(50, Math.max(1, Math.floor(num(req.query.limit)) || 20));
         const offset = (page - 1) * limit;
         const where = [];
         const params = [];
@@ -616,10 +632,11 @@ router.get('/stats', asyncHandler(async (req, res) => {
                    COALESCE(SUM(skipped_count),0) AS skip_q,
                    COALESCE(SUM(total_ms),0) AS total_ms
             FROM practice_sessions WHERE finished_at IS NOT NULL AND DATE(finished_at) = CURDATE()`);
-        const rate = all.total_q ? Math.round(all.correct_q / all.total_q * 1000) / 10 : 0;
+        /* mysql2 SUM 返回字符串，必须 Number() 后再参与运算/返回（防字符串拼接与类型契约错位） */
+        const rate = all.total_q ? Math.round(Number(all.correct_q) / Number(all.total_q) * 1000) / 10 : 0;
         res.json({
-            all: { sessions: all.sessions, totalQ: all.total_q, correctQ: all.correct_q, wrongQ: all.wrong_q, skipQ: all.skip_q, totalMs: all.total_ms, rate },
-            today: { sessions: today.sessions, totalQ: today.total_q, correctQ: today.correct_q, wrongQ: today.wrong_q, skipQ: today.skip_q, totalMs: today.total_ms }
+            all: { sessions: Number(all.sessions), totalQ: Number(all.total_q), correctQ: Number(all.correct_q), wrongQ: Number(all.wrong_q), skipQ: Number(all.skip_q), totalMs: Number(all.total_ms), rate },
+            today: { sessions: Number(today.sessions), totalQ: Number(today.total_q), correctQ: Number(today.correct_q), wrongQ: Number(today.wrong_q), skipQ: Number(today.skip_q), totalMs: Number(today.total_ms) }
         });
 }));
 

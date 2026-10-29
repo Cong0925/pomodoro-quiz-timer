@@ -160,7 +160,7 @@ async function toggleFav(h: HistoryItem, r: HistoryRecord): Promise<void> {
       historyStore.setFavNos(h.id, (h.favNos || []).filter((x) => x.no !== r.no))
       ElMessage.success(`已取消收藏 第${r.no}题`)
     } else {
-      await favStore.add({
+      const newFavId = await favStore.add({
         roundId: h.id,
         no: r.no,
         title: h.title || '未命名轮次',
@@ -172,7 +172,7 @@ async function toggleFav(h: HistoryItem, r: HistoryRecord): Promise<void> {
         subId: h.subId || '',
         subName: h.subName || '',
       })
-      historyStore.setFavNos(h.id, [...(h.favNos || []), { no: r.no, id: Date.now() }])
+      historyStore.setFavNos(h.id, [...(h.favNos || []), { no: r.no, id: newFavId }])
       ElMessage.success(`已收藏错题 第${r.no}题`)
     }
   } catch (e) {

@@ -221,7 +221,7 @@ async function restoreBuiltin(): Promise<void> {
     </div>
 
     <!-- 名称输入弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="360px" align-center @open="undefined">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="360px" align-center @close="dialogCancel">
       <el-input v-model="dialogValue" :placeholder="dialogPlaceholder" maxlength="100" @keydown.enter.prevent="dialogOk" />
       <template #footer>
         <el-button @click="dialogCancel">取消</el-button>

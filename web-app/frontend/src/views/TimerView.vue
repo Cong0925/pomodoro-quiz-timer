@@ -69,12 +69,13 @@ const customCount = ref<number | null>(null)
 watch(batchCount, (v) => {
   if (v === 'custom') return
   timer.maxRound.value = Number(v)
-  timer.newRound()
+  // 本轮已有记录时只改题量上限，不重开（防止中途改题量丢弃整轮记录）
+  if (timer.records.value.length === 0) timer.newRound()
 })
 watch(customCount, (v) => {
   if (batchCount.value === 'custom' && v && v > 0) {
     timer.maxRound.value = v
-    timer.newRound()
+    if (timer.records.value.length === 0) timer.newRound()
   }
 })
 
@@ -85,6 +86,8 @@ function isInputFocused(): boolean {
 }
 
 function onKeydown(e: KeyboardEvent): void {
+  /* keep-alive 下监听常驻，仅计时页响应（防止切到其他页面误触快捷键） */
+  if (route.name !== 'timer') return
   /* 整组错题标记面板 */
   if (timer.showBatchPanel.value) {
     const key = e.key.toLowerCase()

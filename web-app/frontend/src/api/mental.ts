@@ -17,7 +17,11 @@ export interface MentalQuestion {
   fillDir?: 'den' | 'pct' | 'frac' | 'val' | 'dec'
 }
 
-export interface MentalStartQuestion extends MentalQuestion {}
+/** /start、/more 返回的题目（不含 answer/tip/active/fillable，防作弊下发），填空题附 fillDir */
+export type MentalStartQuestion = Pick<
+  MentalQuestion,
+  'id' | 'qtype' | 'difficulty' | 'stem' | 'options' | 'tag' | 'fillDir'
+>
 
 export interface MentalStartResult {
   sessionId: number

@@ -94,8 +94,8 @@ export function useTimer(options: UseTimerOptions) {
   }
 
   /* ---- 归档 ---- */
-  async function archiveCurrentRound(): Promise<void> {
-    if (records.value.length === 0 || archived.value) return
+  async function archiveCurrentRound(): Promise<boolean> {
+    if (records.value.length === 0 || archived.value) return true
     const total = records.value.length
     const cat = options.getCat()
     const payload: HistoryArchivePayload = {
@@ -114,9 +114,11 @@ export function useTimer(options: UseTimerOptions) {
     archived.value = true
     try {
       await options.archive(payload)
+      return true
     } catch (e) {
       archived.value = false
       options.notify('归档失败：' + (e instanceof Error ? e.message : String(e)), 'error')
+      return false
     }
   }
 
@@ -125,9 +127,10 @@ export function useTimer(options: UseTimerOptions) {
     const no = records.value.length + 1
     records.value.push({ no, ms: pendingMs, cumMs: pendingMs, timeStr: formatTime(pendingMs), result })
     if (records.value.length >= maxRound.value) {
-      archiveCurrentRound()
       showNewRoundBtn.value = true
-      options.notify(`本轮 ${maxRound.value} 题已完成，已归档到历史记录`, 'success')
+      void archiveCurrentRound().then((ok) => {
+        if (ok) options.notify(`本轮 ${maxRound.value} 题已完成，已归档到历史记录`, 'success')
+      })
     }
   }
 
@@ -222,19 +225,26 @@ export function useTimer(options: UseTimerOptions) {
     resetTimer()
   }
 
-  async function clearRound(): Promise<void> {
-    if (records.value.length > 0 && !archived.value) {
-      await archiveCurrentRound()
-      options.notify('本轮已存入历史记录', 'success')
+  /** 重置前归档本轮（如有必要）；归档失败返回 false，调用方必须中止清空以防丢数据 */
+  async function archiveBeforeReset(): Promise<boolean> {
+    if (records.value.length === 0 || archived.value) return true
+    const ok = await archiveCurrentRound()
+    if (!ok) {
+      options.notify('归档失败，本轮记录仍保留，请稍后重试', 'error')
+      return false
     }
+    options.notify('本轮已存入历史记录', 'success')
+    return true
+  }
+
+  async function clearRound(): Promise<void> {
+    if (!(await archiveBeforeReset())) return
     resetTimer()
     newRound()
   }
 
   async function startNewRound(): Promise<void> {
-    if (records.value.length > 0 && !archived.value) {
-      await archiveCurrentRound()
-    }
+    if (!(await archiveBeforeReset())) return
     resetTimer()
     newRound()
   }
@@ -258,8 +268,9 @@ export function useTimer(options: UseTimerOptions) {
     }
   }
 
-  /** 模式切换（清空当前轮） */
-  function applyMode(m: TimerMode): void {
+  /** 模式切换（清空当前轮；有未归档记录时先归档，失败则不切换以防丢数据） */
+  async function applyMode(m: TimerMode): Promise<void> {
+    if (!(await archiveBeforeReset())) return
     mode.value = m
     resetTimer()
     newRound()

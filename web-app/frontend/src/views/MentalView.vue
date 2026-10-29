@@ -276,6 +276,9 @@ async function finish(): Promise<void> {
     reportStudyDelta(todayKey(), ms).catch(() => {})
     studyStore.loadTodayBase().catch(() => {})
   } catch (e) {
+    /* 恢复到末题保持界面可操作（可重试结算），避免答题区空白卡死 */
+    r.finished = false
+    r.idx = Math.max(0, r.questions.length - 1)
     ElMessage.error('结束练习失败：' + (e instanceof Error ? e.message : String(e)))
   }
 }
@@ -287,12 +290,12 @@ function backToStart(): void {
   phase.value = 'setup'
 }
 
-/* 选项样式（选择题作答后） */
+/* 选项样式（选择题作答后）；跳过题 my=null 不着红（Number(null)===0 会误红选项 A） */
 function optClass(idx: number): string {
   const a = curAnswer.value
   if (!a || isFill.value) return ''
   if (idx === Number(a.correctIndex)) return 'correct'
-  if (idx === Number(a.my)) return 'wrong'
+  if (a.my != null && idx === Number(a.my)) return 'wrong'
   return 'dim'
 }
 
@@ -306,9 +309,16 @@ function myAnswerText(a: RunAnswer): string {
   return String(a.my)
 }
 
-/* Enter 快捷键：作答后下一题 / 填空提交 */
+/* Enter 快捷键：作答后下一题 / 填空提交（不抢占按钮/弹窗的 Enter）
+   注意：输入框内 Enter 必须继续响应——填空流程是「回车提交 → 回车下一题」，提交后焦点仍在输入框；
+   未作答时有 curAnswer 门槛兜底，输入中的 Enter 不会误触下一题 */
 function onKeydown(e: KeyboardEvent): void {
   if (e.key !== 'Enter' || phase.value !== 'run') return
+  const tag = document.activeElement ? document.activeElement.tagName : ''
+  if (tag === 'BUTTON') return // 按钮 Enter 交给浏览器激活，避免双触发
+  /* 弹窗真正可见时让行（el-overlay 关闭后仍留在 DOM，不能用存在性判断） */
+  const overlayOpen = [...document.querySelectorAll('.el-overlay')].some((o) => (o as HTMLElement).style.display !== 'none')
+  if (overlayOpen) return
   if (curAnswer.value) {
     e.preventDefault()
     nextQ()

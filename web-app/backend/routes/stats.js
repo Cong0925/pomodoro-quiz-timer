@@ -88,13 +88,13 @@ router.get('/', asyncHandler(async (req, res) => {
         const todayQuestions = tq[0].questions;
         const todaySkipped = tq[0].skipped;
         const today = {
-            rounds: t[0].rounds,
-            questions: todayQuestions,
-            correct: t[0].correct,
-            skipped: todaySkipped,
-            rate: todayQuestions > 0 ? +(t[0].correct / todayQuestions * 100).toFixed(1) : 0,
-            workMs: t[0].workMs,
-            studyMs: sd.length ? sd[0].ms : 0
+            rounds: Number(t[0].rounds),
+            questions: Number(todayQuestions),
+            correct: Number(t[0].correct),
+            skipped: Number(todaySkipped),
+            rate: todayQuestions > 0 ? +(Number(t[0].correct) / Number(todayQuestions) * 100).toFixed(1) : 0,
+            workMs: Number(t[0].workMs),
+            studyMs: Number(sd.length ? sd[0].ms : 0)
         };
 
         /* 按粒度聚合：rounds 汇总（轮次/答对/做题时长） */
@@ -144,13 +144,13 @@ router.get('/', asyncHandler(async (req, res) => {
             return {
                 key,
                 label: labelOf(key, gran),
-                rounds: r.rounds,
-                questions: q.q,
-                correct: r.correct,
-                skipped: q.s,
-                rate: q.q > 0 ? +(r.correct / q.q * 100).toFixed(1) : 0,
-                workMs: r.workMs,
-                studyMs: studyMap[key] || 0
+                rounds: Number(r.rounds),
+                questions: Number(q.q),
+                correct: Number(r.correct),
+                skipped: Number(q.s),
+                rate: q.q > 0 ? +(Number(r.correct) / Number(q.q) * 100).toFixed(1) : 0,
+                workMs: Number(r.workMs),
+                studyMs: Number(studyMap[key] || 0)
             };
         });
 

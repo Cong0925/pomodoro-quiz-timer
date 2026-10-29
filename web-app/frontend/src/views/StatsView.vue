@@ -186,6 +186,7 @@ onUnmounted(() => {
             layout="total, sizes, prev, pager, next"
             background
             size="small"
+            @size-change="page = 1"
           />
         </div>
       </template>

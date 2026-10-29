@@ -33,7 +33,11 @@ async function ensureMonthLoaded(y: number, m: number): Promise<void> {
   const month = `${y}-${pad2(m + 1)}`
   try {
     const list = await fetchMemosMonth(month)
-    const map: Record<string, { type: MemoType; title: string; text: string }> = { ...memos.value }
+    /* 当月以服务端为准整月替换（含已删除项），避免「保存空内容=清空」后旧备忘在日历残留 */
+    const map: Record<string, { type: MemoType; title: string; text: string }> = {}
+    Object.entries(memos.value).forEach(([k, v]) => {
+      if (!k.startsWith(month + '-')) map[k] = v
+    })
     list.forEach((item) => {
       map[item.date] = { type: item.type, title: item.title, text: item.content || '' }
     })

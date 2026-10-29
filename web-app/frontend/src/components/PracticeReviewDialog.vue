@@ -7,6 +7,8 @@ import { formatMs } from '../utils/format'
 const props = defineProps<{
   modelValue: boolean
   records: PracticeDetailRecord[]
+  /** 打开时定位到的题号下标（单题解析跳转用） */
+  startIndex?: number
 }>()
 const emit = defineEmits<{ 'update:modelValue': [v: boolean] }>()
 
@@ -17,7 +19,10 @@ const cur = computed<PracticeDetailRecord | null>(() => props.records[idx.value]
 watch(
   () => props.modelValue,
   (open) => {
-    if (open) idx.value = 0
+    if (open) {
+      const s = props.startIndex ?? 0
+      idx.value = Math.min(Math.max(0, s), Math.max(0, props.records.length - 1))
+    }
   }
 )
 
@@ -36,13 +41,16 @@ function optText(o: PracticeOption | undefined): string {
 function optImg(o: PracticeOption | undefined): string {
   return typeof o === 'object' && o?.img ? o.img : ''
 }
-/* 选项样式：正确=绿 我的错误=红 其余淡化 */
+/* 选项样式：正确=绿 我的错误=红 其余淡化（答案多于 1 个字母按多选集合判定） */
 function optClass(_o: PracticeOption | undefined, i: number): string {
   const c = cur.value
   if (!c) return ''
   const label = optLabel(i)
-  if (label === c.correctAnswer) return 'correct'
-  if (label === c.userAnswer && c.result !== 'ok') return 'wrong'
+  const isMulti = (c.correctAnswer || '').length > 1
+  const correctSet = isMulti ? (c.correctAnswer || '').split('') : [c.correctAnswer]
+  const mySet = isMulti && c.userAnswer ? (c.userAnswer || '').split('') : c.userAnswer ? [c.userAnswer] : []
+  if (correctSet.includes(label)) return 'correct'
+  if (mySet.includes(label) && c.result !== 'ok') return 'wrong'
   return 'dim'
 }
 

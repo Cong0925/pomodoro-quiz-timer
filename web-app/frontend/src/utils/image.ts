@@ -69,5 +69,9 @@ export async function compressImageFile(file: File, maxKB = 300): Promise<Compre
     size = base64Bytes(dataUrl)
     quality -= 0.1
   }
+  if (size > maxKB * 1024) {
+    /* 压缩到质量下限仍超限时明确报错，不静默返回超限图（否则到后端才被拒，用户不知原因） */
+    throw new Error(`图片压缩后仍超过 ${maxKB}KB（当前约 ${Math.round(size / 1024)}KB），请缩小原图或裁剪后重试`)
+  }
   return { dataUrl, size, orig, width: w, height: h }
 }

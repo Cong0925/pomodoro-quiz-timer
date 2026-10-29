@@ -39,6 +39,12 @@ async function importData(conn, data) {
     await conn.query('DELETE FROM rounds');
 
     const rounds = data.history;
+    /* 缺 id 的行预分配稳定回退 id，插入与明细/收藏引用同一值（避免明细挂 0 触发外键失败） */
+    const ridMap = new Map();
+    rounds.forEach((h, n) => {
+        h._rid = num(h.id) || (Date.now() + n);
+        if (num(h.id)) ridMap.set(num(h.id), h._rid);
+    });
     for (let i = 0; i < rounds.length; i += BATCH) {
         const chunk = rounds.slice(i, i + BATCH);
         const vals = [], params = [];
@@ -49,7 +55,7 @@ async function importData(conn, data) {
                 ({ single: '单题模式', batch: '整组模式', practice: '练习模式', mental: '速算练习' }[mode] || '');
             vals.push('(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
             params.push(
-                num(h.id) || Date.now() + i + k,
+                h._rid,
                 mode,
                 modeName,
                 str(h.title, 100),
@@ -77,7 +83,7 @@ async function importData(conn, data) {
     for (let i = 0; i < rounds.length; i++) {
         const h = rounds[i];
         const recs = Array.isArray(h.records) ? h.records : [];
-        const rid = num(h.id) || 0;
+        const rid = h._rid;
         for (let j = 0; j < recs.length; j += BATCH) {
             const chunk = recs.slice(j, j + BATCH);
             const vals = [], params = [];
@@ -103,10 +109,10 @@ async function importData(conn, data) {
             vals.push('(?,?,?,?,?,?,?,?,?,?,?,?)');
             params.push(
                 num(f.id) || Date.now() + i + k,
-                num(f.hid) || 0,
+                num(f.hid) ? (ridMap.get(num(f.hid)) || num(f.hid)) : 0,
                 num(f.no) || 0,
                 str(f.title, 100),
-                f.mode === 'batch' ? 'batch' : 'single',
+                ['single', 'batch', 'practice', 'mental'].includes(f.mode) ? f.mode : 'single',
                 str(f.modeName, 20) || '单题模式',
                 str(f.timeStr, 12),
                 f.collectedAt || '1970-01-01 00:00:00',
@@ -174,12 +180,18 @@ async function importData(conn, data) {
         await conn.query('DELETE FROM question_banks');
 
         const banks = Array.isArray(data.practice.questionBanks) ? data.practice.questionBanks : [];
+        /* 缺 id 的题库/题目预分配稳定回退 id，供题目/明细外键引用同一值 */
+        const bidMap = new Map();
+        banks.forEach((b, n) => {
+            b._bid = num(b.id) || (Date.now() + n);
+            if (num(b.id)) bidMap.set(num(b.id), b._bid);
+        });
         for (let i = 0; i < banks.length; i += BATCH) {
             const chunk = banks.slice(i, i + BATCH);
             const vals = [], params = [];
             chunk.forEach(b => {
                 vals.push('(?,?,?,?,?)');
-                params.push(num(b.id) || 0, str(b.name, 100), str(b.catId, 32) || null,
+                params.push(b._bid, str(b.name, 100), str(b.catId, 32) || null,
                     str(b.subId, 64) || null, str(b.description, 255));
             });
             await conn.query(
@@ -189,12 +201,17 @@ async function importData(conn, data) {
         pBanks = banks.length;
 
         const qs = Array.isArray(data.practice.questions) ? data.practice.questions : [];
+        const qidMap = new Map();
+        qs.forEach((q, n) => {
+            q._qid = num(q.id) || (Date.now() + 50000 + n);
+            if (num(q.id)) qidMap.set(num(q.id), q._qid);
+        });
         for (let i = 0; i < qs.length; i += BATCH) {
             const chunk = qs.slice(i, i + BATCH);
             const vals = [], params = [];
             chunk.forEach(q => {
                 vals.push('(?,?,?,?,?,?,?,?,?,?,?)');
-                params.push(num(q.id) || 0, num(q.bankId) || 0, str(q.type, 10) || 'single',
+                params.push(q._qid, num(q.bankId) ? (bidMap.get(num(q.bankId)) || num(q.bankId)) : 0, str(q.type, 10) || 'single',
                     str(q.stem, 20000), JSON.stringify(q.stemImg || []), JSON.stringify(q.options || []), str(q.answer, 50),
                     str(q.analysis, 20000), Math.min(3, Math.max(1, num(q.difficulty) || 2)),
                     str(q.source, 100), q.isDeleted ? 1 : 0);
@@ -206,12 +223,15 @@ async function importData(conn, data) {
         pQuestions = qs.length;
 
         const sessions = Array.isArray(data.practice.practiceSessions) ? data.practice.practiceSessions : [];
+        sessions.forEach((s, n) => {
+            s._sid = num(s.id) || (Date.now() + 100000 + n);
+        });
         for (let i = 0; i < sessions.length; i += BATCH) {
             const chunk = sessions.slice(i, i + BATCH);
             const vals = [], params = [];
             chunk.forEach(s => {
                 vals.push('(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-                params.push(num(s.id) || 0, num(s.bankId) || 0, str(s.bankName, 100),
+                params.push(s._sid, num(s.bankId) ? (bidMap.get(num(s.bankId)) || num(s.bankId)) : 0, str(s.bankName, 100),
                     str(s.mode, 10) || 'order', num(s.totalCount), num(s.doneCount), num(s.correctCount),
                     num(s.wrongCount), num(s.skippedCount), num(s.rate), num(s.totalMs),
                     str(s.catId, 32) || null, str(s.catName, 100) || null, str(s.subId, 64) || null,
@@ -229,14 +249,14 @@ async function importData(conn, data) {
         /* practice_records：按会话插入（自增 id） */
         for (const s of sessions) {
             const recs = Array.isArray(s.records) ? s.records : [];
-            const sid = num(s.id) || 0;
+            const sid = s._sid;
             for (let j = 0; j < recs.length; j += BATCH) {
                 const chunk = recs.slice(j, j + BATCH);
                 const vals = [], params = [];
                 chunk.forEach(r => {
                     vals.push('(?,?,?,?,?,?,?)');
                     const res = r.result === 'ok' || r.result === 'ng' || r.result === 'skip' ? r.result : 'ok';
-                    params.push(sid, num(r.questionId) || 0, num(r.no) || 0,
+                    params.push(sid, num(r.questionId) ? (qidMap.get(num(r.questionId)) || num(r.questionId)) : 0, num(r.no) || 0,
                         r.userAnswer == null || r.userAnswer === '' ? null : str(r.userAnswer, 50),
                         res, num(r.ms), null);
                 });
@@ -254,14 +274,20 @@ async function importData(conn, data) {
         await conn.query('DELETE FROM mental_sessions');
 
         const mqs = Array.isArray(data.mental.mentalQuestions) ? data.mental.mentalQuestions : [];
+        /* 缺 id 的题预分配稳定回退 id，供速算明细引用同一值 */
+        const midMap = new Map();
         if (mqs.length) {
             await conn.query('DELETE FROM mental_questions');
+            mqs.forEach((q, n) => {
+                q._mid = num(q.id) || (Date.now() + 200000 + n);
+                if (num(q.id)) midMap.set(num(q.id), q._mid);
+            });
             for (let i = 0; i < mqs.length; i += BATCH) {
                 const chunk = mqs.slice(i, i + BATCH);
                 const vals = [], params = [];
                 chunk.forEach(q => {
                     vals.push('(?,?,?,?,?,?,?,?,?,?)');
-                    params.push(num(q.id) || 0, str(q.qtype, 16) || 'percent',
+                    params.push(q._mid, str(q.qtype, 16) || 'percent',
                         Math.min(3, Math.max(1, num(q.difficulty) || 2)),
                         str(q.stem, 20000), JSON.stringify(q.options || []), str(q.answer, 50),
                         str(q.tip, 20000), str(q.tag, 50), q.active === false ? 0 : 1,
@@ -275,12 +301,15 @@ async function importData(conn, data) {
         }
 
         const sessions = Array.isArray(data.mental.mentalSessions) ? data.mental.mentalSessions : [];
+        sessions.forEach((s, n) => {
+            s._sid = num(s.id) || (Date.now() + 300000 + n);
+        });
         for (let i = 0; i < sessions.length; i += BATCH) {
             const chunk = sessions.slice(i, i + BATCH);
             const vals = [], params = [];
             chunk.forEach(s => {
                 vals.push('(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-                params.push(num(s.id) || 0, str(s.qtype, 16) || 'mixed',
+                params.push(s._sid, str(s.qtype, 16) || 'mixed',
                     str(s.qtypeName, 20) || '', Math.min(3, Math.max(0, num(s.difficulty))),
                     s.answerMode === 'fill' ? 'fill' : 'choice',
                     num(s.totalCount), num(s.doneCount), num(s.correctCount),
@@ -298,14 +327,14 @@ async function importData(conn, data) {
         /* mental_records：按会话插入（自增 id，题目快照照搬） */
         for (const s of sessions) {
             const recs = Array.isArray(s.records) ? s.records : [];
-            const sid = num(s.id) || 0;
+            const sid = s._sid;
             for (let j = 0; j < recs.length; j += BATCH) {
                 const chunk = recs.slice(j, j + BATCH);
                 const vals = [], params = [];
                 chunk.forEach(r => {
                     vals.push('(?,?,?,?,?,?,?,?,?,?,?,?)');
                     const res = r.result === 'ok' || r.result === 'ng' || r.result === 'skip' ? r.result : 'ok';
-                    params.push(sid, num(r.questionId) || 0, num(r.no) || 0,
+                    params.push(sid, num(r.questionId) ? (midMap.get(num(r.questionId)) || num(r.questionId)) : 0, num(r.no) || 0,
                         str(r.qtype, 16) || '', str(r.stem, 20000), JSON.stringify(r.options || []),
                         str(r.answer, 50), str(r.tip, 20000),
                         r.userAnswer == null || r.userAnswer === '' ? null : str(r.userAnswer, 50),

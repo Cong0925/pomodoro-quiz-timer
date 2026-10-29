@@ -41,17 +41,21 @@ async function loadStats(): Promise<void> {
   }
 }
 
+let reqSeq = 0 // 请求序号：过期响应丢弃（防快速翻页乱序覆盖）
+
 async function loadPage(reset = false): Promise<void> {
   if (reset) page.value = 1
+  const seq = ++reqSeq
   loading.value = true
   try {
     const data = await practiceApi.fetchPracticeHistory(page.value, pageSize.value)
+    if (seq !== reqSeq) return
     list.value = data.list
     total.value = data.total
   } catch (e) {
-    ElMessage.error('记录加载失败：' + (e instanceof Error ? e.message : String(e)))
+    if (seq === reqSeq) ElMessage.error('记录加载失败：' + (e instanceof Error ? e.message : String(e)))
   } finally {
-    loading.value = false
+    if (seq === reqSeq) loading.value = false
   }
 }
 
@@ -317,7 +321,7 @@ defineExpose({ refresh })
     />
 
     <!-- 回顾解析弹窗 -->
-    <PracticeReviewDialog v-model="reviewVisible" :records="reviewRecords" />
+    <PracticeReviewDialog v-model="reviewVisible" :records="reviewRecords" :start-index="reviewIdx" />
   </div>
 </template>
 

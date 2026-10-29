@@ -7,12 +7,13 @@ export function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-/** mm:ss.xx（含百分秒，计时显示用） */
+/** mm:ss.xx（含百分秒，计时显示用；百分秒截断防 toFixed 进位出 00:60.00） */
 export function formatTime(ms: number): string {
-  const totalSec = ms / 1000
-  const minutes = String(Math.floor(totalSec / 60)).padStart(2, '0')
-  const seconds = (totalSec % 60).toFixed(2).padStart(5, '0')
-  return `${minutes}:${seconds}`
+  const totalCs = Math.max(0, Math.floor(ms / 10))
+  const minutes = String(Math.floor(totalCs / 6000)).padStart(2, '0')
+  const seconds = String(Math.floor((totalCs % 6000) / 100)).padStart(2, '0')
+  const cs = String(totalCs % 100).padStart(2, '0')
+  return `${minutes}:${seconds}.${cs}`
 }
 
 /** mm:ss（整数秒，练习/短用时展示用） */

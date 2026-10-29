@@ -61,15 +61,19 @@ const qLoading = ref(false)
 /* 题目状态筛选：normal=仅正常 deleted=仅已停用 all=全部（后端分页过滤） */
 const statusFilter = ref<practiceApi.QuestionStatus>('normal')
 
+let reqSeq = 0 // 请求序号：过期响应丢弃（防快速连点/筛选切换乱序覆盖）
+
 async function loadQuestions(): Promise<void> {
   if (!curBank.value) {
     questions.value = []
     qTotal.value = 0
     return
   }
+  const seq = ++reqSeq
   qLoading.value = true
   try {
     const data = await practiceApi.fetchQuestionsPage(curBank.value, qPage.value, qPageSize.value, statusFilter.value)
+    if (seq !== reqSeq) return
     qTotal.value = data.total
     questions.value = data.list
     /* 删除后页码越界回退 */
@@ -78,9 +82,9 @@ async function loadQuestions(): Promise<void> {
       return
     }
   } catch (e) {
-    ElMessage.error('题目加载失败：' + (e instanceof Error ? e.message : String(e)))
+    if (seq === reqSeq) ElMessage.error('题目加载失败：' + (e instanceof Error ? e.message : String(e)))
   } finally {
-    qLoading.value = false
+    if (seq === reqSeq) qLoading.value = false
   }
 }
 
@@ -160,13 +164,15 @@ interface QOptionDraft { text: string; img: string }
 const qDialog = ref(false)
 const qEditId = ref(0)
 const qForm = ref<{
+  type: 'single' | 'multi' | 'judge'
   stem: string
   stemImg: string[]
   analysis: string
   difficulty: number
   answer: string
+  multiAnswer: string[]
   options: QOptionDraft[]
-}>({ stem: '', stemImg: [], analysis: '', difficulty: 2, answer: 'A', options: Array.from({ length: 4 }, () => ({ text: '', img: '' })) })
+}>({ type: 'single', stem: '', stemImg: [], analysis: '', difficulty: 2, answer: 'A', multiAnswer: [], options: Array.from({ length: 4 }, () => ({ text: '', img: '' })) })
 
 /* 图片上传 refs（题干多图 / 选项逐项） */
 const stemFileInput = ref<HTMLInputElement | null>(null)
@@ -223,15 +229,17 @@ function openQDialog(id = 0): void {
     const q = questions.value.find((x) => x.id === id)
     const opts = (q?.options && q.options.length ? [...q.options] : ['', '', '', '']) as PracticeOption[]
     qForm.value = {
+      type: q?.type === 'multi' || q?.type === 'judge' ? q.type : 'single',
       stem: q?.stem || '',
-      stemImg: Array.isArray(q?.stem_img) ? q.stem_img : [],
+      stemImg: Array.isArray(q?.stem_img) ? [...q.stem_img] : [],
       analysis: q?.analysis || '',
       difficulty: q?.difficulty || 2,
       answer: q?.answer || 'A',
+      multiAnswer: q?.type === 'multi' ? (q?.answer || '').split('').sort() : [],
       options: opts.map((o) => (typeof o === 'string' ? { text: o, img: '' } : { text: o.text || '', img: o.img || '' })),
     }
   } else {
-    qForm.value = { stem: '', stemImg: [], analysis: '', difficulty: 2, answer: 'A', options: Array.from({ length: 4 }, () => ({ text: '', img: '' })) }
+    qForm.value = { type: 'single', stem: '', stemImg: [], analysis: '', difficulty: 2, answer: 'A', multiAnswer: [], options: Array.from({ length: 4 }, () => ({ text: '', img: '' })) }
   }
   qDialog.value = true
 }
@@ -241,6 +249,7 @@ async function saveQuestion(): Promise<void> {
   const stemImg = qForm.value.stemImg.filter(isDataImageUrl)
   if (!stem && stemImg.length === 0) return void ElMessage.warning('请填写题干或上传题干图')
   if (qForm.value.options.some((o) => !o.text.trim() && !o.img)) return void ElMessage.warning('请填写所有选项（文字或图片至少一项）')
+  if (qForm.value.type === 'multi' && qForm.value.multiAnswer.length < 2) return void ElMessage.warning('多选题请至少勾选两个正确答案')
   const options: PracticeOption[] = qForm.value.options.map((o) => {
     const text = o.text.trim()
     if (o.img) return text ? { text, img: o.img } : { img: o.img }
@@ -248,11 +257,11 @@ async function saveQuestion(): Promise<void> {
   })
   const payload: practiceApi.QuestionPayload = {
     bankId: curBank.value,
-    type: 'single',
+    type: qForm.value.type,
     stem,
     stemImg,
     options,
-    answer: qForm.value.answer,
+    answer: qForm.value.type === 'multi' ? [...qForm.value.multiAnswer].sort().join('') : qForm.value.answer,
     analysis: qForm.value.analysis.trim(),
     difficulty: qForm.value.difficulty,
     source: '',
@@ -482,8 +491,22 @@ async function restoreQ(id: number): Promise<void> {
             </div>
           </div>
         </el-form-item>
+        <el-form-item label="题型" required>
+          <el-radio-group v-model="qForm.type">
+            <el-radio-button value="single">单选</el-radio-button>
+            <el-radio-button value="multi">多选</el-radio-button>
+            <el-radio-button value="judge">判断</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="答案" required>
-          <el-select v-model="qForm.answer" style="width: 120px">
+          <el-select v-if="qForm.type === 'judge'" v-model="qForm.answer" style="width: 140px">
+            <el-option value="T" label="正确 (T)" />
+            <el-option value="F" label="错误 (F)" />
+          </el-select>
+          <el-checkbox-group v-else-if="qForm.type === 'multi'" v-model="qForm.multiAnswer">
+            <el-checkbox v-for="(_, i) in qForm.options" :key="i" :value="String.fromCharCode(65 + i)">{{ String.fromCharCode(65 + i) }}</el-checkbox>
+          </el-checkbox-group>
+          <el-select v-else v-model="qForm.answer" style="width: 120px">
             <el-option v-for="(_, i) in qForm.options" :key="i" :value="String.fromCharCode(65 + i)" :label="String.fromCharCode(65 + i)" />
           </el-select>
         </el-form-item>

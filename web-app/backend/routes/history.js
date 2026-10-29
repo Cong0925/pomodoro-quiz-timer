@@ -5,7 +5,7 @@
  * ============================================================ */
 const express = require('express');
 const pool = require('../db');
-const { asyncHandler, str, num, parseJsonArray } = require('../utils');
+const { asyncHandler, str, num, parseJsonArray, nowDateTime } = require('../utils');
 
 const router = express.Router();
 
@@ -135,7 +135,7 @@ router.post('/', asyncHandler(async (req, res) => {
                 str(b.modeName, 20) || (b.mode === 'batch' ? '整组模式' : '单题模式'),
                 str(b.title, 100),
                 str(b.description, 255),
-                b.finishedAt || new Date().toISOString().slice(0, 19).replace('T', ' '),
+                b.finishedAt || nowDateTime(),
                 num(b.maxCount) || 20,
                 num(b.totalMs),
                 num(b.correct),

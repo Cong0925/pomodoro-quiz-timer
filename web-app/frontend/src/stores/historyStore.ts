@@ -24,14 +24,18 @@ export const useHistoryStore = defineStore('history', () => {
 
   const isEmpty = computed(() => list.value.length === 0)
 
+  let reqSeq = 0 // 请求序号：响应回来先比对，过期响应丢弃（防快速连点/切换筛选乱序覆盖）
+
   async function loadPage(opts: { page?: number; append?: boolean } = {}): Promise<void> {
     const p = opts.page || 1
+    const seq = ++reqSeq
     try {
       const data = await historyApi.fetchHistoryPage({
         ...filter.value,
         page: p,
         limit: PAGE_LIMIT,
       })
+      if (seq !== reqSeq) return // 已有更新的请求发出，丢弃过期响应
       list.value = opts.append && page.value === data.page - 1 ? [...list.value, ...data.list] : data.list
       total.value = data.total
       page.value = data.page

@@ -24,7 +24,10 @@ const loading = ref(false)
 
 let kwTimer: number | null = null
 
+let reqSeq = 0 // 请求序号：过期响应丢弃（防快速连点/筛选切换乱序覆盖）
+
 async function load(): Promise<void> {
+  const seq = ++reqSeq
   loading.value = true
   try {
     const data = await mentalApi.fetchAdminQuestions({
@@ -36,6 +39,7 @@ async function load(): Promise<void> {
       page: page.value,
       pageSize: pageSize.value,
     })
+    if (seq !== reqSeq) return
     list.value = data.list || []
     total.value = data.total || 0
     groups.value = data.groups || {}
@@ -45,11 +49,12 @@ async function load(): Promise<void> {
       page.value--
     }
   } catch (e) {
+    if (seq !== reqSeq) return
     ElMessage.error('题库加载失败：' + (e instanceof Error ? e.message : String(e)))
     list.value = []
     total.value = 0
   } finally {
-    loading.value = false
+    if (seq === reqSeq) loading.value = false
   }
 }
 
@@ -338,6 +343,7 @@ onMounted(() => load())
             layout="total, sizes, prev, pager, next"
             background
             size="small"
+            @size-change="page = 1"
           />
         </div>
       </div>
