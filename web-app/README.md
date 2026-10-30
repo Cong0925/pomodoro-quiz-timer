@@ -1,7 +1,7 @@
 ---
 description: web-app 版（Vue3+Node 前后端分离）目录结构与启动说明
 created: 2026-10-28
-last_modified: 2026-10-28
+last_modified: 2026-10-30
 ---
 
 # web-app 版本（Vue 3 + TypeScript + Node）
@@ -32,21 +32,25 @@ web-app/
 ```bash
 # 后端（先初始化数据库，首次执行）
 cd backend
-cp .env.example .env   # 按需修改数据库配置
+cp .env.example .env   # 按需修改数据库配置（端口以 .env 的 PORT 为准，默认 3000）
 npm install
-npm run init-db        # 建库建表（幂等，可重复执行）
-npm run dev            # 开发模式（node --watch，端口 3000）
+npm run init-db        # 仅建库建表（幂等，不含数据）
+# 首次加载基础数据（分类/题库/题目/速算题）：在仓库根目录执行
+#   node database/init-all.js   （一步到位：建表 + 基础数据，可替代上面的 npm run init-db）
+npm run dev            # 开发模式（node --watch）
 
 # 前端（另开终端）
 cd frontend
 npm install
-npm run dev            # 开发模式（端口 5173，/api 自动代理到 3000）
+npm run dev            # 开发模式（默认端口 5173，/api 自动代理到后端）
 ```
+
+> 题目图片：行测真题图片实体在仓库根 `data/qi-images/`（约 256MB），缺失需从原电脑拷贝，否则图片题裂图（见 `../database/README.md`）。
 
 ## 约定
 
-- 前端所有请求走 `src/api/http.ts`，开发环境经 Vite proxy 转发 `/api` → `http://localhost:3000`
-- 数据库与主版本共用库 `pomodoro-quiz-timer`（各自独立 `.env`，互不影响）
+- 前端所有请求走 `src/api/http.ts`，开发环境经 Vite proxy 转发 `/api` → 后端端口（以 `backend/.env` 的 `PORT` 为准）
+- 数据库与主版本共用库 `pomodoro-quiz-timer`（各自独立 `.env`，互不影响）；跨电脑加载数据库用仓库根 `database/init-all.js`（建表 + 基础数据一键还原，个人数据用 backup/restore）
 - 全部版本统一在 `main` 分支管理（2026-10-28 起，历史 `version-vue+node` 分支已并入并删除）；web-app 与主版本改动分开提交、不混提
 - 编码规范见根目录 `docs/coding-standards.md` 第三/四/五章（Vue/TS/Pinia）
 
