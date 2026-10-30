@@ -1,6 +1,16 @@
 # 刷题计时器（MySQL 版）
 
-双模式刷题计时 + 历史记录 + 错题收藏 + 学习统计 + 日历备忘 + **题库练习**（题库/题目管理、顺序/随机/错题重练、答题即判、练习记录归档）。数据全部存储在本地 MySQL 数据库，前端通过 Node 后端接口读写，数据再多也不卡顿。
+双模式刷题计时（单题/整组）+ 悬浮学习计时 + 历史记录 + 错题收藏 + 学习统计（日/周/月）+ 日历备忘 + **题库练习**（题库/题目管理、顺序/随机/错题重练、答题即判、练习记录归档、题目停用/恢复、图片题、行测真题 9 库 27460 题）+ **速算练习**（百化分/分数比较/估算值/平方数，选择+填空，按难度抽题、技巧手册）。数据全部存储在本地 MySQL 数据库，前端通过 Node 后端接口读写，数据再多也不卡顿。
+
+本仓库为一仓多版本（统一 `main` 分支管理）：
+
+| 版本 | 位置 | 技术栈 | 入口 |
+| --- | --- | --- | --- |
+| **主版本**（本 README） | 仓库根目录 | 原生 HTML/CSS/JS + Node/Express/MySQL | 双击 `启动.bat` |
+| **web-app 版** | `web-app/` | Vue 3 + TypeScript + Node 前后端分离 | 见 `web-app/README.md` |
+| **app 版** | `app/`（规划中） | 预留 Rust/Tauri | 未开始 |
+
+两个版本共用同一个 MySQL 库 `pomodoro-quiz-timer`，数据互通。
 
 ## 一、怎么启动（日常使用）
 
@@ -29,9 +39,14 @@ PORT=3000
 
 ## 三、日常备份与恢复
 
+数据分两类，恢复方式不同：
+
+- **基础数据**（分类 / 题库 / 题目 / 速算内置题）：随 `database/` 工具箱走，新电脑执行 `node database/init-all.js` 一键还原，平时不需要备份；
+- **个人数据**（做题记录 / 收藏 / 学习时长 / 备忘等）：用下面的备份 / 恢复命令定期备份。
+
 | 命令 | 作用 |
 | --- | --- |
-| `npm run backup` | 一键把全部数据导出为 `data/backup-日期.json`（含历史/收藏/分类/学习/备忘） |
+| `npm run backup` | 一键把全部数据（14 张表，含题库/题目）导出为 `data/backup-日期.json` |
 | `npm run restore <备份文件>` | 从备份文件恢复数据（导入前自动先备份当前库，防止误操作） |
 | 页面「设置 → 本地化保存 → 保存 JSON」 | 在界面上直接下载备份文件到本地 |
 | 页面「设置 → 本地化保存 → 导入 JSON」 | 在界面上选择备份文件导入 |
@@ -40,18 +55,17 @@ PORT=3000
 
 ## 四、迁移到新电脑（完整步骤）
 
-> 前提：新电脑已安装 **Node.js**（LTS 版）和 **MySQL**，并已创建好数据库账号（root 或自建账号均可）。
+> 前提：新电脑已安装 **Node.js**（LTS 版）和 **MySQL 8.x**，并已创建好数据库账号（root 或自建账号均可）。
 
-1. **旧电脑导出数据**：在旧电脑项目目录执行 `npm run backup`，得到 `data/backup-日期.json`。
-2. **把备份文件带到新电脑**：通过网盘 / U盘 / 微信等方式传输（备份文件含个人数据，不要传到公开仓库）。
-3. **获取代码**：从 GitHub 下载或 `git clone` 本项目到新电脑。
-4. **配置数据库**：复制 `.env.example` 为 `.env`，把 `DB_USER` / `DB_PASSWORD` 改成新电脑 MySQL 的账号密码（库名保持 `pomodoro-quiz-timer` 即可，脚本会自动创建）。
-5. **安装依赖**：`npm install`。
-6. **建库建表**：`npm run init-db`（自动创建数据库和 14 张表，可重复执行）。
-7. **恢复数据**：把备份文件放进项目 `data/` 目录，执行 `npm run restore data/backup-日期.json`。
-8. **启动**：双击 `启动.bat`，浏览器打开 http://localhost:3000，数据全部就位。
+1. **获取代码**：从 GitHub 下载或 `git clone` 本项目到新电脑。
+2. **配置数据库**：复制 `.env.example` 为 `.env`，把 `DB_USER` / `DB_PASSWORD` 改成新电脑 MySQL 的账号密码（库名保持 `pomodoro-quiz-timer` 即可，脚本会自动创建）。
+3. **安装依赖**：`npm install`。
+4. **初始化数据库（建表 + 基础数据，关键步骤）**：执行 `node database/init-all.js`——自动建库建表，并导入分类、题库、题目（含行测真题 27460 题）、速算内置题；幂等可重复执行。详见 `database/README.md`。
+5. **拷贝题目图片（必须）**：把旧电脑的 `data/qi-images` 目录（约 256MB，行测真题图片实体）整个拷到新电脑 `data/` 下——数据库只存图片路径引用，不拷会裂图。
+6. **恢复个人数据（可选）**：旧电脑执行 `npm run backup` 得到 `data/backup-日期.json`，带到新电脑放进 `data/` 目录后执行 `npm run restore data/backup-日期.json`（做题记录/收藏/备忘等个人数据）。
+7. **启动**：双击 `启动.bat`，浏览器打开 http://localhost:3000，数据全部就位。
 
-> 提示：`data/` 目录已被 .gitignore 排除，备份文件不会误传到 GitHub；新电脑上用上述步骤导入即可。
+> 提示：`data/` 目录已被 .gitignore 排除，备份文件与题目图片都不会误传到 GitHub。
 
 ## 五、旧项目数据迁移（首次从旧版 JSON 导入）
 
@@ -69,7 +83,8 @@ npm run migrate 旧data.json路径 -- --force
 | 命令 | 作用 |
 | --- | --- |
 | `npm start` | 启动后端服务 |
-| `npm run init-db` | 建库建表（幂等，可重复执行） |
+| `node database/init-all.js` | **一键初始化数据库**：建库建表 + 导入基础数据（分类/题库/题目/速算题），跨电脑加载用 |
+| `npm run init-db` | 仅建库建表（不含数据，幂等，可重复执行） |
 | `npm run backup` | 备份全部数据到 data/ 目录 |
 | `npm run restore <文件>` | 从备份文件恢复 |
 | `npm run migrate <文件> -- --force` | 从旧版 data.json 导入 |
@@ -87,6 +102,7 @@ npm run migrate 旧data.json路径 -- --force
 │  ├─ exportData.js     数据导出公共模块
 │  ├─ importData.js     数据导入核心逻辑
 │  ├─ defaultCategories.js  内置分类（公务员考试等）
+│  ├─ mentalQuestions.js    速算题目种子（百化分/分数比较/估算值/平方数，179 题）
 │  ├─ utils.js          服务端公共工具（uid/nowDateTime/num/str/asyncHandler…）
 │  ├─ db.js             数据库连接池
 │  └─ routes/           API 路由（按资源拆分，统一用 asyncHandler 包错误处理）
@@ -98,7 +114,6 @@ npm run migrate 旧data.json路径 -- --force
 │     ├─ memos.js       日历备忘
 │     ├─ practice.js    练习模式（题库/题目/会话/历史/统计）
 │     ├─ mental.js      速算练习（内置题库/会话/作答/历史/统计）
-│     ├─ mentalQuestions.js 速算题目种子（百化分/比大小/估算 34 题）
 │     └─ data.js        数据导入导出（备份文件格式）
 ├─ public/              前端（纯 HTML/CSS/JS，浏览器直接运行）
 │  ├─ index.html        单页入口（各视图容器 + 组件容器）
@@ -124,6 +139,12 @@ npm run migrate 旧data.json路径 -- --force
 │     │  ├─ settings.js 设置
 │     │  └─ studyFloat.js 悬浮计时
 │     └─ app.js         入口：初始化 + 视图切换 + 菜单
+├─ database/            数据库一键初始化工具箱（跨电脑加载用，见 database/README.md）
+│  ├─ init-all.js       建库建表 + 导入基础数据 + 校验（幂等，不删个人数据）
+│  ├─ seed-data.sql.gz  基础数据快照（分类/题库/题目/速算题，mysqldump 导出）
+│  └─ README.md         使用说明（含 data/qi-images 图片拷贝指引与种子重导命令）
+├─ data/                运行数据（备份 JSON + qi-images 题目图片约 256MB；已 gitignore）
+├─ web-app/             web-app 版（Vue3 + TS + Node 前后端分离，见 web-app/README.md）
 ├─ .env                 数据库配置（改这里；已被 gitignore，不会上传）
 ├─ .env.example         配置模板（新电脑复制为 .env）
 ├─ .gitignore           已排除 .env / node_modules / data（数据与密码不上传）
@@ -144,8 +165,9 @@ npm run migrate 旧data.json路径 -- --force
 4. **写后端 API**：需要接口时新建 `server/routes/你的模块.js`，
    路由处理函数统一写成 `router.get('/...', asyncHandler(async (req, res) => { ... }))`，
    在 `server/index.js` 挂载 `app.use('/api/你的模块', require('./routes/你的模块'))`。
-5. **加表**：涉及新表时在 `server/schema.sql` 追加 `CREATE TABLE IF NOT EXISTS`，
-   新电脑/现有库执行 `npm run init-db` 建表（幂等）。
+5. **加表**：涉及新表时在 `server/schema.sql` 追加 `CREATE TABLE IF NOT EXISTS`（web-app 版在
+   `web-app/backend/schema.sql` 同步维护），新电脑/现有库执行 `npm run init-db` 建表（幂等）；
+   若新表含需要随库分发的种子数据，按 `database/README.md` 第三节重新导出 `seed-data.sql.gz`。
 
 公共约定：时间统一用 `YYYY-MM-DD HH:mm:ss`（服务端 `nowDateTime()` / 前端 `formatDate()`）；
 危险操作（删除等）必须用 `PQ.ui.confirm()` 二次确认；提示统一用 `PQ.ui.showToast()`；
@@ -156,4 +178,6 @@ npm run migrate 旧data.json路径 -- --force
 - **页面提示"连接后端失败"**：服务没启动，双击「启动.bat」。
 - **改过 MySQL 密码后连不上**：把新密码填到 `.env` 的 `DB_PASSWORD`，然后重启服务。
 - **想要换端口**：改 `.env` 的 `PORT`。
-- **新电脑 restore 报连接失败**：检查 `.env` 账号密码、MySQL 服务是否启动、`npm run init-db` 是否已执行。
+- **新电脑打开没有分类/题库/题目**：执行 `node database/init-all.js` 导入基础数据（只跑 `npm run init-db` 只会建空表）。
+- **行测题目图片显示裂图**：检查 `data/qi-images` 目录是否已从旧电脑拷贝完整（约 256MB）。
+- **新电脑 restore 报连接失败**：检查 `.env` 账号密码、MySQL 服务是否启动、`node database/init-all.js` 是否已执行。
