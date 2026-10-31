@@ -1,0 +1,11 @@
+{
+  "name": "record-template",
+  "version": "1.0.0",
+  "description": "通用屏幕操作录制模板：录像 + 虚拟鼠标光标/点击涟漪/目标高亮/步骤注解。依赖已内置，拷贝即用",
+  "main": "recorder.js",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "^1.64.1"
+  }
+}

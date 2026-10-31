@@ -1,7 +1,7 @@
 ---
 description: Claude 会话备忘：项目理解、多版本架构、web-app 当前进度与待办（每次会话开始读取，任务完成后更新）
 created: 2026-10-28
-last_modified: 2026-10-30
+last_modified: 2026-10-31
 ---
 
 # Claude 会话备忘（project memo）
@@ -56,7 +56,7 @@ web-app/
 
 > 仓库根另有 `database/` 一键数据库初始化工具箱（`init-all.js` + `seed-data.sql.gz` + `README.md`，双版本共用，跨电脑加载数据库用，见进度第 39 条）。
 
-## 四、当前进度（截至 2026-10-30 13:16）
+## 四、当前进度（截至 2026-10-31 13:43）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -109,7 +109,11 @@ web-app/
 
 39. ✅ **数据库一键初始化工具箱 database/（2026-10-30 13:10，方案A）**：盘点结论=双端 schema.sql 无结构缺口，缺口在数据层（init-db.js 只建表，题库题目无预置途径）；新建仓库根 `database/`（双版本共用）：`init-all.js`（建库建表→REPLACE 导种子→校验→qi-images 缺失告警；读 database/.env→web-app/backend/.env→根 .env；mysql2 自动探测双 node_modules；幂等不删用户数据）+ `seed-data.sql.gz`（mysqldump 当前库 5 张基础表：categories 7/category_subs 48/question_banks 17/questions 27500 含 stem_img 2550/mental_questions 179，排除 9 张用户数据表）+ `README.md`（含 data/qi-images 256MB 手动拷贝指引与种子重导命令）；临时库全链路验证+幂等复跑+抽查全过，临时库已删；**未提交（等用户指令）**
 
-40. ✅ **项目介绍与使用文档全面修订（2026-10-30 13:16，方案B）**：根 `README.md`（介绍补全速算/行测真题/图片题/停用+一仓多版本表格、备份章节区分基础/个人数据、迁移新电脑改 database/init-all.js 主流程+qi-images 拷贝、命令速查/目录结构/扩展约定/常见问题同步，修正 mentalQuestions.js 位置与 179 题描述）+ `web-app/README.md`（启动步骤补种子加载与图片提示、端口改以 .env 为准、约定补工具箱说明）；**未提交（等用户指令）**
+40. ✅ **项目介绍与使用文档全面修订（2026-10-30 13:16，方案B）**：根 `README.md`（介绍补全速算/行测真题/图片题/停用+一仓多版本表格、备份章节区分基础/个人数据、迁移新电脑改 database/init-all.js 主流程+qi-images 拷贝、命令速查/目录结构/扩展约定/常见问题同步，修正 mentalQuestions.js 位置与 179 题描述）+ `web-app/README.md`（启动步骤补种子加载与图片提示、端口改以 .env 为准、约定补工具箱说明）；**已随 13:27 提交推送（`f90d3fa0`/`0c4b2f0d`）**
+
+41. ✅ **web-app 核心三模块操作录制（2026-10-30 19:56，方案A 单条演示视频）**：新建 `record-webapp-demo.js`（当时在仓库根，2026-10-31 已移入 record-template/，见第 42 条；用 record-template/recorder）10 步演示——计时导览/单题 Y-N-P 三题/清空归档、练习选题导览/逐题作答/结算页、速算题型导览/百化分填空/分数比大小选择（无限流快结算）、收尾回首页；服务全托管（Start-Process 拉起 start-webapp.ps1，录完 stop-webapp.ps1 自动停止，--keep-services 可保留）+ 录前预热规避 Vite 依赖 504；测后清理（响应监听收集会话/归档 id → 录完统一 DELETE，视频不含删除操作）；产出 `docs/演示视频/web-app-核心三模块演示.webm`（17.6MB，14/14 PASS、0 报错）；过程修复 4 处（空格被输入框拦截→先 blur、Vite 504→预热、detached spawn ps1 静默失效→Start-Process、题量不足空等→自适应循环）；**未提交（等用户指令）**
+
+42. ✅ **录制脚本收纳进 record-template/（2026-10-31 13:43，优化方案A + 生成器一并移入）**：仓库根 `record-webapp-demo.js`、`create-record-template.js` 移入 `record-template/`；record-webapp-demo.js 修 5 处路径（require('./recorder')、__dirname 三处上跳 `..`、用法注释）；create-record-template.js 路径基于 cwd 无需改，补头部说明 + 自保护校验（禁止以自身所在目录为目标，防 `--force` 连带误删 record-webapp-demo.js 等非模板文件）；record-template/README.md 补附带脚本说明；验证 node --check ×2 + 自保护实测拦截 + require 解析过；**未提交（等用户指令）**
 
 **待办（建议优先级）**：
 0.8. ⬜ **审查遗留待定项（2026-10-29 21:46）**：① v-html 题干/解析 XSS 面——需引入 DOMPurify 依赖做白名单过滤，待用户决策是否加依赖；② CatSelect 换大类双发 reload（正确性已由请求序号守卫兜底，仅剩一次冗余请求可优化）；③ 修复批次全部完成待用户人工验收（重点：多选题作答、速算抽题、计时改题量、收藏/取消收藏、导出导入往返）
@@ -134,7 +138,8 @@ web-app/
 **2026-10-29 17:28 提交状态（用户指令「提交所有修改,然后推送」）**：`dd8cd21f` docs 备忘录+修改记录+gitignore 排除 zip（3 文件）、`8c239697` feat(web-app) 一键启停脚本 4 文件；已 push `72778271..8c239697 → origin/main`，工作区干净（仅本条回执与修改记录回执为推送后新增、待下次提交）。
 **2026-10-29 19:11 提交状态（用户指令「提交所有修改并推送」）**：按跨版本禁混提拆 3 个 commit——`e58c9720` feat(web-app) 速算难度抽题+题库管理筛选状态列+分页器翻页修复（6 文件）、`51f7fcac` feat(主版本) 速算开放难度抽题+状态三态筛选与状态列（3 文件）、`09feed9f` docs 备忘录+10-29 修改记录（2 文件）；已 push `a32d1afc..09feed9f → origin/main`（常规推送因代理未开 SSL 失败，经 `git -c http.proxy= -c https.proxy=` 绕过直连成功），工作区干净。
 **2026-10-29 22:01 提交状态（用户指令「提交并推送」）**：按跨版本禁混提拆 3 个 commit——`2637c655` feat(web-app) 双端代码审查修复批次1~3（30 文件）、`a92c8a98` feat(主版本) 同款同步（16 文件）、`11df5977` docs 备忘录+10-29 修改记录（2 文件）；已 push `09feed9f..11df5977 → origin/main`（常规推送直接成功）。
-**当前未提交改动（等用户指令）**：`database/` 工具箱 3 文件（init-all.js / seed-data.sql.gz / README.md，2026-10-30 新增，见进度第 39 条）+ 根 README.md 与 web-app/README.md 全面修订（第 40 条）+ docs 更新；`xingcezhenti-main.zip` 已在 .gitignore 排除（用户 10-29 手动添加），本地保留不入库；数据库数据修复（百化分中等档难度恢复）不入 git。
+**2026-10-30 13:27 提交状态（用户指令「提交并且推送当前所有修改」）**：按跨版本禁混提拆 4 个 commit——`28d1afca` feat: database 一键初始化工具箱（3 文件）、`f90d3fa0` docs: 根 README 修订（1 文件）、`0c4b2f0d` docs(web-app): README 同步（1 文件）、`6fd90e2d` docs: 备忘录+10-29/10-30 修改记录（3 文件）；已 push `11df5977..6fd90e2d → origin/main`（常规推送直接成功）。
+**当前未提交改动（等用户指令）**：`docs/演示视频/`（webm 演示视频，见第 41 条）、`record-template/`（未跟踪目录，含移入的 record-webapp-demo.js + create-record-template.js，见第 42 条）、docs 回执与 10-30/10-31 修改记录（13:27 提交后新增，下次提交带上）；`xingcezhenti-main.zip` 已在 .gitignore 排除（用户 10-29 手动添加），本地保留不入库；数据库数据修复（百化分中等档难度恢复）不入 git。
 **2026-10-29 15:54 提交状态（用户指令「提交并推送」）**：`8aa14893` feat(主版本) is_deleted+导出导入适配+界面优化（11 文件含 docs，覆盖进度第 21~25 条主版本部分）、`72778271` feat(web-app) is_deleted+体验优化+速算记录实时刷新（15 文件，覆盖第 21~28 条 web-app 部分）；已 push `46a04764..72778271 → origin/main`。注：第 21~28 条条目内「未提交」字样为提交前写入，实际已随上述两 commit 入库。
 
 **2026-10-29 提交状态（用户指令「提交所有未提交内容」，方案A 拆 2 次）**：`e6b76cb4` feat(主版本) 练习模块图片题支持 + 行测真题题库与导入工具入库（42441 文件，含 `xingcezhenti-main/` 464M 题库数据、`tools/import-xingce/`、demos、docs）、`46a04764` feat(web-app) 练习模块图片题支持（13 文件）；安全处理：`tools/import-xingce/config.js` 明文 MySQL 密码改 `process.env.DB_PASSWORD || ''`（密码未进历史，`git log -S` 已验证）；**已 push**（13:22 用户指令「直接推送」，首次因 7897 代理未开失败，代理启动后 `03e050ec..46a04764` → origin/main 成功）；用户明确不追加 docs commit（本文件与 10-29 修改记录保持未提交）。
