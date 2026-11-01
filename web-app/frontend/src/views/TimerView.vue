@@ -216,11 +216,15 @@ const modeDesc = computed(() =>
     </div>
 
     <!-- 单题对错弹窗 -->
-    <el-dialog v-model="timer.showResultModal.value" title="本题结果？" width="320px" :close-on-click-modal="false" :show-close="false" align-center>
+    <el-dialog v-model="timer.showResultModal.value" width="420px" :close-on-click-modal="false" :show-close="false" align-center class="result-dialog">
+      <template #header>
+        <div class="result-dialog-title">本题结果？</div>
+      </template>
+      <div class="result-hint">键盘快捷键：Y = 对，N = 错，P = 没做跳过</div>
       <div class="result-btns">
         <el-button type="success" size="large" @click="timer.confirmResult('ok')">对（Y）</el-button>
         <el-button type="danger" size="large" @click="timer.confirmResult('ng')">错（N）</el-button>
-        <el-button size="large" @click="timer.confirmResult('skip')">跳过（P）</el-button>
+        <el-button type="warning" size="large" @click="timer.confirmResult('skip')">跳过（P）</el-button>
       </div>
     </el-dialog>
 
@@ -373,10 +377,29 @@ const modeDesc = computed(() =>
 .mark-ng { color: var(--el-color-danger); }
 .mark-skip { color: var(--el-color-warning); }
 .mark-toggle { cursor: pointer; }
-.result-btns {
+/* 单题对错弹窗：弹窗内容 teleport 到 body，scoped 样式不生效，须用 :global 包裹 */
+:global(.result-dialog .el-dialog__header) {
+  padding-bottom: 2px;
+}
+:global(.result-dialog .result-dialog-title) {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--el-text-color-primary);
+}
+:global(.result-dialog .result-hint) {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  text-align: center;
+}
+:global(.result-dialog .result-btns) {
   display: flex;
-  justify-content: center;
-  gap: 8px;
+  gap: 10px;
+}
+:global(.result-dialog .result-btns .el-button) {
+  flex: 1;
+  margin-left: 0;
 }
 .result-grid {
   display: grid;

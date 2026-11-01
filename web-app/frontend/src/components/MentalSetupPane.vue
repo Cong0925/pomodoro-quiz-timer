@@ -21,7 +21,7 @@ const DIFF_OPTIONS = [
 </script>
 
 <template>
-  <div>
+  <div class="setup-card">
     <div class="section-title">选择题型</div>
     <div class="type-grid">
       <div v-for="t in TYPES" :key="t.k" class="type-card" :class="{ active: type === t.k }" @click="emit('update:type', t.k)">
@@ -48,6 +48,20 @@ const DIFF_OPTIONS = [
 </template>
 
 <style scoped>
+.setup-card {
+  /* 操作配置区：白色背景卡片（与主版本一致，2026-11-01） */
+  background: #fff;
+  border: 1px solid #d3dbe6;
+  border-radius: 12px;
+  padding: 16px 20px 18px;
+  box-shadow: 0 2px 12px rgba(31, 45, 61, 0.08);
+}
+.setup-card > .section-title:first-child {
+  margin-top: 0;
+}
+.setup-card .start-row {
+  margin-bottom: 0;
+}
 .section-title {
   font-size: 14px;
   font-weight: 600;

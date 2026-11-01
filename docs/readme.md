@@ -56,7 +56,7 @@ web-app/
 
 > 仓库根另有 `database/` 一键数据库初始化工具箱（`init-all.js` + `seed-data.sql.gz` + `README.md`，双版本共用，跨电脑加载数据库用，见进度第 39 条）。
 
-## 四、当前进度（截至 2026-10-31 13:43）
+## 四、当前进度（截至 2026-11-01 18:34）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -114,6 +114,14 @@ web-app/
 41. ✅ **web-app 核心三模块操作录制（2026-10-30 19:56，方案A 单条演示视频）**：新建 `record-webapp-demo.js`（当时在仓库根，2026-10-31 已移入 record-template/，见第 42 条；用 record-template/recorder）10 步演示——计时导览/单题 Y-N-P 三题/清空归档、练习选题导览/逐题作答/结算页、速算题型导览/百化分填空/分数比大小选择（无限流快结算）、收尾回首页；服务全托管（Start-Process 拉起 start-webapp.ps1，录完 stop-webapp.ps1 自动停止，--keep-services 可保留）+ 录前预热规避 Vite 依赖 504；测后清理（响应监听收集会话/归档 id → 录完统一 DELETE，视频不含删除操作）；产出 `docs/演示视频/web-app-核心三模块演示.webm`（17.6MB，14/14 PASS、0 报错）；过程修复 4 处（空格被输入框拦截→先 blur、Vite 504→预热、detached spawn ps1 静默失效→Start-Process、题量不足空等→自适应循环）；**未提交（等用户指令）**
 
 42. ✅ **录制脚本收纳进 record-template/（2026-10-31 13:43，优化方案A + 生成器一并移入）**：仓库根 `record-webapp-demo.js`、`create-record-template.js` 移入 `record-template/`；record-webapp-demo.js 修 5 处路径（require('./recorder')、__dirname 三处上跳 `..`、用法注释）；create-record-template.js 路径基于 cwd 无需改，补头部说明 + 自保护校验（禁止以自身所在目录为目标，防 `--force` 连带误删 record-webapp-demo.js 等非模板文件）；record-template/README.md 补附带脚本说明；验证 node --check ×2 + 自保护实测拦截 + require 解析过；**未提交（等用户指令）**
+
+43. ✅ **web-app 单题对错弹窗样式优化（2026-11-01，方案B，用户指令）**：检查双端（真机对比 8889 / 临时 3000）——主版本弹窗无问题（自适应宽度、22px 居中标题、快捷键提示、绿/红/橙三色按钮）；web-app 问题=320px 偏窄、标题 Element 默认小字、无快捷键提示、跳过按钮灰白、按钮挤。改 `TimerView.vue`：弹窗 320→420px、标题改 `#header` 插槽居中 18px 加粗、补快捷键提示行、跳过按钮 `type="warning"` 橙色、三按钮等宽 `flex:1`；**关键发现**：弹窗内容 teleport 到 body 后 scoped 样式失效（原 `.result-btns` flex/gap 布局从未生效），本次改 `:global(.result-dialog ...)` 包裹（沿用 rv-dialog 先例）；验证：浏览器实测截图通过 + build 全绿（3.23s）、测试无脏数据、主版本临时进程已停；**未提交（等用户指令）**
+
+44. ✅ **web-app 整组模式 totalMs 恒为 0 修复（2026-11-01，用户反馈，方案=直接修复）**：用户反馈整组轮历史无用时、统计无做题时长。定位：useTimer `totalMs` computed 整组分支返回 `roundTotalMs`（普通变量非响应式）→ computed 因依赖（mode）不变缓存旧值 0 → 归档入库 0。浏览器复现证实（正常流程 2.2s 也存 0），修复 `let roundTotalMs` → `const roundTotalMs = ref(0)` + 4 处 `.value`（totalMs/finishBatchRound/newRound）；主版本无 computed 无此问题不改。验证：build 全绿、复现流程 totalMs=2430 正确、stats workMs 计入、测试记录已清；**用户 17:26 整组记录已按用户指令直接 UPDATE total_ms=1787000（29:47 近似，标题分钟粒度）恢复，历史/统计同步生效**；**未提交（等用户指令）**
+45. ⏳ **整组模式题目描述丢失排查（2026-11-01，进行中，等待用户确认所指）**：直查库确认全表 records 2449 条「有 note」=0（非显示问题）；双端功能链路（编辑/保存/读取/导出/导入/backup）全查均正常带 note、实测写入成功；**rounds.description 轮次描述 97/119 有、batch 65/65 全在**，与「每题知识点描述 records.note 全 0」需用户确认所指；用户称在主版本添加且未做过导出导入/恢复/重建，项目唯一有记载的丢 note 环节为 10-29 修复前导出漏 note（已修）；data/ 无 backup、旧 data.json 不在 → 已丢数据无法恢复，等待用户确认后定结论
+46. ✅ **历史展开明细限高滚动 + 右下角回到顶部（双端，2026-11-01，用户反馈，方案A）**：web-app HistoryView `.detail-grid` 加 max-height:500px+内部滚动、模板加 `<el-backtop target=".el-main">`（**web-app 滚动容器是 .el-main 非 window，target 必须指定；需重启 dev server 才加载新增组件依赖**）；主版本 style.css 展开区 600px→500px 统一 + 手写 `.back-to-top`（fixed 右下、超 300px 显示、smooth 回顶）+ history.js 动态创建按钮。验证：web-app scrollH=792>500 滚动、回顶点击 scrollTop=0；主版本注入 100 题级内容 sh=2273>499 内部滚动、回顶 scrollY=0；build 全绿；**未提交（等用户指令）**
+47. ✅ **主版本练习/速算操作配置区白色背景卡片（2026-11-01，v2，用户新预期"加白色背景"）**：v1 灰底方案（#e9eef5）用户验收不符已回滚；v2 改为 `#pPaneStart .p-card, #mPaneStart .p-card` 显式白底 #fff + 边框加深 #d3dbe6 + 轻阴影（0 2px 12px rgba(31,45,61,.08)），白色卡片在浅灰页面（#f5f7fa）上轮廓清晰。验证：3000 实测 computed + 像素取样（卡片内 255,255,255 vs 页面 245,247,250）；答题/结算/题库管理卡片不受影响（ID 限定）；**未提交（等用户指令）**
+48. ✅ **web-app 练习/速算配置区白色背景卡片（2026-11-01，用户确认双端都要）**：web-app 配置区是独立 Vue 组件（主版本 CSS 不涉及）：PracticeSetupPane `.setup-main`（题库练习右侧主配置区，左栏大类本有卡片）+ MentalSetupPane 根 div 加 `.setup-card`，统一白底 #fff + 边框 #d3dbe6 + 圆角 12px + 阴影 0 2px 12px + 首尾间距修正；页面背景为 App.vue `.content` 的 `--el-fill-color-light`（#f5f7fa）与主版本一致。验证：build 全绿、8888/8889 实测 computed style 生效；**未提交（等用户指令）**
 
 **待办（建议优先级）**：
 0.8. ⬜ **审查遗留待定项（2026-10-29 21:46）**：① v-html 题干/解析 XSS 面——需引入 DOMPurify 依赖做白名单过滤，待用户决策是否加依赖；② CatSelect 换大类双发 reload（正确性已由请求序号守卫兜底，仅剩一次冗余请求可优化）；③ 修复批次全部完成待用户人工验收（重点：多选题作答、速算抽题、计时改题量、收藏/取消收藏、导出导入往返）

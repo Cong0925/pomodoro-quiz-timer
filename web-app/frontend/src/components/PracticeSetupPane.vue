@@ -188,6 +188,19 @@ const MODES = [
 .setup-main {
   flex: 1;
   min-width: 0;
+  /* 操作配置区：白色背景卡片（与主版本一致，2026-11-01） */
+  background: #fff;
+  border: 1px solid #d3dbe6;
+  border-radius: 12px;
+  padding: 16px 20px 18px;
+  box-shadow: 0 2px 12px rgba(31, 45, 61, 0.08);
+}
+/* 卡片内首尾间距修正 */
+.setup-main > .section-title:first-child {
+  margin-top: 0;
+}
+.setup-main .start-row {
+  margin-bottom: 0;
 }
 /* 小类：流式紧凑 chip，一行多个 */
 .chip-flow {

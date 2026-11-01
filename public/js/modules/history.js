@@ -441,6 +441,22 @@
         }
     });
 
+    /* ---- 回到顶部：右下角固定按钮，滚动超 300px 显示，点击平滑回顶 ---- */
+    const backTopBtn = document.createElement('button');
+    backTopBtn.className = 'back-to-top';
+    backTopBtn.type = 'button';
+    backTopBtn.title = '回到顶部';
+    backTopBtn.setAttribute('aria-label', '回到顶部');
+    backTopBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
+    document.body.appendChild(backTopBtn);
+    const toggleBackTop = () => {
+        const y = window.scrollY || document.documentElement.scrollTop;
+        backTopBtn.classList.toggle('show', y > 300);
+    };
+    window.addEventListener('scroll', toggleBackTop, { passive: true });
+    toggleBackTop();
+    backTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
     window.PQ = window.PQ || {};
     PQ.history = { renderHistory, renderFilter, renderPage, toggleFav, isFaved };
 })();

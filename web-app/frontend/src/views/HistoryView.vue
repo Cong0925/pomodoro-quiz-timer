@@ -329,6 +329,9 @@ async function loadMore(): Promise<void> {
     <div v-if="historyStore.page < historyStore.totalPages" class="load-more">
       <el-button plain @click="loadMore">加载更多（{{ historyStore.list.length }}/{{ historyStore.total }}）</el-button>
     </div>
+
+    <!-- 回到顶部（Element Plus 组件；滚动容器为布局主区 .el-main，滚动超 200px 显示） -->
+    <el-backtop target=".el-main" :right="24" :bottom="80" />
   </div>
 </template>
 
@@ -442,6 +445,10 @@ async function loadMore(): Promise<void> {
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px;
   margin-top: 10px;
+  /* 展开明细限高 500px，超出后内部滚动，避免页面过长 */
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 .detail-item {
   border: 1px solid var(--el-border-color-lighter);

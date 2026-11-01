@@ -55,11 +55,13 @@ export function useTimer(options: UseTimerOptions) {
   let startTime: number | null = null
   let timerId: number | null = null
   let pendingMs = 0
-  let roundTotalMs = 0
+  /* 整组总用时：必须用 ref（响应式），否则 totalMs computed 依赖不变时缓存旧值 0，
+     导致整组归档 totalMs 恒为 0（学习统计 workMs 也丢失） */
+  const roundTotalMs = ref(0)
 
   /* ---- 统计 ---- */
   const totalMs = computed(() => {
-    if (mode.value === 'batch') return roundTotalMs
+    if (mode.value === 'batch') return roundTotalMs.value
     return records.value.reduce((s, i) => s + i.ms, 0)
   })
   const correctCount = computed(() => records.value.filter((i) => i.result === 'ok').length)
@@ -180,7 +182,7 @@ export function useTimer(options: UseTimerOptions) {
   })
 
   function finishBatchRound(): void {
-    roundTotalMs = pendingMs
+    roundTotalMs.value = pendingMs
     records.value = batchResults.value.map((r, i) => ({
       no: i + 1,
       ms: 0,
@@ -213,7 +215,7 @@ export function useTimer(options: UseTimerOptions) {
   function newRound(): void {
     records.value = []
     archived.value = false
-    roundTotalMs = 0
+    roundTotalMs.value = 0
     batchResults.value = []
     roundMeta.title = defaultRoundTitle()
     roundMeta.desc = ''
