@@ -220,19 +220,15 @@ onReachBottom(() => {
 })
 </script>
 
-<style scoped>
-.page {
-  padding: 24rpx 32rpx 48rpx;
-}
-
-/* 统计条 */
+<style scoped lang="scss">
+/* 统计条：品牌渐变数据卡（Keep 式大数字反馈） */
 .stats-bar {
   display: flex;
-  background-color: #ffffff;
-  border: 1rpx solid #e3e8f0;
-  border-radius: 28rpx;
-  padding: 24rpx 0;
-  margin-bottom: 20rpx;
+  background: $brand-gradient;
+  border-radius: $radius-lg;
+  padding: 30rpx 0;
+  margin-bottom: $gap-item;
+  box-shadow: $shadow-btn;
 }
 
 .st {
@@ -241,55 +237,57 @@ onReachBottom(() => {
 }
 
 .st + .st {
-  border-left: 1rpx solid #e3e8f0;
+  border-left: 1rpx solid rgba(255, 255, 255, 0.25);
 }
 
 .st-num {
-  font-size: 36rpx;
-  font-weight: 700;
+  font-size: 40rpx;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  color: #ffffff;
 }
 
 .st-label {
   font-size: 23rpx;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.8);
   margin-top: 4rpx;
 }
 
 .st2row {
   display: flex;
-  gap: 20rpx;
-  margin-bottom: 20rpx;
+  gap: $gap-item;
+  margin-bottom: $gap-item;
 }
 
 .st2 {
   flex: 1;
-  background-color: #ffffff;
-  border: 1rpx solid #e3e8f0;
-  border-radius: 24rpx;
-  padding: 20rpx 0;
+  background-color: $bg-card;
+  border-radius: $radius-md;
+  padding: 22rpx 0;
   text-align: center;
+  box-shadow: $shadow-card-sm;
 }
 
 .st2-num {
-  font-size: 32rpx;
-  font-weight: 700;
+  font-size: 34rpx;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  color: $brand-600;
 }
 
 .st2-label {
   font-size: 23rpx;
-  color: #6b7280;
+  color: $text-sub;
   margin-top: 4rpx;
 }
 
 /* 会话卡片 */
 .rec-item {
-  background-color: #ffffff;
-  border: 1rpx solid #e3e8f0;
-  border-radius: 24rpx;
+  background-color: $bg-card;
+  border-radius: $radius-md;
   padding: 24rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: $gap-item;
+  box-shadow: $shadow-card-sm;
 }
 
 .rec-top {
@@ -301,23 +299,25 @@ onReachBottom(() => {
 .rec-type {
   font-size: 30rpx;
   font-weight: 700;
+  color: $text-main;
 }
 
 .rec-sub {
   font-size: 23rpx;
-  color: #9ca3af;
+  color: $text-weak;
   font-weight: 400;
   margin-left: 12rpx;
 }
 
 .rec-rate {
   font-size: 30rpx;
-  font-weight: 700;
-  color: #16a34a;
+  font-weight: 800;
+  color: $success;
+  font-variant-numeric: tabular-nums;
 }
 
 .rec-rate.low {
-  color: #dc2626;
+  color: $danger;
 }
 
 .rec-meta {
@@ -326,7 +326,7 @@ onReachBottom(() => {
   align-items: center;
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: $text-sub;
   gap: 16rpx;
   flex-wrap: wrap;
 }
@@ -337,7 +337,7 @@ onReachBottom(() => {
 
 .rec-time {
   min-width: 0;
-  color: #9ca3af;
+  color: $text-weak;
 }
 
 .rec-del-row {
@@ -349,25 +349,26 @@ onReachBottom(() => {
 
 .rec-toggle {
   font-size: 24rpx;
-  color: #2563eb;
+  color: $brand-600;
+  font-weight: 600;
 }
 
 .rec-del {
   font-size: 24rpx;
-  color: #dc2626;
+  color: $danger;
   padding: 8rpx 4rpx;
 }
 
 /* 明细 */
 .rec-detail {
-  border-top: 1rpx dashed #e3e8f0;
+  border-top: 1rpx dashed $line;
   margin-top: 16rpx;
   padding-top: 16rpx;
 }
 
 .detail-loading {
   font-size: 24rpx;
-  color: #9ca3af;
+  color: $text-weak;
   text-align: center;
   padding: 24rpx 0;
 }
@@ -377,7 +378,7 @@ onReachBottom(() => {
   gap: 16rpx;
   padding: 14rpx 0;
   font-size: 25rpx;
-  border-bottom: 1rpx solid #f3f4f6;
+  border-bottom: 1rpx solid $line;
   align-items: flex-start;
 }
 
@@ -400,15 +401,15 @@ onReachBottom(() => {
 }
 
 .rd-mark.ok {
-  background-color: #16a34a;
+  background-color: $success;
 }
 
 .rd-mark.ng {
-  background-color: #dc2626;
+  background-color: $danger;
 }
 
 .rd-mark.skip {
-  background-color: #d97706;
+  background-color: $warning;
 }
 
 .rd-body {
@@ -418,15 +419,16 @@ onReachBottom(() => {
 
 .rd-stem {
   line-height: 1.45;
+  color: $text-main;
 }
 
 .rd-ans {
-  color: #16a34a;
+  color: $success;
   margin-top: 4rpx;
 }
 
 .rd-tip {
-  color: #6b7280;
+  color: $text-sub;
   margin-top: 4rpx;
 }
 
@@ -434,14 +436,14 @@ onReachBottom(() => {
 .empty {
   text-align: center;
   padding: 120rpx 20rpx;
-  color: #9ca3af;
+  color: $text-weak;
   font-size: 27rpx;
 }
 
 .load-more {
   text-align: center;
   font-size: 25rpx;
-  color: #9ca3af;
+  color: $text-weak;
   padding: 20rpx 0 4rpx;
 }
 </style>

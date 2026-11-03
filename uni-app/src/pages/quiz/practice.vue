@@ -1,8 +1,13 @@
 <template>
   <view class="page">
-    <text class="title">练习</text>
-    <view class="placeholder">
-      <text>页面开发中——答题/解析/导航条，待 Demo 确认后实现</text>
+    <view class="hero">
+      <view class="hero-badge">专项题库</view>
+      <view class="hero-title">练习</view>
+      <view class="hero-sub">逐题作答 · 即时判题 · 解析回顾</view>
+    </view>
+    <view class="empty-box">
+      <view class="empty-title">答题页开发中</view>
+      <view class="empty-text">题目渲染（含图片题）、作答与解析、题目导航即将上线</view>
     </view>
   </view>
 </template>
@@ -10,23 +15,3 @@
 <script setup lang="ts">
 // 练习页：题目渲染（含图片题 stemImg）、选项/填空作答、判题、解析、题目导航
 </script>
-
-<style scoped>
-.page {
-  padding: 32rpx;
-}
-.title {
-  font-size: 36rpx;
-  font-weight: 600;
-  color: #1f2937;
-}
-.placeholder {
-  margin-top: 32rpx;
-  padding: 32rpx;
-  border-radius: 16rpx;
-  background-color: #ffffff;
-  text-align: center;
-  font-size: 26rpx;
-  color: #9ca3af;
-}
-</style>

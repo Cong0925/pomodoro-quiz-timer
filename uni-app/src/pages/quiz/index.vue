@@ -1,8 +1,13 @@
 <template>
   <view class="page">
-    <text class="title">题库练习</text>
-    <view class="placeholder">
-      <text>页面开发中——分类/题库选择，待 Demo 确认后实现</text>
+    <view class="hero">
+      <view class="hero-badge">专项题库</view>
+      <view class="hero-title">题库练习</view>
+      <view class="hero-sub">判断推理 · 资料分析 · 数量关系</view>
+    </view>
+    <view class="empty-box">
+      <view class="empty-title">题库分类开发中</view>
+      <view class="empty-text">大类 → 题库列表（题量/停用态）即将上线</view>
     </view>
   </view>
 </template>
@@ -10,23 +15,3 @@
 <script setup lang="ts">
 // 题库：大类 → 题库列表（题量/停用态），功能开发前先出 Demo 讨论
 </script>
-
-<style scoped>
-.page {
-  padding: 32rpx;
-}
-.title {
-  font-size: 36rpx;
-  font-weight: 600;
-  color: #1f2937;
-}
-.placeholder {
-  margin-top: 32rpx;
-  padding: 32rpx;
-  border-radius: 16rpx;
-  background-color: #ffffff;
-  text-align: center;
-  font-size: 26rpx;
-  color: #9ca3af;
-}
-</style>

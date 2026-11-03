@@ -78,24 +78,31 @@ const powRows = ref<Array<[string, string]>>([
 ])
 </script>
 
-<style scoped>
-.page {
-  padding: 24rpx 32rpx 48rpx;
-}
-
+<style scoped lang="scss">
 .card {
-  background-color: #ffffff;
-  border: 1rpx solid #e3e8f0;
-  border-radius: 28rpx;
-  padding: 24rpx;
-  margin-bottom: 24rpx;
+  background-color: $bg-card;
+  border-radius: $radius-lg;
+  padding: 28rpx;
+  margin-bottom: $gap-item;
+  box-shadow: $shadow-card;
 }
 
 .card-title {
-  font-size: 27rpx;
+  display: flex;
+  align-items: center;
+  font-size: 28rpx;
   font-weight: 700;
-  color: #1f2937;
+  color: $text-main;
   margin-bottom: 20rpx;
+}
+
+.card-title::before {
+  content: '';
+  width: 8rpx;
+  height: 30rpx;
+  border-radius: 4rpx;
+  background: $brand-gradient;
+  margin-right: 14rpx;
 }
 
 .tbl {
@@ -106,7 +113,7 @@ const powRows = ref<Array<[string, string]>>([
 .tbl-row {
   width: 50%;
   display: flex;
-  border: 1rpx solid #e3e8f0;
+  border: 1rpx solid $line;
   margin-left: -1rpx;
   margin-top: -1rpx;
 }
@@ -119,16 +126,18 @@ const powRows = ref<Array<[string, string]>>([
   font-variant-numeric: tabular-nums;
   min-width: 0;
   overflow: hidden;
+  color: $text-main;
 }
 
 .tbl-cell.key {
-  background-color: #fafbfc;
-  font-weight: 600;
+  background-color: $brand-50;
+  font-weight: 700;
+  color: $brand-600;
 }
 
 .note {
   font-size: 24rpx;
-  color: #9ca3af;
+  color: $text-weak;
   line-height: 1.6;
   text-align: center;
   margin-top: 8rpx;

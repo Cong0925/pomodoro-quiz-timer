@@ -39,11 +39,11 @@ function optClass(i: number): string {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .opt-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: $gap-item;
 }
 
 .opt-item {
@@ -51,20 +51,23 @@ function optClass(i: number): string {
   display: flex;
   align-items: center;
   gap: 24rpx;
-  background-color: #ffffff;
-  border: 3rpx solid #e3e8f0;
-  border-radius: 24rpx;
+  background-color: $bg-card;
+  border: 2rpx solid transparent;
+  border-radius: $radius-md;
   padding: 16rpx 28rpx;
+  box-shadow: $shadow-card-sm;
 }
 
 .opt-item.correct {
-  border-color: #16a34a;
-  background-color: #f0fdf4;
+  border-color: $success;
+  background-color: $success-bg;
+  box-shadow: 0 6rpx 18rpx rgba(16, 185, 129, 0.16);
 }
 
 .opt-item.wrong {
-  border-color: #dc2626;
-  background-color: #fef2f2;
+  border-color: $danger;
+  background-color: $danger-bg;
+  box-shadow: 0 6rpx 18rpx rgba(239, 68, 68, 0.14);
 }
 
 .opt-item.dim {
@@ -75,7 +78,8 @@ function optClass(i: number): string {
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
-  background-color: #f1f3f7;
+  background-color: $brand-50;
+  color: $brand-600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,12 +89,12 @@ function optClass(i: number): string {
 }
 
 .opt-item.correct .opt-label {
-  background-color: #16a34a;
+  background-color: $success;
   color: #ffffff;
 }
 
 .opt-item.wrong .opt-label {
-  background-color: #dc2626;
+  background-color: $danger;
   color: #ffffff;
 }
 

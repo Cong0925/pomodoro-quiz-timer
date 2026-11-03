@@ -11,7 +11,7 @@
         :adjust-position="true"
         :cursor-spacing="120"
         placeholder="填数字"
-        @input="$emit('update:modelValue', $event.detail.value)"
+        @input="onInput"
         @confirm="$emit('submit')"
       />
       <text v-if="suffix" class="fill-affix">{{ suffix }}</text>
@@ -37,7 +37,13 @@ const props = defineProps<{
   fillDir?: MentalFillDir
 }>()
 
-defineEmits<{ 'update:modelValue': [value: string]; submit: [] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: string]; submit: [] }>()
+
+/** input 输入事件：透传值（uni-app 模板事件推断为 Event，取 detail.value） */
+function onInput(e: Event): void {
+  const detail = (e as { detail?: { value?: string } }).detail
+  emit('update:modelValue', detail?.value ?? '')
+}
 
 const prefix = computed(() =>
   props.fillDir === 'den' || props.fillDir === 'frac' ? '1/' : ''
@@ -45,7 +51,7 @@ const prefix = computed(() =>
 const suffix = computed(() => (props.fillDir === 'pct' ? '%' : ''))
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .fill-box {
   margin-top: 12rpx;
 }
@@ -53,38 +59,42 @@ const suffix = computed(() => (props.fillDir === 'pct' ? '%' : ''))
 .fill-row {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: $gap-item;
 }
 
 .fill-affix {
   font-size: 44rpx;
   font-weight: 700;
+  color: $text-main;
 }
 
 .fill-input {
   flex: 1;
   min-width: 0;
   height: 100rpx;
-  border: 3rpx solid #e3e8f0;
-  border-radius: 24rpx;
+  border: 3rpx solid $brand-200;
+  border-radius: $radius-md;
   padding: 0 24rpx;
   font-size: 40rpx;
   font-weight: 700;
   text-align: center;
-  background-color: #ffffff;
+  background-color: $brand-50;
+  color: $text-main;
+  box-shadow: $shadow-card-sm;
 }
 
 .fill-submit {
   height: 100rpx;
   line-height: 100rpx;
   padding: 0 40rpx;
-  border-radius: 24rpx;
-  background-color: #2563eb;
+  border-radius: $radius-md;
+  background: $brand-gradient;
   color: #ffffff;
   font-size: 30rpx;
   font-weight: 600;
   border: none;
   margin: 0;
+  box-shadow: $shadow-primary;
 }
 
 .fill-submit::after {
@@ -93,14 +103,14 @@ const suffix = computed(() => (props.fillDir === 'pct' ? '%' : ''))
 
 .fill-tip {
   font-size: 23rpx;
-  color: #9ca3af;
+  color: $text-weak;
   margin-top: 16rpx;
   line-height: 1.5;
 }
 
 .key-hint {
-  background-color: #eef2ff;
-  color: #2563eb;
+  background-color: $brand-50;
+  color: $brand-600;
   padding: 2rpx 12rpx;
   border-radius: 8rpx;
   font-weight: 600;

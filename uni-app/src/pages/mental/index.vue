@@ -173,66 +173,8 @@ function goManual(): void {
 }
 </script>
 
-<style scoped>
-.page {
-  padding: 32rpx 32rpx 40rpx;
-  min-height: 100vh;
-  box-sizing: border-box;
-}
-
-/* 渐变主视觉 */
-.hero {
-  padding: 44rpx 40rpx 50rpx;
-  border-radius: 32rpx;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
-  box-shadow: 0 16rpx 32rpx rgba(37, 99, 235, 0.28);
-  overflow: hidden;
-}
-
-.hero-badge {
-  display: inline-block;
-  padding: 8rpx 20rpx;
-  border-radius: 999rpx;
-  background-color: rgba(255, 255, 255, 0.18);
-  color: #dbeafe;
-  font-size: 22rpx;
-  letter-spacing: 2rpx;
-}
-
-.hero-title {
-  margin-top: 22rpx;
-  font-size: 52rpx;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: 4rpx;
-}
-
-.hero-sub {
-  margin-top: 10rpx;
-  font-size: 25rpx;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-/* 分组 */
-.sec {
-  margin-top: 34rpx;
-}
-
-.sec-title {
-  display: flex;
-  align-items: baseline;
-  font-size: 30rpx;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 18rpx;
-}
-
-.sec-no {
-  font-size: 22rpx;
-  font-weight: 800;
-  color: #93c5fd;
-  margin-right: 12rpx;
-}
+<style scoped lang="scss">
+/* 渐变主视觉：使用 App.vue 全局 .hero/.hero-badge/.hero-title/.hero-sub */
 
 /* 题型卡片：一行两个，综合全宽跨列 */
 .type-grid {
@@ -244,18 +186,18 @@ function goManual(): void {
 .type-card {
   min-width: 0;
   box-sizing: border-box;
-  background-color: #ffffff;
-  border: 2rpx solid #eef1f6;
-  border-radius: 24rpx;
+  background-color: $bg-card;
+  border: 2rpx solid transparent;
+  border-radius: $radius-md;
   padding: 22rpx 20rpx;
   display: flex;
   align-items: center;
-  box-shadow: 0 4rpx 14rpx rgba(15, 23, 42, 0.04);
+  box-shadow: $shadow-card-sm;
 }
 
 .type-card.active {
-  border-color: #2563eb;
-  box-shadow: 0 6rpx 18rpx rgba(37, 99, 235, 0.14);
+  border-color: $brand-600;
+  box-shadow: $shadow-primary;
 }
 
 .type-card.wide {
@@ -286,12 +228,12 @@ function goManual(): void {
 .tc-name {
   font-size: 27rpx;
   font-weight: 700;
-  color: #1f2937;
+  color: $text-main;
 }
 
 .tc-desc {
   font-size: 20rpx;
-  color: #9ca3af;
+  color: $text-weak;
   margin-top: 4rpx;
   line-height: 1.35;
   white-space: nowrap;
@@ -307,7 +249,7 @@ function goManual(): void {
   width: 36rpx;
   height: 36rpx;
   border-radius: 50%;
-  background-color: #2563eb;
+  background-color: $brand-600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -323,77 +265,29 @@ function goManual(): void {
   transform: rotate(45deg) translate(-2rpx, -2rpx);
 }
 
-/* chips */
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-
-.chip {
-  min-height: 68rpx;
-  padding: 12rpx 34rpx;
-  border-radius: 999rpx;
-  background-color: #ffffff;
-  border: 2rpx solid #eef1f6;
-  font-size: 27rpx;
-  color: #4b5563;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2rpx 8rpx rgba(15, 23, 42, 0.04);
-}
-
-.chip.active {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  border-color: transparent;
-  color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 6rpx 16rpx rgba(37, 99, 235, 0.25);
-}
-
 .hint {
   font-size: 24rpx;
-  color: #9ca3af;
+  color: $text-weak;
   line-height: 1.5;
   margin: 30rpx 4rpx 24rpx;
-}
-
-.btn-primary {
-  width: 100%;
-  height: 100rpx;
-  line-height: 100rpx;
-  border-radius: 28rpx;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: #ffffff;
-  font-size: 34rpx;
-  font-weight: 700;
-  border: none;
-  box-shadow: 0 12rpx 24rpx rgba(37, 99, 235, 0.3);
-  letter-spacing: 2rpx;
-}
-
-.btn-primary::after {
-  border: none;
 }
 
 /* 入口 */
 .entry-row {
   display: flex;
-  gap: 20rpx;
+  gap: $gap-item;
   margin-top: 28rpx;
 }
 
 .entry-card {
   flex: 1;
-  background-color: #ffffff;
-  border: 2rpx solid #eef1f6;
-  border-radius: 24rpx;
+  background-color: $bg-card;
+  border-radius: $radius-md;
   padding: 22rpx;
   display: flex;
   align-items: center;
   gap: 14rpx;
-  box-shadow: 0 4rpx 14rpx rgba(15, 23, 42, 0.04);
+  box-shadow: $shadow-card-sm;
 }
 
 .entry-ic {
@@ -407,11 +301,11 @@ function goManual(): void {
 }
 
 .entry-ic.blue {
-  background-color: #e8f0fe;
+  background-color: $brand-50;
 }
 
 .entry-ic.amber {
-  background-color: #fef3e2;
+  background-color: $warning-bg;
 }
 
 .entry-text {
@@ -422,22 +316,13 @@ function goManual(): void {
 .entry-name {
   font-size: 26rpx;
   font-weight: 600;
-  color: #1f2937;
+  color: $text-main;
 }
 
 .entry-sub {
   font-size: 20rpx;
-  color: #9ca3af;
+  color: $text-weak;
   margin-top: 2rpx;
-}
-
-.entry-arrow {
-  width: 14rpx;
-  height: 14rpx;
-  border-top: 4rpx solid #cbd5e1;
-  border-right: 4rpx solid #cbd5e1;
-  transform: rotate(45deg);
-  flex-shrink: 0;
 }
 
 /* 内联小图标（CSS 绘制） */
@@ -454,17 +339,17 @@ function goManual(): void {
   content: '';
   height: 6rpx;
   border-radius: 3rpx;
-  background-color: #2563eb;
+  background-color: $brand-600;
 }
 
 .ic-line3::after {
-  background-color: #93c5fd;
+  background-color: $brand-400;
 }
 
 .ic-book {
   width: 28rpx;
   height: 28rpx;
-  border: 4rpx solid #d97706;
+  border: 4rpx solid $warning;
   border-radius: 4rpx;
   position: relative;
 }
@@ -476,6 +361,6 @@ function goManual(): void {
   top: 4rpx;
   bottom: 4rpx;
   width: 2rpx;
-  background-color: #d97706;
+  background-color: $warning;
 }
 </style>

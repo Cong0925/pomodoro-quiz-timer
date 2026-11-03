@@ -357,10 +357,10 @@ function goBack(): void {
 }
 
 onLoad((query) => {
-  qtype.value = (query.qtype as MentalQtype) || 'percent'
-  diff.value = Number(query.diff) || 0
-  count.value = Number(query.count) || 10
-  mode.value = (query.mode as MentalAnswerMode) || 'choice'
+  qtype.value = (query?.qtype as MentalQtype) || 'percent'
+  diff.value = Number(query?.diff) || 0
+  count.value = Number(query?.count) || 10
+  mode.value = (query?.mode as MentalAnswerMode) || 'choice'
   void startSession()
 })
 
@@ -376,114 +376,107 @@ onUnload(() => {
 })
 </script>
 
-<style scoped>
-.page {
-  padding: 32rpx;
-}
-
+<style scoped lang="scss">
 .center-box { padding: 200rpx 32rpx; display: flex; flex-direction: column; align-items: center; }
 
-.center-text { font-size: 28rpx; color: #6b7280; }
+.center-text { font-size: 28rpx; color: $text-sub; }
 
 .retry { margin-top: 24rpx; width: 400rpx; }
 
-.btn-primary {
-  height: 96rpx;
-  line-height: 96rpx;
-  border-radius: 24rpx;
-  background-color: #2563eb;
-  color: #ffffff;
-  font-size: 31rpx;
-  font-weight: 700;
-  border: none;
-}
-
-.btn-primary::after {
-  border: none;
-}
-
-.btn-ghost {
-  height: 96rpx;
-  line-height: 96rpx;
-  border: 3rpx solid #e3e8f0;
-  border-radius: 24rpx;
-  background-color: #ffffff;
-  color: #1f2937;
-  font-size: 31rpx;
-  font-weight: 600;
-}
-
-.btn-ghost::after {
-  border: none;
-}
-
-/* 顶部状态 */
-.run-head {  display: flex;
+/* 顶部状态卡：品牌渐变，白字（沉浸答题感） */
+.run-head {
+  display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  background: $brand-gradient;
+  border-radius: $radius-lg;
+  padding: 26rpx 28rpx;
+  box-shadow: $shadow-btn;
 }
 
-.run-title { font-size: 32rpx; font-weight: 700; }
+.run-title { font-size: 31rpx; font-weight: 700; color: #ffffff; }
 
-.run-meta { font-size: 23rpx; color: #6b7280; margin-top: 4rpx; }
+.run-meta { font-size: 22rpx; color: rgba(255, 255, 255, 0.8); margin-top: 6rpx; }
 
 .run-right { text-align: right; }
 
-.run-counts { font-size: 25rpx; }
+.run-counts { font-size: 24rpx; color: #ffffff; }
 
 .run-counts .ok {
-  color: #16a34a;
+  color: #bbf7d0;
+  font-weight: 700;
 }
 
 .run-counts .ng {
-  color: #dc2626;
+  color: #fecaca;
+  font-weight: 700;
 }
 
 .run-counts .sk {
-  color: #d97706;
+  color: #fde68a;
+  font-weight: 700;
 }
 
 .end-btn {
-  margin-top: 10rpx;
-  padding: 10rpx 24rpx;
-  border-radius: 999rpx;
-  border: 1rpx solid #d97706;
-  color: #d97706;
-  font-size: 24rpx;
-  background-color: #ffffff;
+  margin-top: 12rpx;
+  padding: 8rpx 24rpx;
+  border-radius: $radius-full;
+  background-color: rgba(255, 255, 255, 0.18);
+  border: 2rpx solid rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+  font-size: 23rpx;
   text-align: center;
+  display: inline-block;
 }
 
-/* 进度条 */
+/* 进度条（卡片内白条） */
 .run-bar {
   height: 8rpx;
-  background-color: #e3e8f0;
+  background-color: rgba(255, 255, 255, 0.28);
   border-radius: 4rpx;
-  margin: 20rpx 0 24rpx;
+  margin: 20rpx 0 0;
   overflow: hidden;
 }
 
 .run-bar-inner {
   height: 100%;
-  background-color: #2563eb;
+  background-color: #ffffff;
   border-radius: 4rpx;
 }
 
 /* 题目 */
-.q-no { font-size: 25rpx; color: #6b7280; margin-bottom: 20rpx; }
+.q-no {
+  display: inline-block;
+  font-size: 23rpx;
+  color: $brand-600;
+  background-color: $brand-50;
+  border-radius: $radius-full;
+  padding: 6rpx 20rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+  margin-top: 32rpx;
+}
 
-.q-stem { font-size: 44rpx; font-weight: 700; line-height: 1.5; margin-bottom: 28rpx; font-variant-numeric: tabular-nums; }
+.q-stem {
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.5;
+  margin-bottom: 28rpx;
+  font-variant-numeric: tabular-nums;
+  color: $text-main;
+}
 
 .skip-btn {
   width: 100%;
   height: 88rpx;
   line-height: 88rpx;
-  border: 3rpx solid #e3e8f0;
-  border-radius: 24rpx;
-  background-color: #ffffff;
-  color: #6b7280;
+  border: 3rpx solid $line;
+  border-radius: $radius-md;
+  background-color: $bg-card;
+  color: $text-sub;
   font-size: 30rpx;
-  margin-top: 20rpx;
+  margin-top: $gap-item;
+  box-shadow: $shadow-card-sm;
 }
 
 .skip-btn::after {
