@@ -20,12 +20,14 @@ last_modified: 2026-10-27
 |------|------|------|--------|------|
 | **主版本**（初始版本/原始代码） | 仓库根目录 | `main` | 原生 HTML/CSS/JS + Node.js + Express + MySQL | 已有完整代码，持续维护 |
 | **web-app 版本** | `web-app/` | `main` | Vue 3 + TypeScript + Node.js（前后端分离） | 后端完成，前端编码进行中 |
+| **小程序版本** | `uni-app/` | `main` | uni-app（Vue 3 + TypeScript + Vite）+ 微信小程序 | 框架已初始化（2026-11-03），页面开发中 |
 | **app 版本** | `app/`（规划） | `main`（未来） | 规划中（预留 Rust/Tauri 等） | 未创建 |
 
 ```
 pomodoro-quiz-timer/                 ← 仓库根目录（main 分支）
 ├── server/  public/  ...            ← 主版本代码
 ├── web-app/                         ← Vue + Node 版
+├── uni-app/                         ← 微信小程序版（uni-app 框架，编译产物 dist/dev|build/mp-weixin）
 └── app/                             ← app 版（规划中，尚未创建）
 ```
 
@@ -42,8 +44,8 @@ pomodoro-quiz-timer/                 ← 仓库根目录（main 分支）
 | 一、核心原则 | 全部版本 |
 | 二、文件行数上限 | 全部版本（按对应文件类型） |
 | 三、前端 Vue 规范 | **web-app 版本**（主版本为原生 JS，不适用） |
-| 四、TypeScript 规范 | **web-app 版本** |
-| 五、Pinia Store 规范 | **web-app 版本** |
+| 四、TypeScript 规范 | **web-app 版本**（小程序版本同适用） |
+| 五、Pinia Store 规范 | **web-app 版本**（小程序版本无 Pinia，状态管理见 0.5） |
 | 六、Rust 后端规范 | **app 版本（规划中）预留**，当前主版本与 web-app 均无 Rust 代码 |
 | 七、命名约定总表 | 全部版本（按对应技术栈行执行） |
 | 八、禁止事项 | 全部版本 |
@@ -58,6 +60,32 @@ pomodoro-quiz-timer/                 ← 仓库根目录（main 分支）
 2. **不适用** Vue / TypeScript / Pinia / Rust 章节
 3. 新增原生 JS 代码：按功能拆分至 `public/js/` 下独立文件，单文件建议不超过 500 行
 4. 后端 `server/`：遵循 Node.js 通用实践 + 本规范通用强制章节
+
+### 0.5 小程序版本（`uni-app/`）编码补充说明
+
+小程序版本使用 **uni-app 框架（Vue 3 + TypeScript + Vite）**，编译到微信小程序（`dist/dev/mp-weixin` 供微信开发者工具导入）。维护时：
+
+1. 适用本规范中**全部通用强制章节**（异常捕获、日志、命名、注释、红线规则等）与 TypeScript 章节
+2. **不适用** Pinia 章节（小程序无 Pinia）；页面级共享状态使用 `uni.getStorageSync/setStorageSync` 或 composable 模式，遵守「登录态 token 独立模块（`utils/token.ts`）」约定，禁止模块间循环依赖
+3. 新增页面：统一放 `src/pages/<模块>/<页面>.vue`，每个页面 `template/script/style` 结构，样式必须 `scoped`
+4. 请求统一走 `src/utils/request.ts`（token 注入、超时、错误提示、中文异常日志），禁止页面内裸写 `uni.request`
+5. 业务常量放 `src/config/index.ts`（如 `API_BASE_URL`），禁止散落硬编码
+6. 通用类型定义放 `src/types/index.ts`，与后端接口驼峰约定一致（`stemImg`/`isDeleted` 等）
+7. **数据层约定**：题库/分类/题目为全局共享数据（所有用户读同一份，不绑定用户）；练习记录/速算记录/计时记录/偏好为**用户私有数据**，按 `user_id` 维度读写（小程序登录后取真实 user_id，PC 版默认 user_id=1 兼容）
+8. 登录鉴权：启动时 `utils/auth.ts` 静默登录（wx.login → code → 后端 /api/auth/login），失败不阻塞匿名使用
+9. **禁止事项补充**：禁止直接引入 web-app 的 Element Plus / DOM 操作代码；页面样式统一 rpx 单位；提交时禁止把 `dist/`、`node_modules/` 提交入库
+10. 小程序版本改动单独提交，禁止与主版本 / web-app 混提（见 0.2）
+
+### 0.6 后端用户体系（web-app/backend，多端共用）
+
+1. **users 表**：`id`/`openid`(唯一)/`nickname`/`avatar`/`role`；内置默认账户 `root`（id=1，openid='root'，role='root'），存量数据全部归属 root
+2. **记录隔离**：记录类根表（`rounds`/`favorites`/`study_daily`/`memos`/`practice_sessions`/`mental_sessions`）均有 `user_id`（存量行默认 1=root）；明细表（`records`/`practice_records`/`mental_records`）经外键随会话级联隔离，不加 user_id；`study_daily`/`memos` 主键为 `(user_id, 日期)` 复合主键
+3. **登录接口**：`POST /api/auth/login` body=`{ code }` → 微信 `code2session` 换 openid → 查/建 users → 返回 `{ token, user }`；`GET /api/auth/me` 返回当前用户
+4. **token 方案**：Node 内置 `crypto` HMAC-SHA256 自签（payload=`{uid, exp}`，30 天），密钥 `WX_TOKEN_SECRET`（.env）；无 JWT 依赖
+5. **鉴权策略**：记录类接口读 `Authorization: Bearer <token>` 取 uid；**无 token / token 失效一律回退 root（user_id=1）**——PC 版单用户兼容，也是本地自用场景的安全取舍（任意无 token 请求等同 root 权限），上线多租户前需收紧
+6. **dev 模式**：`WX_SECRET` 未配置时，openid = `'dev_' + sha1(code)`（稳定可重入），仅本地联调可用；真机/上线必须配置真实 AppSecret
+7. **题库/题目/分类**为全局共享数据，不按用户过滤；导出导入（data.js）为全局备份，不做用户维度拆分
+8. 主版本（根目录 `server/`）为 PC 单机版，不引入 users/user_id，schema 与路由均不同步本轮改造
 
 ---
 
@@ -262,6 +290,8 @@ src-tauri/src/
 | Rust 文件 | snake_case | `command.rs` |
 | Rust 函数 | snake_case | `cmd_create_project` |
 | Rust 类型 | PascalCase | `FeatureConfig` |
+| uni-app 页面/组件文件 | PascalCase（页面目录小写，文件 index.vue） | `pages/quiz/practice.vue`、`components/QuestionCard.vue` |
+| uni-app 工具/类型文件 | camelCase | `utils/request.ts`、`types/index.ts` |
 
 ---
 

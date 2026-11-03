@@ -26,6 +26,7 @@ last_modified: 2026-10-31
 |------|------|------|--------|------|
 | 主版本 | 仓库根目录 | `main` | 原生 HTML/CSS/JS + Express + MySQL | ✅ 完整，维护中 |
 | web-app 版 | `web-app/` | `main` | Vue 3 + TS + Pinia + Router + Element Plus + Express | 🚧 后端完成，前端功能开发中 |
+| 小程序版 | `uni-app/` | `main` | uni-app（Vue 3 + TS + Vite）→ 微信小程序 | 🚧 框架已初始化（2026-11-03），页面开发中 |
 | app 版 | `app/`（未创建） | `main`（未来） | 预留 Rust/Tauri | 未开始 |
 
 - **单分支管理**：历史上的 `version-vue+node` 分支已于 2026-10-28 并入 main 并删除；所有版本统一在 `main` 维护
@@ -153,6 +154,10 @@ web-app/
 **2026-10-29 提交状态（用户指令「提交所有未提交内容」，方案A 拆 2 次）**：`e6b76cb4` feat(主版本) 练习模块图片题支持 + 行测真题题库与导入工具入库（42441 文件，含 `xingcezhenti-main/` 464M 题库数据、`tools/import-xingce/`、demos、docs）、`46a04764` feat(web-app) 练习模块图片题支持（13 文件）；安全处理：`tools/import-xingce/config.js` 明文 MySQL 密码改 `process.env.DB_PASSWORD || ''`（密码未进历史，`git log -S` 已验证）；**已 push**（13:22 用户指令「直接推送」，首次因 7897 代理未开失败，代理启动后 `03e050ec..46a04764` → origin/main 成功）；用户明确不追加 docs commit（本文件与 10-29 修改记录保持未提交）。
 **13:22 push 之后的新未提交改动**：题库题逻辑删除 is_deleted（见进度第 21 条）与双端导出/导入链路适配（第 22 条）与题库模式用户体验优化（第 23 条，含新接口 replay-errors）与弹窗限高修复（第 24 条）与题库管理状态列三态筛选（第 25 条）与记录切 tab 刷新修复（第 26 条）与计时模式大类默认公务员考试（第 27 条）与速算填空自动聚焦（第 28 条），等用户指令提交。
 
+**小程序版本（uni-app/）初始化（2026-11-03，未提交）**：用户经微信开发者工具创建的原生云开发模板（`miniprogram/` + `cloudfunctions/` 示例）已全部清理；用 `degit dcloudio/uni-preset-vue#vite-ts` 重建为 uni-app（Vue3+TS+Vite）项目——AppID `wxe3e193bb3456bb6e` 已写入 `src/manifest.json`（mp-weixin）与根 `project.config.json`（miniprogramRoot=`dist/dev/mp-weixin`，urlCheck=false 便于本地连 8888）；pages.json 注册 10 页面 + tabBar（首页/题库/速算/我的）；基础层：`utils/request.ts`（统一请求封装：token 注入/超时/错误提示/中文日志）、`utils/token.ts`（登录态存取独立模块，避免循环依赖）、`utils/auth.ts`（静默登录 wx.login→code→`POST /api/auth/login`，**后端接口 TODO**）、`config/index.ts`（API_BASE_URL=http://127.0.0.1:8888，真机预览改局域网 IP）、`types/index.ts`；全部页面为占位（待 Demo 讨论）；`build:mp-weixin` 编译通过无 warning，dev 产物 `dist/dev/mp-weixin` 已生成供微信开发者工具导入；`.gitignore` 已排除 node_modules/dist；数据层约定已入 `docs/coding-standards.md` 0.5 节（题库全局共享、记录按 user_id 隔离、PC 版默认 user_id=1 兼容）。
+
+**后端用户体系（web-app/backend，2026-11-03，未提交）**：按用户拍板方案实施「复用自建后端 + users 表 + 记录按 user_id 隔离 + 微信 API 注册登录 + 默认 root + 存量数据绑定 root」——① schema.sql 新增 users 表（openid 唯一，root 账户 id=1 已建）与幂等迁移段 c5~c10：6 张记录根表（rounds/favorites/study_daily/memos/practice_sessions/mental_sessions）加 user_id 列（存量行默认 1=root，rounds 121 行已归 root），study_daily/memos 主键改复合 (user_id,日期)，已执行并 SHOW CREATE TABLE 验证；② .env 追加 WX_APPID/WX_SECRET（空=dev 模式 code 哈希 openid）/WX_TOKEN_SECRET；③ 新增 `utils/auth.js`（crypto HMAC token 签发/验证 + 微信 code2session + 请求用户解析，无 token 默认 root）与 `routes/auth.js`（POST /api/auth/login、GET /api/auth/me），index.js 挂载；④ 7 个记录类路由（history/favorites/study/memos/practice/mental/stats）读写全部按 user_id 过滤，INSERT 显式带 user_id，明细表经外键级联隔离；题库/题目/分类全局共享不改；data.js 导出导入保持全局备份；⑤ 冒烟通过（dev 登录新用户 id=2 → 隔离读写：新用户 history 0→1、root 侧恒 121；study-daily/mental-stats 隔离；测试数据已清理）；⑥ 主版本 server/ 为 PC 单机，不引入用户体系（按 coding-standards 0.6 约定）；uni-app `utils/auth.ts` 登录契约已与后端对齐（移除 TODO 注释）。**待办**：真机/上线需用户提供微信 AppSecret 填入 .env；WX_TOKEN_SECRET 生产需换随机长串。
+
 ## 五、关键约定（给下次会话的 Claude）
 
 1. 回复开头固定「老板，」；任何需求先复述+列 ≥2 套方案+等用户确认才动工
@@ -174,4 +179,7 @@ cd web-app/frontend && npm run dev
 
 # 主版本（3000，与 web-app 后端互斥，不能同时跑）
 双击根目录 启动.bat
+
+# 小程序版（uni-app）：开发编译后，微信开发者工具「导入项目」选 uni-app/dist/dev/mp-weixin
+cd uni-app && npm run dev:mp-weixin
 ```
