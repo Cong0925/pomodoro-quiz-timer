@@ -25,6 +25,12 @@
 			}
 		},
 		{
+			"path": "pages/quiz/record-detail",
+			"style": {
+				"navigationBarTitleText": "练习回顾"
+			}
+		},
+		{
 			"path": "pages/mental/index",
 			"style": {
 				"navigationBarTitleText": "速算练习"
@@ -58,6 +64,12 @@
 			"path": "pages/timer/batch",
 			"style": {
 				"navigationBarTitleText": "整组计时"
+			}
+		},
+		{
+			"path": "pages/timer/records",
+			"style": {
+				"navigationBarTitleText": "计时记录"
 			}
 		},
 		{

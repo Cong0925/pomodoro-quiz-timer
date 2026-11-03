@@ -98,3 +98,8 @@ export function fetchMentalDetail(id: number): Promise<MentalDetailResult> {
 export function deleteMentalSession(id: number): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>({ url: `/api/mental/history/${id}`, method: 'DELETE' })
 }
+
+/** 清空速算历史 */
+export function clearMentalHistory(): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>({ url: '/api/mental/history', method: 'DELETE' })
+}
