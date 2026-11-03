@@ -234,15 +234,16 @@ function goManual(): void {
   margin-right: 12rpx;
 }
 
-/* 题型卡片：2×2 + 综合全宽 */
+/* 题型卡片：一行两个，综合全宽跨列 */
 .type-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16rpx;
 }
 
 .type-card {
-  width: calc(50% - 8rpx);
+  min-width: 0;
+  box-sizing: border-box;
   background-color: #ffffff;
   border: 2rpx solid #eef1f6;
   border-radius: 24rpx;
@@ -258,7 +259,7 @@ function goManual(): void {
 }
 
 .type-card.wide {
-  width: 100%;
+  grid-column: 1 / -1;
 }
 
 .tc-icon {
