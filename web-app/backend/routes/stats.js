@@ -5,6 +5,7 @@
 const express = require('express');
 const pool = require('../db');
 const { asyncHandler } = require('../utils');
+const { getUserId } = require('../utils/auth');
 
 const router = express.Router();
 
@@ -63,6 +64,7 @@ function buildKeys(gran, start, end) {
    返回 { today, sum(全段合计), list(当前页), total, page, limit, totalPages }
    注：列表为三表聚合 + JS 补零拼接，无法直接 SQL LIMIT/OFFSET，分页在聚合后切页 */
 router.get('/', asyncHandler(async (req, res) => {
+        const uid = getUserId(req);
         const gran = ['day', 'week', 'month'].includes(req.query.gran) ? req.query.gran : 'day';
 
         /* 分页参数（非法/越界钳制） */
@@ -77,14 +79,14 @@ router.get('/', asyncHandler(async (req, res) => {
             `SELECT COUNT(*) AS rounds,
                     COALESCE(SUM(correct),0) AS correct,
                     COALESCE(SUM(total_ms),0) AS workMs
-             FROM rounds WHERE DATE(finished_at) = CURDATE()`
+             FROM rounds WHERE user_id=? AND DATE(finished_at) = CURDATE()`, [uid]
         );
         const [tq] = await pool.query(
             `SELECT COUNT(*) AS questions, COALESCE(SUM(result='skip'),0) AS skipped
              FROM records rc JOIN rounds r ON r.id = rc.round_id
-             WHERE DATE(r.finished_at) = CURDATE()`
+             WHERE r.user_id=? AND DATE(r.finished_at) = CURDATE()`, [uid]
         );
-        const [sd] = await pool.query('SELECT ms FROM study_daily WHERE study_date = CURDATE()');
+        const [sd] = await pool.query('SELECT ms FROM study_daily WHERE user_id=? AND study_date = CURDATE()', [uid]);
         const todayQuestions = tq[0].questions;
         const todaySkipped = tq[0].skipped;
         const today = {
@@ -103,7 +105,7 @@ router.get('/', asyncHandler(async (req, res) => {
                     COUNT(*) AS rounds,
                     COALESCE(SUM(correct),0) AS correct,
                     COALESCE(SUM(total_ms),0) AS workMs
-             FROM rounds GROUP BY gkey`
+             FROM rounds WHERE user_id=? GROUP BY gkey`, [uid]
         );
 
         /* 按粒度聚合：records 计数（做题数）与跳过数，join rounds 取时间归属 */
@@ -111,13 +113,13 @@ router.get('/', asyncHandler(async (req, res) => {
             `SELECT ${granExpr('r.finished_at', gran)} AS gkey, COUNT(*) AS questions,
                     COALESCE(SUM(result='skip'),0) AS skipped
              FROM records rc JOIN rounds r ON r.id = rc.round_id
-             GROUP BY gkey`
+             WHERE r.user_id=? GROUP BY gkey`, [uid]
         );
 
         /* 按粒度聚合：学习时长 */
         const [sRows] = await pool.query(
             `SELECT ${granExpr('study_date', gran)} AS gkey, SUM(ms) AS studyMs
-             FROM study_daily GROUP BY gkey ORDER BY gkey DESC`
+             FROM study_daily WHERE user_id=? GROUP BY gkey ORDER BY gkey DESC`, [uid]
         );
         const roundMap = {};
         rRows.forEach(x => { roundMap[x.gkey] = x; });
@@ -130,10 +132,10 @@ router.get('/', asyncHandler(async (req, res) => {
            缺失粒度（未登录的日子/周/月）补 0，保证日期不断档 */
         const [bnd] = await pool.query(
             `SELECT MIN(d) AS m FROM (
-                SELECT MIN(DATE(finished_at)) AS d FROM rounds
+                SELECT MIN(DATE(finished_at)) AS d FROM rounds WHERE user_id=?
                 UNION ALL
-                SELECT MIN(study_date) FROM study_daily
-             ) t`
+                SELECT MIN(study_date) FROM study_daily WHERE user_id=?
+             ) t`, [uid, uid]
         );
         const startKey = bnd[0].m || fmtDate(new Date());
         const endKey = fmtDate(new Date());

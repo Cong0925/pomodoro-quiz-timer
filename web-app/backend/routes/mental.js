@@ -8,6 +8,7 @@
 const express = require('express');
 const pool = require('../db');
 const { asyncHandler, num, str, nowDateTime } = require('../utils');
+const { getUserId } = require('../utils/auth');
 const SEED_QUESTIONS = require('../mentalQuestions');
 
 const router = express.Router();
@@ -334,9 +335,9 @@ router.post('/start', asyncHandler(async (req, res) => {
     }
 
     const [r] = await pool.query(
-        `INSERT INTO mental_sessions (qtype, qtype_name, difficulty, answer_mode, total_count)
-         VALUES (?,?,?,?,?)`,
-        [qtype, TYPE_NAMES[qtype], difficulty, answerMode, infinite ? 0 : ids.length]
+        `INSERT INTO mental_sessions (user_id, qtype, qtype_name, difficulty, answer_mode, total_count)
+         VALUES (?,?,?,?,?,?)`,
+        [getUserId(req), qtype, TYPE_NAMES[qtype], difficulty, answerMode, infinite ? 0 : ids.length]
     );
     const sessionId = r.insertId;
     const questions = await fetchQuestions(ids, fillOnly);
@@ -355,7 +356,8 @@ router.post('/start', asyncHandler(async (req, res) => {
    仅 total_count=0 的无限会话可用 */
 router.post('/:id/more', asyncHandler(async (req, res) => {
     const sessionId = num(req.params.id);
-    const [s] = await pool.query('SELECT * FROM mental_sessions WHERE id=?', [sessionId]);
+    const uid = getUserId(req);
+    const [s] = await pool.query('SELECT * FROM mental_sessions WHERE id=? AND user_id=?', [sessionId, uid]);
     if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
     if (s[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再追加题目' });
     if (s[0].total_count !== 0) return res.status(400).json({ error: '定量会话无需追加题目' });
@@ -374,13 +376,14 @@ router.post('/:id/more', asyncHandler(async (req, res) => {
    服务端判对错，返回正确答案文本与技巧提示；防重复作答 */
 router.post('/:id/answer', asyncHandler(async (req, res) => {
     const sessionId = num(req.params.id);
+    const uid = getUserId(req);
     const no = num(req.body && req.body.no);
     const userAnswer = str(req.body && req.body.answer, 50).trim();
     const ms = num(req.body && req.body.ms);
     const questionId = num(req.body && req.body.questionId);
     if (!no) return res.status(400).json({ error: '缺少题号' });
 
-    const [sRows] = await pool.query('SELECT id, answer_mode, finished_at FROM mental_sessions WHERE id=?', [sessionId]);
+    const [sRows] = await pool.query('SELECT id, answer_mode, finished_at FROM mental_sessions WHERE id=? AND user_id=?', [sessionId, uid]);
     if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
     if (sRows[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再作答' });
     const fillMode = sRows[0].answer_mode === 'fill';
@@ -424,6 +427,7 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
 /* POST /api/mental/:id/skip { no, questionId, ms } */
 router.post('/:id/skip', asyncHandler(async (req, res) => {
     const sessionId = num(req.params.id);
+    const uid = getUserId(req);
     const no = num(req.body && req.body.no);
     const ms = num(req.body && req.body.ms);
     const questionId = num(req.body && req.body.questionId);
@@ -432,7 +436,7 @@ router.post('/:id/skip', asyncHandler(async (req, res) => {
     const [ex] = await pool.query('SELECT id FROM mental_records WHERE session_id=? AND no=?', [sessionId, no]);
     if (ex.length > 0) return res.status(409).json({ error: '该题已作答' });
 
-    const [sRows] = await pool.query('SELECT id, answer_mode, finished_at FROM mental_sessions WHERE id=?', [sessionId]);
+    const [sRows] = await pool.query('SELECT id, answer_mode, finished_at FROM mental_sessions WHERE id=? AND user_id=?', [sessionId, uid]);
     if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
     if (sRows[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再操作' });
     const fillMode = sRows[0].answer_mode === 'fill';
@@ -470,13 +474,14 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const sessionId = num(req.params.id);
+        const uid = getUserId(req);
         const ms = num(req.body && req.body.ms);
         const now = nowDateTime();
         await conn.beginTransaction();
 
         /* 无限流（total_count=0）：按实际作答数结算，并把题量修正为实做题数 */
         const [pre] = await conn.query(
-            'SELECT * FROM mental_sessions WHERE id=? AND finished_at IS NULL', [sessionId]);
+            'SELECT * FROM mental_sessions WHERE id=? AND user_id=? AND finished_at IS NULL', [sessionId, uid]);
         if (pre.length === 0) {
             await conn.rollback();
             return res.status(404).json({ error: '会话不存在或已结束' });
@@ -488,10 +493,10 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
         const newTotal = p.total_count === 0 ? totalAns : p.total_count;
         await conn.query(
             `UPDATE mental_sessions SET total_ms=?, finished_at=?, total_count=?, rate=?
-             WHERE id=? AND finished_at IS NULL`,
-            [ms, now, newTotal, rate, sessionId]
+             WHERE id=? AND user_id=? AND finished_at IS NULL`,
+            [ms, now, newTotal, rate, sessionId, uid]
         );
-        const [row] = await conn.query('SELECT * FROM mental_sessions WHERE id=?', [sessionId]);
+        const [row] = await conn.query('SELECT * FROM mental_sessions WHERE id=? AND user_id=?', [sessionId, uid]);
         const r = row[0];
 
         /* 归档历史概要（rounds：mode=mental，分类固定为 公务员考试 → 速算） */
@@ -510,10 +515,10 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
         const tag = tagRows[0] || { cat_id: null, cat_name: null, sub_id: null, sub_name: null };
         await conn.query(
             `INSERT INTO rounds
-                (id, mode, mode_name, title, description, finished_at, max_count,
+                (id, user_id, mode, mode_name, title, description, finished_at, max_count,
                  total_ms, correct, rate, cat_id, cat_name, sub_id, sub_name)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [rid, 'mental', '速算练习', str(r.qtype_name, 100), '', now, r.total_count,
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [rid, uid, 'mental', '速算练习', str(r.qtype_name, 100), '', now, r.total_count,
              r.total_ms, r.correct_count, r.rate, tag.cat_id, tag.cat_name, tag.sub_id, tag.sub_name]
         );
         /* 归档历史明细（records：累计用时 + 格式化时间） */
@@ -556,8 +561,8 @@ router.get('/history', asyncHandler(async (req, res) => {
     const page = Math.max(1, Math.floor(num(req.query.page)) || 1);
     const limit = Math.min(50, Math.max(1, Math.floor(num(req.query.limit)) || 20));
     const offset = (page - 1) * limit;
-    const where = [];
-    const params = [];
+    const where = ['user_id=?'];
+    const params = [getUserId(req)];
     if (req.query.qtype && VALID_TYPES.includes(req.query.qtype)) { where.push('qtype=?'); params.push(req.query.qtype); }
     const diff = num(req.query.difficulty);
     if (diff >= 1 && diff <= 3) { where.push('difficulty=?'); params.push(diff); }
@@ -573,21 +578,24 @@ router.get('/history', asyncHandler(async (req, res) => {
 
 /* DELETE /api/mental/history/:id 删除单个速算会话（明细级联删除） */
 router.delete('/history/:id', asyncHandler(async (req, res) => {
-    const [r] = await pool.query('DELETE FROM mental_sessions WHERE id=?', [num(req.params.id)]);
+    const uid = getUserId(req);
+    const [r] = await pool.query('DELETE FROM mental_sessions WHERE id=? AND user_id=?', [num(req.params.id), uid]);
     if (r.affectedRows === 0) return res.status(404).json({ error: '会话不存在' });
     res.json({ ok: true });
 }));
 
-/* DELETE /api/mental/history 清空全部速算历史（明细级联删除） */
+/* DELETE /api/mental/history 清空当前用户全部速算历史（明细级联删除） */
 router.delete('/history', asyncHandler(async (req, res) => {
-    await pool.query('DELETE FROM mental_sessions');
+    const uid = getUserId(req);
+    await pool.query('DELETE FROM mental_sessions WHERE user_id=?', [uid]);
     res.json({ ok: true });
 }));
 
 /* GET /api/mental/history/:id 单场明细（题目快照直接读取，无需联表） */
 router.get('/history/:id', asyncHandler(async (req, res) => {
     const id = num(req.params.id);
-    const [s] = await pool.query('SELECT * FROM mental_sessions WHERE id=?', [id]);
+    const uid = getUserId(req);
+    const [s] = await pool.query('SELECT * FROM mental_sessions WHERE id=? AND user_id=?', [id, uid]);
     if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
     const [recs] = await pool.query(
         'SELECT no, qtype, stem, options, answer, tip, user_answer, result, ms FROM mental_records WHERE session_id=? ORDER BY no ASC',
@@ -605,6 +613,7 @@ router.get('/history/:id', asyncHandler(async (req, res) => {
 
 /* GET /api/mental/stats（累计 + 今日概况） */
 router.get('/stats', asyncHandler(async (req, res) => {
+    const uid = getUserId(req);
     const [[all]] = await pool.query(`
         SELECT COUNT(*) AS sessions,
                COALESCE(SUM(total_count),0) AS total_q,
@@ -613,7 +622,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
                COALESCE(SUM(wrong_count),0) AS wrong_q,
                COALESCE(SUM(skipped_count),0) AS skip_q,
                COALESCE(SUM(total_ms),0) AS total_ms
-        FROM mental_sessions WHERE finished_at IS NOT NULL`);
+        FROM mental_sessions WHERE finished_at IS NOT NULL AND user_id=?`, [uid]);
     const [[today]] = await pool.query(`
         SELECT COUNT(*) AS sessions,
                COALESCE(SUM(total_count),0) AS total_q,
@@ -621,7 +630,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
                COALESCE(SUM(wrong_count),0) AS wrong_q,
                COALESCE(SUM(skipped_count),0) AS skip_q,
                COALESCE(SUM(total_ms),0) AS total_ms
-        FROM mental_sessions WHERE finished_at IS NOT NULL AND DATE(finished_at) = CURDATE()`);
+        FROM mental_sessions WHERE finished_at IS NOT NULL AND DATE(finished_at) = CURDATE() AND user_id=?`, [uid]);
     const totalQ = Number(all.total_q || 0);
     const rate = totalQ ? Math.round(Number(all.correct_q) / totalQ * 1000) / 10 : 0;
     res.json({

@@ -6,6 +6,7 @@
 const express = require('express');
 const pool = require('../db');
 const { asyncHandler, num, str, nowDateTime } = require('../utils');
+const { getUserId } = require('../utils/auth');
 
 const router = express.Router();
 
@@ -321,8 +322,9 @@ router.delete('/questions/:id', asyncHandler(async (req, res) => {
 
 /* ---------- 练习会话 ---------- */
 
-/* 抽题：order=顺序 random=随机 review=该题库历史错题（不足补随机）；只从未停用题目中抽 */
-async function pickQuestions(bankId, mode, count) {
+/* 抽题：order=顺序 random=随机 review=该题库历史错题（不足补随机）；只从未停用题目中抽
+   uid：错题重练按用户隔离（review 只抽当前用户的错题） */
+async function pickQuestions(bankId, mode, count, uid) {
     const bank = await pool.query('SELECT * FROM question_banks WHERE id=?', [bankId]);
     if (bank[0].length === 0) return null;
     const limit = Math.max(1, count);
@@ -332,8 +334,8 @@ async function pickQuestions(bankId, mode, count) {
             SELECT q.id FROM practice_records pr
             JOIN practice_sessions s ON s.id = pr.session_id
             JOIN questions q ON q.id = pr.question_id
-            WHERE s.bank_id = ? AND pr.result = 'ng' AND q.is_deleted = 0
-            GROUP BY q.id ORDER BY MAX(pr.id) DESC LIMIT ?`, [bankId, limit]);
+            WHERE s.bank_id = ? AND s.user_id = ? AND pr.result = 'ng' AND q.is_deleted = 0
+            GROUP BY q.id ORDER BY MAX(pr.id) DESC LIMIT ?`, [bankId, uid, limit]);
         ids = wrong.map(w => w.id);
     }
     if (ids.length < limit) {
@@ -352,10 +354,11 @@ async function pickQuestions(bankId, mode, count) {
 
 /* POST /api/practice/start { bankId, mode, count } */
 router.post('/start', asyncHandler(async (req, res) => {
+        const uid = getUserId(req);
         const bankId = num(req.body && req.body.bankId);
         const mode = ['order', 'random', 'review'].includes(req.body && req.body.mode) ? req.body.mode : 'order';
         const count = num(req.body && req.body.count) || 10;
-        const picked = await pickQuestions(bankId, mode, count);
+        const picked = await pickQuestions(bankId, mode, count, uid);
         if (!picked) return res.status(404).json({ error: '题库不存在' });
         const b = picked.bank;
         const qIds = picked.ids;
@@ -366,9 +369,9 @@ router.post('/start', asyncHandler(async (req, res) => {
         const subName = b.sub_id ? (await pool.query('SELECT name FROM category_subs WHERE id=?', [b.sub_id]))[0][0]?.name || '' : '';
 
         const [r] = await pool.query(
-            `INSERT INTO practice_sessions (bank_id, bank_name, mode, total_count, cat_id, cat_name, sub_id, sub_name)
-             VALUES (?,?,?,?,?,?,?,?)`,
-            [bankId, b.name, mode, qIds.length, b.cat_id, catName, b.sub_id, subName]
+            `INSERT INTO practice_sessions (user_id, bank_id, bank_name, mode, total_count, cat_id, cat_name, sub_id, sub_name)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+            [uid, bankId, b.name, mode, qIds.length, b.cat_id, catName, b.sub_id, subName]
         );
         const sessionId = r.insertId;
 
@@ -390,12 +393,13 @@ router.post('/start', asyncHandler(async (req, res) => {
 /* POST /api/practice/:id/answer { no, answer, ms } */
 router.post('/:id/answer', asyncHandler(async (req, res) => {
         const sessionId = num(req.params.id);
+        const uid = getUserId(req);
         const no = num(req.body && req.body.no);
         const userAnswer = str(req.body && req.body.answer, 50).trim();
         const ms = num(req.body && req.body.ms);
         if (!no) return res.status(400).json({ error: '缺少题号' });
 
-        const [sRows] = await pool.query('SELECT * FROM practice_sessions WHERE id=?', [sessionId]);
+        const [sRows] = await pool.query('SELECT * FROM practice_sessions WHERE id=? AND user_id=?', [sessionId, uid]);
         if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
         if (sRows[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再作答' });
         // 防止重复作答同号题
@@ -431,10 +435,11 @@ router.post('/:id/answer', asyncHandler(async (req, res) => {
 /* POST /api/practice/:id/skip { no, ms } */
 router.post('/:id/skip', asyncHandler(async (req, res) => {
         const sessionId = num(req.params.id);
+        const uid = getUserId(req);
         const no = num(req.body && req.body.no);
         const ms = num(req.body && req.body.ms);
         if (!no) return res.status(400).json({ error: '缺少题号' });
-        const [sRows] = await pool.query('SELECT id, finished_at FROM practice_sessions WHERE id=?', [sessionId]);
+        const [sRows] = await pool.query('SELECT id, finished_at FROM practice_sessions WHERE id=? AND user_id=?', [sessionId, uid]);
         if (sRows.length === 0) return res.status(404).json({ error: '会话不存在' });
         if (sRows[0].finished_at) return res.status(400).json({ error: '该会话已结算，不能再操作' });
         const [ex] = await pool.query('SELECT id FROM practice_records WHERE session_id=? AND no=?', [sessionId, no]);
@@ -458,19 +463,20 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const sessionId = num(req.params.id);
+        const uid = getUserId(req);
         const ms = num(req.body && req.body.ms);
         const now = nowDateTime();
         await conn.beginTransaction();
         const [s] = await conn.query(
             `UPDATE practice_sessions SET total_ms = ?, finished_at = ?,
              rate = ROUND(correct_count / total_count * 100, 1)
-             WHERE id = ? AND finished_at IS NULL`, [ms, now, sessionId]
+             WHERE id = ? AND user_id = ? AND finished_at IS NULL`, [ms, now, sessionId, uid]
         );
         if (s.affectedRows === 0) {
             await conn.rollback();
             return res.status(404).json({ error: '会话不存在或已结束' });
         }
-        const [row] = await conn.query('SELECT * FROM practice_sessions WHERE id=?', [sessionId]);
+        const [row] = await conn.query('SELECT * FROM practice_sessions WHERE id=? AND user_id=?', [sessionId, uid]);
         const r = row[0];
 
         // 归档历史概要（rounds）
@@ -483,10 +489,10 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
         };
         await conn.query(
             `INSERT INTO rounds
-                (id, mode, mode_name, title, description, finished_at, max_count,
+                (id, user_id, mode, mode_name, title, description, finished_at, max_count,
                  total_ms, correct, rate, cat_id, cat_name, sub_id, sub_name)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [rid, 'practice', '练习模式', str(r.bank_name, 100), '', now, r.total_count,
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [rid, uid, 'practice', '练习模式', str(r.bank_name, 100), '', now, r.total_count,
              r.total_ms, r.correct_count, r.rate, r.cat_id, r.cat_name, r.sub_id, r.sub_name]
         );
         // 归档历史明细（records：累计用时 + 格式化时间）
@@ -527,7 +533,8 @@ router.post('/:id/finish', asyncHandler(async (req, res) => {
 /* POST /api/practice/:id/replay-errors 本场错题重练：取该会话错题开新会话（mode=review），错题已停用则跳过 */
 router.post('/:id/replay-errors', asyncHandler(async (req, res) => {
         const sessionId = num(req.params.id);
-        const [s] = await pool.query('SELECT * FROM practice_sessions WHERE id=?', [sessionId]);
+        const uid = getUserId(req);
+        const [s] = await pool.query('SELECT * FROM practice_sessions WHERE id=? AND user_id=?', [sessionId, uid]);
         if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
         const [raw] = await pool.query(
             'SELECT question_id FROM practice_records WHERE session_id=? AND result = ? ORDER BY no ASC', [sessionId, 'ng']);
@@ -543,9 +550,9 @@ router.post('/:id/replay-errors', asyncHandler(async (req, res) => {
         }
         const src = s[0];
         const [r] = await pool.query(
-            `INSERT INTO practice_sessions (bank_id, bank_name, mode, total_count, cat_id, cat_name, sub_id, sub_name)
-             VALUES (?,?,?,?,?,?,?,?)`,
-            [src.bank_id, src.bank_name, 'review', qIds.length, src.cat_id, src.cat_name, src.sub_id, src.sub_name]
+            `INSERT INTO practice_sessions (user_id, bank_id, bank_name, mode, total_count, cat_id, cat_name, sub_id, sub_name)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+            [uid, src.bank_id, src.bank_name, 'review', qIds.length, src.cat_id, src.cat_name, src.sub_id, src.sub_name]
         );
         const newId = r.insertId;
         const ph = qIds.map(() => '?').join(',');
@@ -567,8 +574,8 @@ router.get('/history', asyncHandler(async (req, res) => {
         const page = Math.max(1, Math.floor(num(req.query.page)) || 1);
         const limit = Math.min(50, Math.max(1, Math.floor(num(req.query.limit)) || 20));
         const offset = (page - 1) * limit;
-        const where = [];
-        const params = [];
+        const where = ['user_id=?'];
+        const params = [getUserId(req)];
         if (num(req.query.bankId)) { where.push('bank_id=?'); params.push(num(req.query.bankId)); }
         if (req.query.mode) { where.push('mode=?'); params.push(str(req.query.mode, 10)); }
         const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
@@ -583,21 +590,24 @@ router.get('/history', asyncHandler(async (req, res) => {
 
 /* DELETE /api/practice/history/:id 删除单个练习会话（明细级联删除；已归档到历史记录的轮次不受影响） */
 router.delete('/history/:id', asyncHandler(async (req, res) => {
-        const [r] = await pool.query('DELETE FROM practice_sessions WHERE id=?', [num(req.params.id)]);
+        const uid = getUserId(req);
+        const [r] = await pool.query('DELETE FROM practice_sessions WHERE id=? AND user_id=?', [num(req.params.id), uid]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '会话不存在' });
         res.json({ ok: true });
 }));
 
-/* DELETE /api/practice/history 清空全部练习历史（明细级联删除） */
+/* DELETE /api/practice/history 清空当前用户全部练习历史（明细级联删除） */
 router.delete('/history', asyncHandler(async (req, res) => {
-        await pool.query('DELETE FROM practice_sessions');
+        const uid = getUserId(req);
+        await pool.query('DELETE FROM practice_sessions WHERE user_id=?', [uid]);
         res.json({ ok: true });
 }));
 
 /* GET /api/practice/history/:id（含每题明细；题目被真删时题干显示占位，已停用题正常显示） */
 router.get('/history/:id', asyncHandler(async (req, res) => {
         const id = num(req.params.id);
-        const [s] = await pool.query('SELECT * FROM practice_sessions WHERE id=?', [id]);
+        const uid = getUserId(req);
+        const [s] = await pool.query('SELECT * FROM practice_sessions WHERE id=? AND user_id=?', [id, uid]);
         if (s.length === 0) return res.status(404).json({ error: '会话不存在' });
         const [recs] = await pool.query(`
             SELECT pr.no, pr.question_id, pr.user_answer, pr.result, pr.ms,
@@ -615,6 +625,7 @@ router.get('/history/:id', asyncHandler(async (req, res) => {
 
 /* GET /api/practice/stats（累计 + 今日概况） */
 router.get('/stats', asyncHandler(async (req, res) => {
+        const uid = getUserId(req);
         const [[all]] = await pool.query(`
             SELECT COUNT(*) AS sessions,
                    COALESCE(SUM(total_count),0) AS total_q,
@@ -623,7 +634,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
                    COALESCE(SUM(wrong_count),0) AS wrong_q,
                    COALESCE(SUM(skipped_count),0) AS skip_q,
                    COALESCE(SUM(total_ms),0) AS total_ms
-            FROM practice_sessions WHERE finished_at IS NOT NULL`);
+            FROM practice_sessions WHERE finished_at IS NOT NULL AND user_id=?`, [uid]);
         const [[today]] = await pool.query(`
             SELECT COUNT(*) AS sessions,
                    COALESCE(SUM(total_count),0) AS total_q,
@@ -631,7 +642,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
                    COALESCE(SUM(wrong_count),0) AS wrong_q,
                    COALESCE(SUM(skipped_count),0) AS skip_q,
                    COALESCE(SUM(total_ms),0) AS total_ms
-            FROM practice_sessions WHERE finished_at IS NOT NULL AND DATE(finished_at) = CURDATE()`);
+            FROM practice_sessions WHERE finished_at IS NOT NULL AND DATE(finished_at) = CURDATE() AND user_id=?`, [uid]);
         /* mysql2 SUM 返回字符串，必须 Number() 后再参与运算/返回（防字符串拼接与类型契约错位） */
         const rate = all.total_q ? Math.round(Number(all.correct_q) / Number(all.total_q) * 1000) / 10 : 0;
         res.json({

@@ -341,6 +341,26 @@ CREATE TABLE IF NOT EXISTS mental_records (
 --  · 若要支持用户/多端，可增加 users 表并给业务表加 user_id 外键
 -- ============================================================
 
+-- ------------------------------------------------------------
+-- 15. users 用户（多端/小程序登录）
+--    openid 为微信小程序 openid（唯一）；root 为本地默认账户（id=1），
+--    存量数据全部绑定 root；PC 版无 token 时默认以 root(user_id=1) 访问
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS users (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+    openid      VARCHAR(64)  NOT NULL                COMMENT '微信 openid（唯一；root 为本地默认账户）',
+    nickname    VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '昵称',
+    avatar      VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '头像URL',
+    role        VARCHAR(20)  NOT NULL DEFAULT 'user' COMMENT '角色 user=普通 root=管理员/默认账户',
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_openid (openid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户';
+
+-- root 默认账户（存量数据归属；幂等）
+INSERT IGNORE INTO users (id, openid, nickname, role) VALUES (1, 'root', 'root', 'root');
+
 -- ============================================================
 -- 迁移段（幂等）：为已存在的旧表补充新列
 -- 通过 information_schema 检查，列不存在时才 ALTER，可重复执行
@@ -360,3 +380,36 @@ PREPARE st3 FROM @s3; EXECUTE st3; DEALLOCATE PREPARE st3;
 SET @c4 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'questions' AND column_name = 'is_deleted');
 SET @s4 := IF(@c4 = 0, 'ALTER TABLE questions ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT ''逻辑删除/停用 0=正常 1=已停用(软删,可恢复)'' AFTER source', 'SELECT 1');
 PREPARE st4 FROM @s4; EXECUTE st4; DEALLOCATE PREPARE st4;
+
+-- 用户体系迁移：记录类根表加 user_id（存量数据默认 1=root，即现有数据全部绑定 root 账户）
+SET @c5 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'rounds' AND column_name = 'user_id');
+SET @s5 := IF(@c5 = 0, 'ALTER TABLE rounds ADD COLUMN user_id BIGINT NOT NULL DEFAULT 1 COMMENT ''所属用户ID(默认1=root)'' AFTER id, ADD KEY idx_user (user_id)', 'SELECT 1');
+PREPARE st5 FROM @s5; EXECUTE st5; DEALLOCATE PREPARE st5;
+
+SET @c6 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'favorites' AND column_name = 'user_id');
+SET @s6 := IF(@c6 = 0, 'ALTER TABLE favorites ADD COLUMN user_id BIGINT NOT NULL DEFAULT 1 COMMENT ''所属用户ID(默认1=root)'' AFTER id, ADD KEY idx_user (user_id)', 'SELECT 1');
+PREPARE st6 FROM @s6; EXECUTE st6; DEALLOCATE PREPARE st6;
+
+SET @c7 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'study_daily' AND column_name = 'user_id');
+SET @s7 := IF(@c7 = 0, 'ALTER TABLE study_daily ADD COLUMN user_id BIGINT NOT NULL DEFAULT 1 COMMENT ''所属用户ID(默认1=root)'' AFTER study_date', 'SELECT 1');
+PREPARE st7 FROM @s7; EXECUTE st7; DEALLOCATE PREPARE st7;
+-- study_daily 主键改复合 (user_id, study_date)：主键列不含 user_id 时才执行
+SET @k7 := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'study_daily' AND index_name = 'PRIMARY' AND column_name = 'user_id');
+SET @s7b := IF(@k7 = 0, 'ALTER TABLE study_daily DROP PRIMARY KEY, ADD PRIMARY KEY (user_id, study_date)', 'SELECT 1');
+PREPARE st7b FROM @s7b; EXECUTE st7b; DEALLOCATE PREPARE st7b;
+
+SET @c8 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'memos' AND column_name = 'user_id');
+SET @s8 := IF(@c8 = 0, 'ALTER TABLE memos ADD COLUMN user_id BIGINT NOT NULL DEFAULT 1 COMMENT ''所属用户ID(默认1=root)'' AFTER memo_date', 'SELECT 1');
+PREPARE st8 FROM @s8; EXECUTE st8; DEALLOCATE PREPARE st8;
+-- memos 主键改复合 (user_id, memo_date)：主键列不含 user_id 时才执行
+SET @k8 := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'memos' AND index_name = 'PRIMARY' AND column_name = 'user_id');
+SET @s8b := IF(@k8 = 0, 'ALTER TABLE memos DROP PRIMARY KEY, ADD PRIMARY KEY (user_id, memo_date)', 'SELECT 1');
+PREPARE st8b FROM @s8b; EXECUTE st8b; DEALLOCATE PREPARE st8b;
+
+SET @c9 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'practice_sessions' AND column_name = 'user_id');
+SET @s9 := IF(@c9 = 0, 'ALTER TABLE practice_sessions ADD COLUMN user_id BIGINT NOT NULL DEFAULT 1 COMMENT ''所属用户ID(默认1=root)'' AFTER id, ADD KEY idx_user (user_id)', 'SELECT 1');
+PREPARE st9 FROM @s9; EXECUTE st9; DEALLOCATE PREPARE st9;
+
+SET @c10 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'mental_sessions' AND column_name = 'user_id');
+SET @s10 := IF(@c10 = 0, 'ALTER TABLE mental_sessions ADD COLUMN user_id BIGINT NOT NULL DEFAULT 1 COMMENT ''所属用户ID(默认1=root)'' AFTER id, ADD KEY idx_user (user_id)', 'SELECT 1');
+PREPARE st10 FROM @s10; EXECUTE st10; DEALLOCATE PREPARE st10;

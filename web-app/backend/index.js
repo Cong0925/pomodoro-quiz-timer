@@ -39,6 +39,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 /* ---- 业务路由 ---- */
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/favorites', require('./routes/favorites'));

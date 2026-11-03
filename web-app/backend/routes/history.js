@@ -6,6 +6,7 @@
 const express = require('express');
 const pool = require('../db');
 const { asyncHandler, str, num, parseJsonArray, nowDateTime } = require('../utils');
+const { getUserId } = require('../utils/auth');
 
 const router = express.Router();
 
@@ -46,8 +47,9 @@ const rowToHistory = (r, withRecords) => {
 router.get('/', asyncHandler(async (req, res) => {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
-        const where = [];
-        const params = [];
+        const uid = getUserId(req);
+        const where = ['user_id=?'];
+        const params = [uid];
         if (req.query.mode) { where.push('mode=?'); params.push(req.query.mode); }
         if (req.query.catId) { where.push('cat_id=?'); params.push(req.query.catId); }
         if (req.query.subId) { where.push('sub_id=?'); params.push(req.query.subId); }
@@ -99,14 +101,15 @@ router.get('/', asyncHandler(async (req, res) => {
 
 /* GET /api/history/:id 单轮详情（含 records 明细） */
 router.get('/:id', asyncHandler(async (req, res) => {
+        const uid = getUserId(req);
         const [rows] = await pool.query(
             `SELECT h.*, COALESCE(
                 (SELECT JSON_ARRAYAGG(JSON_OBJECT(
                     'no', r.no, 'ms', r.ms, 'cum_ms', r.cum_ms,
                     'time_str', r.time_str, 'result', r.result, 'note', r.note))
                  FROM records r WHERE r.round_id = h.id), JSON_ARRAY()) AS records
-             FROM rounds h WHERE h.id=?`,
-            [req.params.id]
+             FROM rounds h WHERE h.id=? AND h.user_id=?`,
+            [req.params.id, uid]
         );
         if (rows.length === 0) return res.status(404).json({ error: '记录不存在' });
         rows[0].records = parseJsonArray(rows[0].records);
@@ -120,17 +123,19 @@ router.post('/', asyncHandler(async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const b = req.body || {};
+        const uid = getUserId(req);
         const id = Date.now(); // 与旧版 id 生成一致
         const recs = Array.isArray(b.records) ? b.records : [];
 
         await conn.beginTransaction();
         await conn.query(
             `INSERT INTO rounds
-                (id, mode, mode_name, title, description, finished_at, max_count,
+                (id, user_id, mode, mode_name, title, description, finished_at, max_count,
                  total_ms, correct, rate, cat_id, cat_name, sub_id, sub_name)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
                 id,
+                uid,
                 b.mode === 'batch' ? 'batch' : 'single',
                 str(b.modeName, 20) || (b.mode === 'batch' ? '整组模式' : '单题模式'),
                 str(b.title, 100),
@@ -182,11 +187,12 @@ router.put('/:id', asyncHandler(async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const b = req.body || {};
+        const uid = getUserId(req);
         await conn.beginTransaction();
         const [r] = await conn.query(
             `UPDATE rounds SET
                 title=?, description=?, cat_id=?, cat_name=?, sub_id=?, sub_name=?
-             WHERE id=?`,
+             WHERE id=? AND user_id=?`,
             [
                 str(b.title, 100),
                 str(b.description, 255),
@@ -194,23 +200,26 @@ router.put('/:id', asyncHandler(async (req, res) => {
                 str(b.catName, 100) || null,
                 str(b.subId, 64) || null,
                 str(b.subName, 100) || null,
-                req.params.id
+                req.params.id,
+                uid
             ]
         );
         if (r.affectedRows === 0) {
             await conn.rollback();
             return res.status(404).json({ error: '记录不存在' });
         }
-        // 同步更新该轮收藏的标题与分类快照（与旧版行为一致）
+        // 同步更新该轮收藏的标题与分类快照（与旧版行为一致，仅限本人收藏）
         await conn.query(
-            `UPDATE favorites SET title=?, cat_id=?, cat_name=?, sub_id=?, sub_name=? WHERE round_id=?`,
+            `UPDATE favorites SET title=?, cat_id=?, cat_name=?, sub_id=?, sub_name=?
+             WHERE round_id=? AND user_id=?`,
             [
                 str(b.title, 100),
                 str(b.catId, 32) || null,
                 str(b.catName, 100) || null,
                 str(b.subId, 64) || null,
                 str(b.subName, 100) || null,
-                req.params.id
+                req.params.id,
+                uid
             ]
         );
         await conn.commit();
@@ -226,9 +235,11 @@ router.put('/:id', asyncHandler(async (req, res) => {
 /* PUT /api/history/:id/record/:no 更新单题知识点描述
    body: { note } */
 router.put('/:id/record/:no', asyncHandler(async (req, res) => {
+        const uid = getUserId(req);
         const [r] = await pool.query(
-            'UPDATE records SET note=? WHERE round_id=? AND no=?',
-            [str(req.body.note, 255), req.params.id, num(req.params.no)]
+            `UPDATE records SET note=? WHERE round_id=? AND no=?
+             AND round_id IN (SELECT id FROM rounds WHERE id=? AND user_id=?)`,
+            [str(req.body.note, 255), req.params.id, num(req.params.no), req.params.id, uid]
         );
         if (r.affectedRows === 0) return res.status(404).json({ error: '题目记录不存在' });
         res.json({ ok: true });
@@ -236,14 +247,16 @@ router.put('/:id/record/:no', asyncHandler(async (req, res) => {
 
 /* DELETE /api/history/:id 删除单轮（records、favorites 级联删除） */
 router.delete('/:id', asyncHandler(async (req, res) => {
-        const [r] = await pool.query('DELETE FROM rounds WHERE id=?', [req.params.id]);
+        const uid = getUserId(req);
+        const [r] = await pool.query('DELETE FROM rounds WHERE id=? AND user_id=?', [req.params.id, uid]);
         if (r.affectedRows === 0) return res.status(404).json({ error: '记录不存在' });
         res.json({ ok: true });
 }));
 
-/* DELETE /api/history 清空全部历史（records、favorites 级联删除） */
+/* DELETE /api/history 清空当前用户全部历史（records、favorites 级联删除） */
 router.delete('/', asyncHandler(async (req, res) => {
-        await pool.query('DELETE FROM rounds');
+        const uid = getUserId(req);
+        await pool.query('DELETE FROM rounds WHERE user_id=?', [uid]);
         res.json({ ok: true });
 }));
 
