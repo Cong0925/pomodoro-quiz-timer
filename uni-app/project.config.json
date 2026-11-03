@@ -1,0 +1,26 @@
+{
+  "miniprogramRoot": "dist/dev/mp-weixin/",
+  "compileType": "miniprogram",
+  "appid": "wxe3e193bb3456bb6e",
+  "projectname": "pomodoro-quiz-timer",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "enhance": true,
+    "coverView": true,
+    "showShadowRootInWxmlPanel": true,
+    "checkSiteMap": false,
+    "useCompilerPlugins": false
+  },
+  "libVersion": "2.20.1",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  }
+}

@@ -1,0 +1,94 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "刷题计时器"
+			}
+		},
+		{
+			"path": "pages/quiz/index",
+			"style": {
+				"navigationBarTitleText": "题库练习"
+			}
+		},
+		{
+			"path": "pages/quiz/practice",
+			"style": {
+				"navigationBarTitleText": "练习"
+			}
+		},
+		{
+			"path": "pages/quiz/records",
+			"style": {
+				"navigationBarTitleText": "练习记录"
+			}
+		},
+		{
+			"path": "pages/mental/index",
+			"style": {
+				"navigationBarTitleText": "速算练习"
+			}
+		},
+		{
+			"path": "pages/mental/practice",
+			"style": {
+				"navigationBarTitleText": "速算练习"
+			}
+		},
+		{
+			"path": "pages/mental/records",
+			"style": {
+				"navigationBarTitleText": "速算记录"
+			}
+		},
+		{
+			"path": "pages/timer/single",
+			"style": {
+				"navigationBarTitleText": "单题计时"
+			}
+		},
+		{
+			"path": "pages/timer/batch",
+			"style": {
+				"navigationBarTitleText": "整组计时"
+			}
+		},
+		{
+			"path": "pages/profile/index",
+			"style": {
+				"navigationBarTitleText": "我的"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "刷题计时器",
+		"navigationBarBackgroundColor": "#FFFFFF",
+		"backgroundColor": "#F5F6FA"
+	},
+	"tabBar": {
+		"color": "#7A7E83",
+		"selectedColor": "#3A7AFE",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "black",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "首页"
+			},
+			{
+				"pagePath": "pages/quiz/index",
+				"text": "题库"
+			},
+			{
+				"pagePath": "pages/mental/index",
+				"text": "速算"
+			},
+			{
+				"pagePath": "pages/profile/index",
+				"text": "我的"
+			}
+		]
+	}
+}
