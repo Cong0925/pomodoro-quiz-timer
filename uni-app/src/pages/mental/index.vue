@@ -173,28 +173,28 @@ function goManual(): void {
 .head-sub {
   font-size: 24rpx;
   color: #6b7280;
-  margin: 4rpx 0 24rpx;
+  margin: 4rpx 0 20rpx;
 }
 
 .sec-title {
   font-size: 28rpx;
   font-weight: 600;
-  margin: 32rpx 0 16rpx;
+  margin: 24rpx 0 14rpx;
 }
 
-/* 题型卡片：2×2 + 综合全宽 */
+/* 题型卡片：2×2 + 综合全宽（紧凑版） */
 .type-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 20rpx;
+  gap: 16rpx;
 }
 
 .type-card {
-  width: calc(50% - 10rpx);
+  width: calc(50% - 8rpx);
   background-color: #ffffff;
   border: 3rpx solid #e3e8f0;
-  border-radius: 24rpx;
-  padding: 24rpx;
+  border-radius: 20rpx;
+  padding: 14rpx 18rpx;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -209,21 +209,32 @@ function goManual(): void {
   width: 100%;
 }
 
+.tc-left {
+  min-width: 0;
+}
+
 .tc-name {
-  font-size: 30rpx;
+  font-size: 26rpx;
   font-weight: 700;
 }
 
 .tc-desc {
-  font-size: 23rpx;
+  font-size: 20rpx;
   color: #6b7280;
-  margin-top: 6rpx;
-  line-height: 1.45;
+  margin-top: 2rpx;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.type-card.wide .tc-desc {
+  white-space: normal;
 }
 
 .tc-check {
-  width: 40rpx;
-  height: 40rpx;
+  width: 36rpx;
+  height: 36rpx;
   border-radius: 50%;
   border: 3rpx solid #e3e8f0;
   display: flex;
@@ -238,8 +249,8 @@ function goManual(): void {
 }
 
 .tc-dot {
-  width: 22rpx;
-  height: 22rpx;
+  width: 20rpx;
+  height: 20rpx;
   border-radius: 50%;
   background-color: #ffffff;
 }
@@ -248,16 +259,16 @@ function goManual(): void {
 .chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 16rpx;
+  gap: 14rpx;
 }
 
 .chip {
-  min-height: 72rpx;
-  padding: 12rpx 36rpx;
+  min-height: 64rpx;
+  padding: 10rpx 28rpx;
   border-radius: 999rpx;
   background-color: #ffffff;
   border: 3rpx solid #e3e8f0;
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #6b7280;
   display: flex;
   align-items: center;
@@ -275,17 +286,17 @@ function goManual(): void {
   font-size: 24rpx;
   color: #9ca3af;
   line-height: 1.5;
-  margin: 32rpx 0 24rpx;
+  margin: 24rpx 0 20rpx;
 }
 
 .btn-primary {
   width: 100%;
-  height: 96rpx;
-  line-height: 96rpx;
+  height: 88rpx;
+  line-height: 88rpx;
   border-radius: 24rpx;
   background-color: #2563eb;
   color: #ffffff;
-  font-size: 34rpx;
+  font-size: 32rpx;
   font-weight: 700;
   border: none;
 }
