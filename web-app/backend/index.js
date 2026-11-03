@@ -48,6 +48,7 @@ app.use('/api/study-daily', require('./routes/study'));
 app.use('/api/memos', require('./routes/memos'));
 app.use('/api/practice', require('./routes/practice'));
 app.use('/api/mental', require('./routes/mental'));
+app.use('/api/timer', require('./routes/timer'));
 app.use('/api', require('./routes/data')); // /api/export  /api/import
 
 /* ---- 前后端分离：不托管静态文件，前端由 Vite dev server 提供，经 proxy 访问 /api ---- */
