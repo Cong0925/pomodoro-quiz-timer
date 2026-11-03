@@ -1,53 +1,66 @@
 <template>
   <view class="page">
-    <view class="head-title">速算练习</view>
-    <view class="head-sub">资料分析专项技巧训练：答完即时给技巧提示 · 自动归档历史</view>
+    <!-- 渐变主视觉 -->
+    <view class="hero">
+      <view class="hero-badge">资料分析 · 专项技巧</view>
+      <view class="hero-title">速算练习</view>
+      <view class="hero-sub">答完即时给技巧提示 · 自动归档历史</view>
+    </view>
 
     <!-- 题型 -->
-    <view class="sec-title">选择题型</view>
-    <view class="type-grid">
-      <view
-        class="type-card"
-        v-for="t in types"
-        :key="t.key"
-        :class="{ active: curType === t.key, wide: t.key === 'mixed' }"
-        @tap="selectType(t.key)"
-      >
-        <view class="tc-left">
-          <view class="tc-name">{{ t.name }}</view>
-          <view class="tc-desc">{{ t.desc }}</view>
-        </view>
-        <view class="tc-check" v-if="t.key === 'mixed'">
-          <view class="tc-dot" v-if="curType === 'mixed'"></view>
+    <view class="sec">
+      <view class="sec-title"><text class="sec-no">01</text>选择题型</view>
+      <view class="type-grid">
+        <view
+          class="type-card"
+          v-for="t in types"
+          :key="t.key"
+          :class="{ active: curType === t.key, wide: t.key === 'mixed' }"
+          @tap="selectType(t.key)"
+        >
+          <view class="tc-icon" :style="{ backgroundColor: t.bg }">
+            <text class="tc-symbol" :style="{ color: t.fg }">{{ t.symbol }}</text>
+          </view>
+          <view class="tc-left">
+            <view class="tc-name">{{ t.name }}</view>
+            <view class="tc-desc">{{ t.desc }}</view>
+          </view>
+          <view class="tc-check" v-if="curType === t.key">
+            <view class="tc-tick"></view>
+          </view>
         </view>
       </view>
     </view>
 
     <!-- 难度 -->
-    <view class="sec-title">难度</view>
-    <view class="chip-row">
-      <view
-        class="chip"
-        v-for="d in diffs"
-        :key="d.value"
-        :class="{ active: curDiff === d.value }"
-        @tap="selectDiff(d.value)"
-      >
-        {{ d.label }}
+    <view class="sec">
+      <view class="sec-title"><text class="sec-no">02</text>难度</view>
+      <view class="chip-row">
+        <view
+          class="chip"
+          v-for="d in diffs"
+          :key="d.value"
+          :class="{ active: curDiff === d.value }"
+          @tap="selectDiff(d.value)"
+        >
+          {{ d.label }}
+        </view>
       </view>
     </view>
 
     <!-- 题量 -->
-    <view class="sec-title">题量</view>
-    <view class="chip-row">
-      <view
-        class="chip"
-        v-for="c in counts"
-        :key="c.value"
-        :class="{ active: curCount === c.value }"
-        @tap="selectCount(c.value)"
-      >
-        {{ c.label }}
+    <view class="sec">
+      <view class="sec-title"><text class="sec-no">03</text>题量</view>
+      <view class="chip-row">
+        <view
+          class="chip"
+          v-for="c in counts"
+          :key="c.value"
+          :class="{ active: curCount === c.value }"
+          @tap="selectCount(c.value)"
+        >
+          {{ c.label }}
+        </view>
       </view>
     </view>
 
@@ -64,6 +77,7 @@
           <view class="entry-name">练习记录</view>
           <view class="entry-sub">历史会话与明细</view>
         </view>
+        <view class="entry-arrow"></view>
       </view>
       <view class="entry-card" @tap="goManual">
         <view class="entry-ic amber">
@@ -73,6 +87,7 @@
           <view class="entry-name">技巧手册</view>
           <view class="entry-sub">百化分 · 平方 · 幂次速查</view>
         </view>
+        <view class="entry-arrow"></view>
       </view>
     </view>
   </view>
@@ -80,20 +95,19 @@
 
 <script setup lang="ts">
 /**
- * 速算入口页：题型/难度/题量配置 + 开始练习 + 记录/手册入口
- * 与网页版 MentalView 的 setup 阶段对应；开始后跳转答题页（参数透传）
+ * 速算入口页：渐变主视觉 + 题型/难度/题量配置 + 开始练习 + 记录/手册入口
  */
 import { computed, ref } from 'vue'
 import type { MentalQtype } from '@/types/mental'
 import { MENTAL_TYPE_NAMES } from '@/types/mental'
 
-/** 题型配置（5 项：4 专项 + 综合全宽） */
+/** 题型配置（5 项：4 专项 + 综合全宽），带彩色图标 */
 const types = ref([
-  { key: 'percent' as MentalQtype, name: '百化分', desc: '分数↔百分数互化，除转乘秒出' },
-  { key: 'compare' as MentalQtype, name: '分数比大小', desc: '交叉相乘，一秒判断谁大' },
-  { key: 'estimate' as MentalQtype, name: '估算值', desc: '取整估算，先数量级再微调' },
-  { key: 'square' as MentalQtype, name: '平方数', desc: '10-20 平方秒回，资料分析基本功' },
-  { key: 'mixed' as MentalQtype, name: '综合练习', desc: '多类题型混合，全面检验' },
+  { key: 'percent' as MentalQtype, name: '百化分', desc: '分数↔百分数互化，除转乘秒出', symbol: '%', bg: '#e8f0fe', fg: '#2563eb' },
+  { key: 'compare' as MentalQtype, name: '分数比大小', desc: '交叉相乘，一秒判断谁大', symbol: '½', bg: '#f3e8ff', fg: '#7c3aed' },
+  { key: 'estimate' as MentalQtype, name: '估算值', desc: '取整估算，先数量级再微调', symbol: '≈', bg: '#fef3e2', fg: '#d97706' },
+  { key: 'square' as MentalQtype, name: '平方数', desc: '10-20 平方秒回，基本功', symbol: 'x²', bg: '#e6f7f0', fg: '#059669' },
+  { key: 'mixed' as MentalQtype, name: '综合练习', desc: '多类题型混合，全面检验', symbol: '∞', bg: '#eef2ff', fg: '#4f46e5' },
 ])
 
 /** 难度选项：0=不限 1=简单 2=中等 3=困难 */
@@ -161,28 +175,66 @@ function goManual(): void {
 
 <style scoped>
 .page {
-  padding: 32rpx;
+  padding: 32rpx 32rpx 40rpx;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
-.head-title {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: #1f2937;
+/* 渐变主视觉 */
+.hero {
+  padding: 44rpx 40rpx 50rpx;
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
+  box-shadow: 0 16rpx 32rpx rgba(37, 99, 235, 0.28);
+  overflow: hidden;
 }
 
-.head-sub {
-  font-size: 24rpx;
-  color: #6b7280;
-  margin: 4rpx 0 20rpx;
+.hero-badge {
+  display: inline-block;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #dbeafe;
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
+}
+
+.hero-title {
+  margin-top: 22rpx;
+  font-size: 52rpx;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 4rpx;
+}
+
+.hero-sub {
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* 分组 */
+.sec {
+  margin-top: 34rpx;
 }
 
 .sec-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  margin: 24rpx 0 14rpx;
+  display: flex;
+  align-items: baseline;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 18rpx;
 }
 
-/* 题型卡片：2×2 + 综合全宽（紧凑版） */
+.sec-no {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #93c5fd;
+  margin-right: 12rpx;
+}
+
+/* 题型卡片：2×2 + 综合全宽 */
 .type-grid {
   display: flex;
   flex-wrap: wrap;
@@ -192,36 +244,54 @@ function goManual(): void {
 .type-card {
   width: calc(50% - 8rpx);
   background-color: #ffffff;
-  border: 3rpx solid #e3e8f0;
-  border-radius: 20rpx;
-  padding: 14rpx 18rpx;
+  border: 2rpx solid #eef1f6;
+  border-radius: 24rpx;
+  padding: 22rpx 20rpx;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  box-shadow: 0 4rpx 14rpx rgba(15, 23, 42, 0.04);
 }
 
 .type-card.active {
   border-color: #2563eb;
-  background-color: #eff6ff;
+  box-shadow: 0 6rpx 18rpx rgba(37, 99, 235, 0.14);
 }
 
 .type-card.wide {
   width: 100%;
 }
 
+.tc-icon {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 18rpx;
+}
+
+.tc-symbol {
+  font-size: 34rpx;
+  font-weight: 800;
+}
+
 .tc-left {
   min-width: 0;
+  flex: 1;
 }
 
 .tc-name {
-  font-size: 26rpx;
+  font-size: 27rpx;
   font-weight: 700;
+  color: #1f2937;
 }
 
 .tc-desc {
   font-size: 20rpx;
-  color: #6b7280;
-  margin-top: 2rpx;
+  color: #9ca3af;
+  margin-top: 4rpx;
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
@@ -236,69 +306,70 @@ function goManual(): void {
   width: 36rpx;
   height: 36rpx;
   border-radius: 50%;
-  border: 3rpx solid #e3e8f0;
+  background-color: #2563eb;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-left: 12rpx;
 }
 
-.type-card.active .tc-check {
-  border-color: #2563eb;
-  background-color: #2563eb;
-}
-
-.tc-dot {
-  width: 20rpx;
+.tc-tick {
+  width: 12rpx;
   height: 20rpx;
-  border-radius: 50%;
-  background-color: #ffffff;
+  border-right: 4rpx solid #ffffff;
+  border-bottom: 4rpx solid #ffffff;
+  transform: rotate(45deg) translate(-2rpx, -2rpx);
 }
 
 /* chips */
 .chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 14rpx;
+  gap: 16rpx;
 }
 
 .chip {
-  min-height: 64rpx;
-  padding: 10rpx 28rpx;
+  min-height: 68rpx;
+  padding: 12rpx 34rpx;
   border-radius: 999rpx;
   background-color: #ffffff;
-  border: 3rpx solid #e3e8f0;
-  font-size: 26rpx;
-  color: #6b7280;
+  border: 2rpx solid #eef1f6;
+  font-size: 27rpx;
+  color: #4b5563;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(15, 23, 42, 0.04);
 }
 
 .chip.active {
-  border-color: #2563eb;
-  background-color: #eff6ff;
-  color: #2563eb;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: transparent;
+  color: #ffffff;
   font-weight: 600;
+  box-shadow: 0 6rpx 16rpx rgba(37, 99, 235, 0.25);
 }
 
 .hint {
   font-size: 24rpx;
   color: #9ca3af;
   line-height: 1.5;
-  margin: 24rpx 0 20rpx;
+  margin: 30rpx 4rpx 24rpx;
 }
 
 .btn-primary {
   width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 24rpx;
-  background-color: #2563eb;
+  height: 100rpx;
+  line-height: 100rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: #ffffff;
-  font-size: 32rpx;
+  font-size: 34rpx;
   font-weight: 700;
   border: none;
+  box-shadow: 0 12rpx 24rpx rgba(37, 99, 235, 0.3);
+  letter-spacing: 2rpx;
 }
 
 .btn-primary::after {
@@ -309,23 +380,24 @@ function goManual(): void {
 .entry-row {
   display: flex;
   gap: 20rpx;
-  margin-top: 24rpx;
+  margin-top: 28rpx;
 }
 
 .entry-card {
   flex: 1;
   background-color: #ffffff;
-  border: 1rpx solid #e3e8f0;
+  border: 2rpx solid #eef1f6;
   border-radius: 24rpx;
-  padding: 24rpx;
+  padding: 22rpx;
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: 14rpx;
+  box-shadow: 0 4rpx 14rpx rgba(15, 23, 42, 0.04);
 }
 
 .entry-ic {
-  width: 64rpx;
-  height: 64rpx;
+  width: 60rpx;
+  height: 60rpx;
   border-radius: 18rpx;
   display: flex;
   align-items: center;
@@ -334,32 +406,43 @@ function goManual(): void {
 }
 
 .entry-ic.blue {
-  background-color: #eff6ff;
+  background-color: #e8f0fe;
 }
 
 .entry-ic.amber {
-  background-color: #fffbeb;
+  background-color: #fef3e2;
 }
 
 .entry-text {
   min-width: 0;
+  flex: 1;
 }
 
 .entry-name {
-  font-size: 27rpx;
+  font-size: 26rpx;
   font-weight: 600;
+  color: #1f2937;
 }
 
 .entry-sub {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: #9ca3af;
   margin-top: 2rpx;
 }
 
+.entry-arrow {
+  width: 14rpx;
+  height: 14rpx;
+  border-top: 4rpx solid #cbd5e1;
+  border-right: 4rpx solid #cbd5e1;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
 /* 内联小图标（CSS 绘制） */
 .ic-line3 {
-  width: 30rpx;
-  height: 30rpx;
+  width: 28rpx;
+  height: 28rpx;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -378,8 +461,8 @@ function goManual(): void {
 }
 
 .ic-book {
-  width: 30rpx;
-  height: 30rpx;
+  width: 28rpx;
+  height: 28rpx;
   border: 4rpx solid #d97706;
   border-radius: 4rpx;
   position: relative;
