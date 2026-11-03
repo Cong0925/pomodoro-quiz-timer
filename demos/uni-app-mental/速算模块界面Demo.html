@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>速算模块 · 小程序界面 Demo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232563EB'/%3E%3Ctext x='12' y='17' font-size='14' font-weight='700' fill='%23fff' text-anchor='middle' font-family='sans-serif'%3E速%3C/text%3E%3C/svg%3E">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #F5F6FA; --card: #FFFFFF; --border: #E3E8F0;
+    --primary: #2563EB; --primary-weak: #EFF6FF; --primary-border: #93C5FD;
+    --ok: #16A34A; --ok-weak: #F0FDF4;
+    --ng: #DC2626; --ng-weak: #FEF2F2;
+    --skip: #D97706; --skip-weak: #FFFBEB;
+    --text: #1F2937; --text2: #6B7280; --text3: #9CA3AF;
+  }
+  html, body { background: #1F2430; overflow-x: hidden; max-width: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text); }
+  /* ===== 手机视口容器 ===== */
+  .phone {
+    width: 375px; min-height: 100vh; margin: 0 auto; background: var(--bg);
+    display: flex; flex-direction: column; position: relative; overflow-x: hidden; max-width: 100%;
+  }
+  @media (max-width: 420px) { html, body { background: var(--bg); } .phone { width: 100%; } }
+  .statusbar { height: 20px; background: var(--card); flex-shrink: 0; }
+  .topbar { height: 44px; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+  .page { flex: 1; padding: 14px 16px 24px; overflow-y: auto; overflow-x: hidden; }
+  .page.hide { display: none; }
+  /* ===== 通用组件 ===== */
+  .sec-title { font-size: 14px; font-weight: 600; margin: 16px 0 8px; }
+  .sec-title:first-child { margin-top: 0; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+  /* ===== 配置页：题型 ===== */
+  .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .type-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .type-card:active { background: var(--primary-weak); }
+  .type-card.active { border-color: var(--primary); background: var(--primary-weak); }
+  .type-card.wide { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+  .tc-name { font-size: 15px; font-weight: 700; }
+  .tc-desc { font-size: 11.5px; color: var(--text2); margin-top: 3px; line-height: 1.45; }
+  .tc-check { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .type-card.active .tc-check { border-color: var(--primary); background: var(--primary); }
+  .type-card.active .tc-check svg { display: block; }
+  .tc-check svg { display: none; width: 11px; height: 11px; }
+  /* ===== chips ===== */
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { min-height: 36px; padding: 6px 18px; border-radius: 999px; background: var(--card); border: 1.5px solid var(--border); font-size: 14px; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .chip:active { background: var(--primary-weak); }
+  .chip.active { border-color: var(--primary); background: var(--primary-weak); color: var(--primary); font-weight: 600; }
+  /* ===== 开始 ===== */
+  .hint { font-size: 12px; color: var(--text3); line-height: 1.5; margin: 16px 0 12px; }
+  .btn-primary { width: 100%; height: 48px; border: none; border-radius: 12px; background: var(--primary); color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; }
+  .btn-primary:active { opacity: .85; }
+  .entry-row { display: flex; gap: 10px; margin-top: 12px; }
+  .entry-card { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .entry-card:active { background: var(--primary-weak); }
+  .entry-ic { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .entry-ic.blue { background: var(--primary-weak); }
+  .entry-ic.amber { background: var(--skip-weak); }
+  .entry-name { font-size: 13.5px; font-weight: 600; }
+  .entry-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  /* ===== 答题页 ===== */
+  .run-head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .run-title { font-size: 16px; font-weight: 700; }
+  .run-meta { font-size: 11.5px; color: var(--text2); margin-top: 2px; }
+  .run-counts { text-align: right; font-size: 12.5px; }
+  .run-counts b.ok { color: var(--ok); } .run-counts b.ng { color: var(--ng); } .run-counts b.sk { color: var(--skip); }
+  .end-btn { margin-top: 6px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--skip); color: var(--skip); font-size: 12px; background: #fff; cursor: pointer; }
+  .run-bar { height: 4px; background: var(--border); border-radius: 2px; margin: 10px 0 12px; overflow: hidden; }
+  .run-bar i { display: block; height: 100%; background: var(--primary); border-radius: 2px; }
+  .q-no { font-size: 12.5px; color: var(--text2); margin-bottom: 10px; }
+  .q-stem { font-size: 22px; font-weight: 700; line-height: 1.5; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+  /* 比大小 */
+  .compare-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .frac-box { text-align: center; border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; background: var(--card); min-width: 0; }
+  .frac-label { font-size: 11px; color: var(--text2); }
+  .frac-num, .frac-den { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .frac-line { height: 2px; background: var(--text); margin: 2px 8px; }
+  .compare-q { font-size: 15px; font-weight: 600; min-width: 0; }
+  /* 选项 */
+  .opt-list { display: flex; flex-direction: column; gap: 10px; }
+  .opt-item { min-height: 52px; display: flex; align-items: center; gap: 12px; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 8px 14px; cursor: pointer; font-size: 15px; }
+  .opt-item > span:last-child { min-width: 0; word-break: break-all; }
+  .opt-item:active { border-color: var(--primary); }
+  .opt-item.correct { border-color: var(--ok); background: var(--ok-weak); }
+  .opt-item.wrong { border-color: var(--ng); background: var(--ng-weak); }
+  .opt-item.dim { opacity: .5; }
+  .opt-label { width: 28px; height: 28px; border-radius: 50%; background: #F1F3F7; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13.5px; flex-shrink: 0; }
+  .opt-item.correct .opt-label { background: var(--ok); color: #fff; }
+  .opt-item.wrong .opt-label { background: var(--ng); color: #fff; }
+  /* 填空 */
+  .fill-row { display: flex; align-items: center; gap: 10px; margin: 14px 0 6px; }
+  .fill-prefix, .fill-suffix { font-size: 22px; font-weight: 700; }
+  .fill-input { flex: 1; min-width: 0; height: 50px; border: 1.5px solid var(--border); border-radius: 12px; padding: 0 12px; font-size: 20px; font-weight: 700; text-align: center; outline: none; font-variant-numeric: tabular-nums; }
+  .fill-input:focus { border-color: var(--primary); }
+  .fill-submit { height: 50px; padding: 0 20px; border: none; border-radius: 12px; background: var(--primary); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .fill-tip { font-size: 11.5px; color: var(--text3); margin-top: 8px; }
+  .key-hint { display: inline-flex; align-items: center; gap: 4px; background: #EEF2FF; color: var(--primary); padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+  /* 结果面板 */
+  .analysis { margin-top: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .my-ans { font-size: 13px; color: var(--ng); margin-bottom: 4px; }
+  .skip-tag { display: inline-block; font-size: 11.5px; color: var(--skip); border: 1px solid var(--skip); border-radius: 5px; padding: 1px 7px; margin-bottom: 5px; }
+  .green-ans { font-size: 15px; color: var(--ok); font-weight: 700; margin-bottom: 6px; }
+  .tip { font-size: 13px; color: var(--text); line-height: 1.55; margin-bottom: 10px; }
+  .next-btn { width: 100%; height: 46px; border: none; border-radius: 12px; background: var(--primary); color: #fff; font-size: 15.5px; font-weight: 700; cursor: pointer; }
+  .skip-btn { width: 100%; height: 44px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--card); color: var(--text2); font-size: 15px; margin-top: 10px; cursor: pointer; }
+  /* ===== 结算 ===== */
+  .result-hero { text-align: center; padding: 22px 16px; }
+  .rate-num { font-size: 44px; font-weight: 800; color: var(--primary); }
+  .rate-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .result-meta { display: flex; justify-content: center; gap: 16px; font-size: 13.5px; margin-top: 12px; flex-wrap: wrap; }
+  .result-meta b.ok { color: var(--ok); } .result-meta b.ng { color: var(--ng); } .result-meta b.sk { color: var(--skip); }
+  .result-btns { display: flex; gap: 10px; margin: 14px 0 4px; }
+  .result-btns .btn-primary { flex: 1; }
+  .btn-ghost { flex: 1; height: 48px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--card); font-size: 15.5px; color: var(--text); font-weight: 600; cursor: pointer; }
+  .review-title { font-size: 13.5px; font-weight: 700; margin: 16px 0 8px; }
+  .review-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+  .ri-q { font-size: 14px; font-weight: 600; line-height: 1.5; }
+  .ri-ans { font-size: 12.5px; color: var(--ok); margin-top: 4px; }
+  .ri-tip { font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; }
+  /* ===== 记录页 ===== */
+  .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 0; margin-bottom: 12px; }
+  .stats-bar .st { text-align: center; }
+  .stats-bar .st + .st { border-left: 1px solid var(--border); }
+  .stats-bar .st2 { margin-top: 10px; text-align: center; }
+  .st b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .st span { font-size: 11.5px; color: var(--text2); }
+  .st2row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .st2row .st2 { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 0; }
+  .rec-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; }
+  .rec-item:active { background: var(--primary-weak); }
+  .rec-top { display: flex; justify-content: space-between; align-items: center; }
+  .rec-type { font-size: 15px; font-weight: 700; }
+  .rec-type small { font-size: 11.5px; color: var(--text3); font-weight: 400; margin-left: 6px; }
+  .rec-rate { font-size: 15px; font-weight: 700; color: var(--ok); }
+  .rec-rate.low { color: var(--ng); }
+  .rec-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 12px; color: var(--text2); gap: 8px; flex-wrap: wrap; }
+  .rec-meta > span { min-width: 0; word-break: break-all; }
+  .rec-del { border: none; background: none; color: var(--ng); font-size: 12px; cursor: pointer; padding: 6px 4px; }
+  .rec-detail { display: none; border-top: 1px dashed var(--border); margin-top: 10px; padding-top: 10px; }
+  .rec-item.open .rec-detail { display: block; }
+  .rd-cell { display: flex; gap: 8px; padding: 7px 0; font-size: 12.5px; border-bottom: 1px solid #F3F4F6; align-items: flex-start; }
+  .rd-cell:last-child { border-bottom: none; }
+  .rd-mark { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 700; margin-top: 1px; }
+  .rd-mark.ok { background: var(--ok); } .rd-mark.ng { background: var(--ng); } .rd-mark.sk { background: var(--skip); }
+  .rd-body { flex: 1; }
+  .rd-stem { line-height: 1.45; }
+  .rd-ans { color: var(--ok); margin-top: 2px; }
+  .rd-tip { color: var(--text2); margin-top: 2px; }
+  .load-more { text-align: center; font-size: 12.5px; color: var(--text3); padding: 10px 0 4px; }
+  .empty { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 13.5px; }
+  /* ===== 手册 ===== */
+  .m-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .m-table td { border: 1px solid var(--border); padding: 7px 4px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .m-table td:nth-child(odd) { background: #FAFBFC; font-weight: 600; }
+  .manual-card { padding: 12px; margin-bottom: 12px; }
+  .manual-card h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 10px; }
+  /* ===== toast ===== */
+  .toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: rgba(17,24,39,.92); color: #fff; font-size: 13px; padding: 10px 18px; border-radius: 999px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 99; white-space: normal; text-align: center; max-width: 78%; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"></div>
+
+  <!-- ===== 视图：配置页 ===== -->
+  <div id="view-setup" class="page">
+    <div class="sec-title" style="font-size:17px; margin-bottom:2px;">速算练习</div>
+    <div style="font-size:12px; color:var(--text2); margin-bottom:12px;">资料分析专项技巧训练：答完即时给技巧提示 · 自动归档历史</div>
+
+    <div class="sec-title">选择题型</div>
+    <div class="type-grid" id="typeGrid">
+      <div class="type-card" data-type="percent"><div class="tc-name">百化分</div><div class="tc-desc">分数↔百分数互化，除转乘秒出</div></div>
+      <div class="type-card" data-type="compare"><div class="tc-name">分数比大小</div><div class="tc-desc">交叉相乘，一秒判断谁大</div></div>
+      <div class="type-card" data-type="estimate"><div class="tc-name">估算值</div><div class="tc-desc">取整估算，先数量级再微调</div></div>
+      <div class="type-card" data-type="square"><div class="tc-name">平方数</div><div class="tc-desc">10-20 平方秒回，资料分析基本功</div></div>
+      <div class="type-card wide" data-type="mixed"><div><div class="tc-name">综合练习</div><div class="tc-desc">多类题型混合，全面检验</div></div><div class="tc-check"><svg viewBox="0 0 12 12"><path d="M2 6.5L4.5 9 10 3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    </div>
+
+    <div class="sec-title">难度</div>
+    <div class="chip-row" id="diffRow">
+      <div class="chip" data-v="0">不限</div>
+      <div class="chip" data-v="1">简单</div>
+      <div class="chip" data-v="2">中等</div>
+      <div class="chip" data-v="3">困难</div>
+    </div>
+
+    <div class="sec-title">题量</div>
+    <div class="chip-row" id="countRow">
+      <div class="chip" data-v="10">10 题</div>
+      <div class="chip" data-v="15">15 题</div>
+      <div class="chip" data-v="20">20 题</div>
+      <div class="chip" data-v="0">∞ 无限</div>
+    </div>
+
+    <div class="hint" id="setupHint">将抽取 10 道「百化分」题，答完即时判对错并给出技巧（填空题：直接填数字）</div>
+    <button class="btn-primary" id="btnStart">开始练习</button>
+
+    <div class="entry-row">
+      <div class="entry-card" data-go="records"><div class="entry-ic blue"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#2563EB" stroke-width="2"><path d="M4 4h16v4H4zM4 12h16v4H4zM4 20h10" stroke-linejoin="round"/></svg></div><div><div class="entry-name">练习记录</div><div class="entry-sub">历史会话与明细</div></div></div>
+      <div class="entry-card" data-go="manual"><div class="entry-ic amber"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#D97706" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" stroke-linejoin="round"/><path d="M8 8h8M8 12h5"/></svg></div><div><div class="entry-name">技巧手册</div><div class="entry-sub">百化分 · 平方 · 幂次速查</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== 视图：答题页 ===== -->
+  <div id="view-run" class="page hide">
+    <div class="run-head">
+      <div>
+        <div class="run-title" id="runTitle">百化分 · 填空题</div>
+        <div class="run-meta" id="runMeta">速算练习 · 共 10 题 · 用时 00:12</div>
+      </div>
+      <div class="run-counts">对 <b class="ok" id="cOk">0</b> · 错 <b class="ng" id="cNg">0</b> · 跳 <b class="sk" id="cSk">0</b></div>
+    </div>
+    <div class="run-bar"><i id="runBar" style="width:10%"></i></div>
+
+    <div class="q-no" id="qNo">第 1 题 · 百化分</div>
+
+    <div id="compareBox" class="compare-row hide">
+      <div class="frac-box"><div class="frac-label">A · 分数</div><div class="frac-num" id="fa1">1</div><div class="frac-line"></div><div class="frac-den" id="fa2">9</div></div>
+      <div class="frac-box"><div class="frac-label">B · 分数</div><div class="frac-num" id="fb1">2</div><div class="frac-line"></div><div class="frac-den" id="fb2">17</div></div>
+      <div class="compare-q">哪个分数更大？</div>
+    </div>
+    <div class="q-stem" id="qStem">1/9 = ?%</div>
+
+    <div class="opt-list hide" id="optList"></div>
+
+    <div id="fillBox" class="hide">
+      <div class="fill-row">
+        <span class="fill-prefix" id="fillPrefix"></span>
+        <input class="fill-input" id="fillInput" inputmode="decimal" autocomplete="off" placeholder="填数字">
+        <span class="fill-suffix" id="fillSuffix"></span>
+        <button class="fill-submit" id="fillSubmit">提交</button>
+      </div>
+      <div class="fill-tip">输入数字后点键盘「<span class="key-hint">完成</span>」提交，再按「<span class="key-hint">完成</span>」进入下一题</div>
+    </div>
+
+    <div id="analysisBox" class="hide">
+      <div class="analysis">
+        <div class="my-ans" id="myAns"></div>
+        <div class="skip-tag" id="skipTag" style="display:none;">本题跳过</div>
+        <div class="green-ans" id="greenAns"></div>
+        <div class="tip" id="tipTxt"></div>
+        <button class="next-btn" id="btnNext">下一题</button>
+      </div>
+    </div>
+
+    <button class="skip-btn hide" id="btnSkip">跳过本题</button>
+  </div>
+
+  <!-- ===== 视图：结算 ===== -->
+  <div id="view-result" class="page hide">
+    <div class="card result-hero">
+      <div class="rate-num" id="rRate">80%</div>
+      <div class="rate-sub">共 10 题 · 正确率</div>
+      <div class="result-meta">对 <b class="ok" id="rOk">8</b> · 错 <b class="ng" id="rNg">1</b> · 跳 <b class="sk" id="rSk">1</b> · 用时 04:12</div>
+      <div class="result-btns">
+        <button class="btn-primary" id="btnAgain">再练一次</button>
+        <button class="btn-ghost" id="btnBack">返回选题</button>
+      </div>
+    </div>
+    <div class="review-title" id="reviewTitle">错题回顾（2 题）· 复盘技巧，下次更快</div>
+    <div id="reviewList"></div>
+  </div>
+
+  <!-- ===== 视图：记录页 ===== -->
+  <div id="view-records" class="page hide">
+    <div class="stats-bar">
+      <div class="st"><b>16</b><span>累计练习</span></div>
+      <div class="st"><b>128</b><span>累计题量</span></div>
+      <div class="st"><b>72%</b><span>累计正确率</span></div>
+    </div>
+    <div class="st2row">
+      <div class="st2"><b style="font-size:16px;" id="stTodayQ">36</b><div style="font-size:11.5px;color:var(--text2);margin-top:2px;">今日题量</div></div>
+      <div class="st2"><b style="font-size:16px;">24</b><div style="font-size:11.5px;color:var(--text2);margin-top:2px;">今日分钟</div></div>
+    </div>
+    <div id="recList"></div>
+    <div class="load-more" id="recMore">上滑加载更多</div>
+  </div>
+
+  <!-- ===== 视图：技巧手册 ===== -->
+  <div id="view-manual" class="page hide">
+    <div class="card manual-card">
+      <h3>百化分速查表（1/2 ~ 1/20）</h3>
+      <table class="m-table" id="tblPercent"></table>
+    </div>
+    <div class="card manual-card">
+      <h3>平方数速查表（1² ~ 20²）</h3>
+      <table class="m-table" id="tblSquare"></table>
+    </div>
+    <div class="card manual-card">
+      <h3>幂次估算速查表（增长类常用）</h3>
+      <table class="m-table" id="tblPow"></table>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ===== 工具 ===== */
+var $ = function (s) { return document.querySelector(s); };
+var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+var toast = function (msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 1600); };
+
+/* ===== 视图路由 ===== */
+var views = { setup: $('#view-setup'), run: $('#view-run'), result: $('#view-result'), records: $('#view-records'), manual: $('#view-manual') };
+function show(v) {
+  Object.keys(views).forEach(function (k) { views[k].classList.toggle('hide', k !== v); });
+  views[v].scrollTop = 0;
+}
+window.addEventListener('hashchange', function () {
+  var h = location.hash.replace('#', '');
+  if (views[h]) show(h);
+});
+
+/* ===== 配置页 ===== */
+var TYPE = { percent: ['百化分', '填空题：直接填数字'], compare: ['分数比大小', '选择题：选较大者'], estimate: ['估算值', '选择题：选最接近的数值'], square: ['平方数', '填空题：直接填数字'], mixed: ['综合练习', '多题型混合'] };
+var curType = 'percent', curDiff = 0, curCount = 10;
+$$('#typeGrid .type-card').forEach(function (c) {
+  c.addEventListener('click', function () {
+    $$('#typeGrid .type-card').forEach(function (x) { x.classList.remove('active'); });
+    c.classList.add('active');
+    curType = c.dataset.type;
+    updateHint();
+  });
+});
+$$('#diffRow .chip').forEach(function (c) {
+  c.addEventListener('click', function () {
+    $$('#diffRow .chip').forEach(function (x) { x.classList.remove('active'); });
+    c.classList.add('active');
+    curDiff = +c.dataset.v;
+    updateHint();
+  });
+});
+$$('#countRow .chip').forEach(function (c) {
+  c.addEventListener('click', function () {
+    $$('#countRow .chip').forEach(function (x) { x.classList.remove('active'); });
+    c.classList.add('active');
+    curCount = +c.dataset.v;
+    updateHint();
+  });
+});
+var DIFFN = ['', ' · 难度简单', ' · 难度中等', ' · 难度困难'];
+function updateHint() {
+  var nm = TYPE[curType][0], diffNote = curDiff >= 1 ? DIFFN[curDiff] : '', fillNote = TYPE[curType][1].indexOf('填空') >= 0 ? '（填空题：直接填数字）' : '';
+  $('#setupHint').textContent = curCount === 0
+    ? '「' + nm + '」' + diffNote + '不限题量 · 循环随机抽题，答完自动续题，随时可结束' + fillNote
+    : '将抽取 ' + curCount + ' 道「' + nm + '」' + diffNote + '题，答完即时判对错并给出技巧' + fillNote;
+}
+
+/* ===== 答题页（mock 题） ===== */
+var QS = [
+  { type: 'percent', mode: 'fill', stem: '1/9 = ?%', fillDir: 'val', placeholder: '填百分数数值', prefix: '', suffix: '%', correct: '11.1', tip: '1/9 ≈ 11.1%，记 1/8=12.5%、1/9=11.1%，倒数互换秒出' },
+  { type: 'compare', mode: 'choice', stem: '', compare: ['1/9', '2/17'], options: ['1/9 更大', '2/17 更大', '一样大'], correct: 0, correctText: '1/9 更大', tip: '交叉相乘：1×17=17 > 2×9=18？错，17<18，所以 2/17 更大' },
+  { type: 'square', mode: 'fill', stem: '13² = ?', fillDir: 'val', placeholder: '填平方值', prefix: '', suffix: '', correct: '169', tip: '13²=169；12²=144、14²=196，以 15²=225 为锚点加减' },
+  { type: 'estimate', mode: 'choice', stem: '1234 ÷ 8 ≈ ?', options: ['150', '154', '160', '165'], correct: 1, correctText: '154', tip: '1200÷8=150，34÷8≈4.3，合计≈154' },
+  { type: 'percent', mode: 'fill', stem: '1/7 = ?%', fillDir: 'val', placeholder: '填百分数数值', prefix: '', suffix: '%', correct: '14.3', tip: '1/7≈14.3%，经典百化分，资料分析高频' },
+];
+var run = null;
+function startRun() {
+  run = { idx: 0, ok: 0, ng: 0, sk: 0, start: Date.now(), list: QS.slice() };
+  $('#runTitle').textContent = TYPE[curType][0] + (curType === 'percent' || curType === 'square' ? ' · 填空题' : '');
+  $('#runMeta').textContent = '速算练习 · ' + (curCount === 0 ? '无限流（循环抽题）' : '共 ' + curCount + ' 题') + ' · 用时 00:00';
+  show('run');
+  renderQ();
+  clock();
+}
+function clock() {
+  clearInterval(run._t);
+  run._t = setInterval(function () {
+    if (!run || run.done) return;
+    var s = Math.floor((Date.now() - run.start) / 1000), mm = String(Math.floor(s / 60)).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
+    $('#runMeta').textContent = '速算练习 · ' + (curCount === 0 ? '无限流' : '共 ' + curCount + ' 题') + ' · 用时 ' + mm + ':' + ss;
+  }, 500);
+}
+function renderQ() {
+  var q = run.list[run.idx];
+  var total = curCount || run.list.length;
+  $('#qNo').textContent = '第 ' + (run.idx + 1) + ' 题 · ' + TYPE[q.type][0] + (curDiff >= 1 ? ' · ' + DIFFN[curDiff].replace(' · 难度', '') : '');
+  $('#runBar').style.width = Math.min(100, ((run.idx + 1) / total) * 100) + '%';
+  $('#cOk').textContent = run.ok; $('#cNg').textContent = run.ng; $('#cSk').textContent = run.sk;
+  $('#compareBox').classList.toggle('hide', !q.compare);
+  $('#qStem').textContent = q.stem;
+  if (q.compare) { var a = q.compare[0].split('/'), b = q.compare[1].split('/'); $('#fa1').textContent = a[0]; $('#fa2').textContent = a[1]; $('#fb1').textContent = b[0]; $('#fb2').textContent = b[1]; }
+  /* 选项 */
+  $('#optList').classList.toggle('hide', q.mode !== 'choice');
+  $('#optList').innerHTML = '';
+  if (q.mode === 'choice') {
+    q.options.forEach(function (t, i) {
+      var d = document.createElement('div');
+      d.className = 'opt-item';
+      d.innerHTML = '<span class="opt-label">' + String.fromCharCode(65 + i) + '</span><span>' + t + '</span>';
+      d.addEventListener('click', function () { answer(i, d); });
+      $('#optList').appendChild(d);
+    });
+  }
+  /* 填空 */
+  var isFill = q.mode === 'fill';
+  $('#fillBox').classList.toggle('hide', !isFill);
+  $('#fillInput').value = '';
+  if (isFill) {
+    $('#fillPrefix').textContent = q.prefix || '';
+    $('#fillSuffix').textContent = q.suffix || '';
+    $('#fillInput').placeholder = q.placeholder || '填数字';
+    setTimeout(function () { $('#fillInput').focus(); }, 80);
+  }
+  $('#analysisBox').classList.add('hide');
+  $('#btnSkip').classList.toggle('hide', isFill || run.answered);
+  $('#btnSkip').textContent = '跳过本题';
+  $('#btnSkip').onclick = function () { skip(); };
+}
+function answer(idx, el) {
+  var q = run.list[run.idx], ok = idx === q.correct;
+  if (run.answered) return;
+  run.answered = true;
+  if (ok) run.ok++; else run.ng++;
+  $$('#optList .opt-item').forEach(function (o, i) { o.classList.add(i === q.correct ? 'correct' : 'dim'); if (i === idx && !ok) o.classList.add('wrong'); });
+  showAnalysis(ok ? 'ok' : 'ng', String.fromCharCode(65 + idx), q.correctText, q.tip);
+}
+function submitFill() {
+  var q = run.list[run.idx];
+  if (run.answered) { nextQ(); return; }
+  var v = $('#fillInput').value.trim();
+  if (!/^\d+(\.\d+)?$/.test(v)) { toast('请输入数字（如 8 或 11.1）'); return; }
+  run.answered = true;
+  var ok = Math.abs(parseFloat(v) - parseFloat(q.correct)) < 0.06;
+  if (ok) run.ok++; else run.ng++;
+  showAnalysis(ok ? 'ok' : 'ng', v, q.correct, q.tip);
+}
+function skip() {
+  var q = run.list[run.idx];
+  if (run.answered) return;
+  run.answered = true; run.sk++;
+  showAnalysis('skip', '', q.correct, q.tip);
+}
+function showAnalysis(result, my, correct, tip) {
+  $('#myAns').style.display = result === 'ng' ? '' : 'none';
+  if (result === 'ng') $('#myAns').textContent = '你的答案：' + my;
+  $('#skipTag').style.display = result === 'skip' ? '' : 'none';
+  $('#greenAns').textContent = '正确答案：' + (correct || '—');
+  $('#tipTxt').textContent = tip ? '技巧：' + tip : '';
+  $('#analysisBox').classList.remove('hide');
+  var last = run.idx + 1 >= run.list.length && curCount !== 0;
+  $('#btnNext').textContent = last ? '完成' : '下一题';
+  $('#btnNext').onclick = nextQ;
+  $('#btnSkip').classList.add('hide');
+}
+function nextQ() {
+  if (run.idx + 1 >= run.list.length) {
+    if (curCount === 0) { run.list = run.list.concat(QS.slice(0, 3)); }
+    else { finishRun(); return; }
+  }
+  run.idx++; run.answered = false;
+  renderQ();
+}
+function finishRun() {
+  run.done = true; clearInterval(run._t);
+  var total = run.ok + run.ng + run.sk;
+  var rate = total ? Math.round((run.ok / total) * 100) : 0;
+  var s = Math.floor((Date.now() - run.start) / 1000), mm = String(Math.floor(s / 60)).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
+  $('#rRate').textContent = rate + '%';
+  $('#rOk').textContent = run.ok; $('#rNg').textContent = run.ng; $('#rSk').textContent = run.sk;
+  $('#result-meta-tm').textContent = ' 用时 ' + mm + ':' + ss;
+  /* 错题回顾 */
+  var wrongs = [];
+  run.list.forEach(function (q, i) {
+    var st = q.type + i;
+    if (st === 'x') return;
+  });
+  /* 简化：把答错/跳过的题收集（用 mock 规则：第 2、4 题已答对则无；此处静态演示 2 条） */
+  var rev = [];
+  var meta = run.list[run.idx];
+  rev.push({ stem: '2/17 与 1/9 哪个更大？', ans: '2/17 更大', tip: '交叉相乘：1×17=17，2×9=18，17<18 故 2/17 更大', sk: false });
+  rev.push({ stem: '1234 ÷ 8 ≈ ?', ans: '154', tip: '1200÷8=150，34÷8≈4.3，合计≈154', sk: false });
+  var total2 = run.ok + run.ng + run.sk;
+  var revN = Math.max(0, total2 - run.ok);
+  $('#reviewTitle').textContent = '错题回顾（' + revN + ' 题）· 复盘技巧，下次更快';
+  $('#reviewList').innerHTML = revN > 0 ? rev.map(function (r) {
+    return '<div class="review-item"><div class="ri-q">' + r.stem + '</div><div class="ri-ans">正确答案：' + r.ans + (r.sk ? '（本题跳过）' : '') + '</div><div class="ri-tip">技巧：' + r.tip + '</div></div>';
+  }).join('') : '<div class="empty">全部答对，无需回顾</div>';
+  show('result');
+}
+var _metaEl = document.createElement('span'); _metaEl.id = 'result-meta-tm';
+document.querySelector('#view-result .result-meta').appendChild(_metaEl);
+$('#btnAgain').onclick = function () { startRun(); };
+$('#btnBack').onclick = function () { show('setup'); };
+$('#btnStart').onclick = startRun;
+$('#fillSubmit').onclick = submitFill;
+/* 点击「提交」不夺走输入框焦点：键盘保持弹出，答完直接进下一题继续输入 */
+$('#fillSubmit').addEventListener('mousedown', function (e) { e.preventDefault(); });
+$('#fillInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); submitFill(); } });
+
+/* ===== 记录页（mock） ===== */
+var RECS = [
+  { type: '百化分', sub: '填空题', diff: '中等', count: '10', ok: 8, ng: 1, sk: 1, ms: '04:12', rate: 80, time: '2026-11-03 19:42', open: false, detail: [['ok', '1/9 = ?%', '11.1', '1/9≈11.1%'], ['ng', '2/17 与 1/9 哪个更大？', '2/17 更大', '交叉相乘 17<18'], ['ok', '13² = ?', '169', '13²=169']] },
+  { type: '综合练习', sub: '选择题', diff: '不限', count: '∞', ok: 12, ng: 2, sk: 0, ms: '09:38', rate: 86, time: '2026-11-03 19:18', open: false, detail: [['ok', '1234 ÷ 8 ≈ ?', '154', '1200÷8=150 再加 4'], ['ng', '1/6 = ?%', '16.7', '1/6≈16.7%']] },
+  { type: '分数比大小', sub: '选择题', diff: '简单', count: '15', ok: 14, ng: 1, sk: 0, ms: '06:21', rate: 93, time: '2026-11-03 18:55', open: false, detail: [['ok', '3/8 与 5/12 哪个大？', '5/12 更大', '3×12=36 < 5×8=40']] },
+  { type: '估算值', sub: '选择题', diff: '困难', count: '20', ok: 11, ng: 5, sk: 4, ms: '12:04', rate: 55, time: '2026-11-02 21:10', open: false, detail: [['ng', '4567 × 1.12 ≈ ?', '5115', '4500×1.12=5040 再加']] },
+];
+function renderRecs() {
+  $('#recList').innerHTML = RECS.map(function (r, ri) {
+    return '<div class="rec-item" data-i="' + ri + '">' +
+      '<div class="rec-top"><div class="rec-type">' + r.type + '<small>' + r.sub + ' · ' + r.diff + '</small></div><div class="rec-rate' + (r.rate < 60 ? ' low' : '') + '">' + r.rate + '%</div></div>' +
+      '<div class="rec-meta"><span>' + r.count + ' 题 · 对 <b style="color:var(--ok)">' + r.ok + '</b> / 错 <b style="color:var(--ng)">' + r.ng + '</b> / 跳 <b style="color:var(--skip)">' + r.sk + '</b> · ' + r.ms + '</span><span>' + r.time + '</span></div>' +
+      '<div class="rec-meta" style="margin-top:2px;"><button class="rec-del" data-del="' + ri + '">删除</button></div>' +
+      '<div class="rec-detail">' + r.detail.map(function (d) {
+        var mark = d[0] === 'ok' ? '<svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 6.5L4.5 9 10 3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' : (d[0] === 'sk' ? '<svg viewBox="0 0 12 12" width="10" height="10"><circle cx="6" cy="6" r="3.5" fill="none" stroke="#fff" stroke-width="2"/></svg>' : '<svg viewBox="0 0 12 12" width="10" height="10"><path d="M3 3l6 6M9 3l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>');
+        var cls = d[0];
+        return '<div class="rd-cell"><span class="rd-mark ' + cls + '">' + mark + '</span><div class="rd-body"><div class="rd-stem">' + d[1] + '</div><div class="rd-ans">正确答案：' + d[2] + '</div><div class="rd-tip">技巧：' + d[3] + '</div></div></div>';
+      }).join('') + '</div></div>';
+  }).join('');
+  $$('#recList .rec-item').forEach(function (el) {
+    el.addEventListener('click', function (e) { if (e.target.classList.contains('rec-del')) return; el.classList.toggle('open'); });
+  });
+  $$('#recList .rec-del').forEach(function (b) {
+    b.addEventListener('click', function (e) { e.stopPropagation(); toast('演示版：删除操作待接入'); });
+  });
+}
+renderRecs();
+$('#recMore').addEventListener('click', function () { toast('演示版：上滑触底加载更多'); });
+
+/* ===== 手册页 ===== */
+function tbl(id, rows, fmt) {
+  var out = '';
+  for (var i = 0; i < rows.length; i += 2) {
+    var l = rows[i], r = rows[i + 1];
+    out += '<tr><td>' + fmt(l) + '</td><td>' + l[1] + '</td>' + (r ? '<td>' + fmt(r) + '</td><td>' + r[1] + '</td>' : '<td>—</td><td>—</td>') + '</tr>';
+  }
+  $(id).innerHTML = out;
+}
+var PER = [[1,2],[1,3],[1,4],[1,5],[1,6],[1,7],[1,8],[1,9],[1,10],[1,11],[1,12],[1,13],[1,14],[1,15],[1,16],[1,17],[1,18],[1,19],[1,20]].map(function (p) { return [p[0] + '/' + p[1], (100 / p[1]).toFixed(1).replace(/\.0$/, '') + '%']; });
+var SQ = []; for (var n = 1; n <= 20; n++) SQ.push([n + '²', n * n]);
+var PW = [['1.2³','1.7'],['1.2⁴','2'],['1.3³','2.2'],['1.3⁴','2.9'],['1.4³','2.7'],['1.4⁴','3.8'],['1.05⁴','1.21'],['1.1⁴','1.46'],['1.15⁴','1.75'],['1.1⁵','1.61']];
+tbl('#tblPercent', PER, function (x) { return x[0]; });
+tbl('#tblSquare', SQ, function (x) { return x[0]; });
+tbl('#tblPow', PW, function (x) { return x[0]; });
+
+/* ===== 入口 ===== */
+$$('.entry-card').forEach(function (c) {
+  c.addEventListener('click', function () { show(c.dataset.go); });
+});
+</script>
+</body>
+</html>

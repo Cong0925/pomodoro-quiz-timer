@@ -51,10 +51,13 @@ export function request<T = unknown>(options: RequestOptions): Promise<T> {
           resolve(body && 'data' in body ? (body.data as T) : (body as T))
           return
         }
-        const errMsg = `接口异常 HTTP ${res.statusCode}`
-        console.error(`【接口请求失败】${options.url}`, res.statusCode, res.data)
+        const errBody = res.data as { error?: string; msg?: string } | null
+        const serverMsg =
+          errBody && typeof errBody === 'object' ? (errBody.error || errBody.msg || '') : ''
+        const errMsg = serverMsg || `接口异常 HTTP ${res.statusCode}`
+        console.error('【接口请求失败】' + options.url, res.statusCode, res.data)
         if (options.showError !== false) {
-          uni.showToast({ title: '请求失败，请稍后重试', icon: 'none' })
+          uni.showToast({ title: serverMsg || '请求失败，请稍后重试', icon: 'none' })
         }
         reject(new Error(errMsg))
       },

@@ -43,6 +43,12 @@
 			}
 		},
 		{
+			"path": "pages/mental/manual",
+			"style": {
+				"navigationBarTitleText": "技巧手册"
+			}
+		},
+		{
 			"path": "pages/timer/single",
 			"style": {
 				"navigationBarTitleText": "单题计时"
