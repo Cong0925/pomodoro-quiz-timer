@@ -1,7 +1,7 @@
 ---
 description: Claude 会话备忘：项目理解、多版本架构、web-app 当前进度与待办（每次会话开始读取，任务完成后更新）
 created: 2026-10-28
-last_modified: 2026-10-31
+last_modified: 2026-11-08
 ---
 
 # Claude 会话备忘（project memo）
@@ -124,7 +124,17 @@ web-app/
 47. ✅ **主版本练习/速算操作配置区白色背景卡片（2026-11-01，v2，用户新预期"加白色背景"）**：v1 灰底方案（#e9eef5）用户验收不符已回滚；v2 改为 `#pPaneStart .p-card, #mPaneStart .p-card` 显式白底 #fff + 边框加深 #d3dbe6 + 轻阴影（0 2px 12px rgba(31,45,61,.08)），白色卡片在浅灰页面（#f5f7fa）上轮廓清晰。验证：3000 实测 computed + 像素取样（卡片内 255,255,255 vs 页面 245,247,250）；答题/结算/题库管理卡片不受影响（ID 限定）；**未提交（等用户指令）**
 48. ✅ **web-app 练习/速算配置区白色背景卡片（2026-11-01，用户确认双端都要）**：web-app 配置区是独立 Vue 组件（主版本 CSS 不涉及）：PracticeSetupPane `.setup-main`（题库练习右侧主配置区，左栏大类本有卡片）+ MentalSetupPane 根 div 加 `.setup-card`，统一白底 #fff + 边框 #d3dbe6 + 圆角 12px + 阴影 0 2px 12px + 首尾间距修正；页面背景为 App.vue `.content` 的 `--el-fill-color-light`（#f5f7fa）与主版本一致。验证：build 全绿、8888/8889 实测 computed style 生效；**未提交（等用户指令）**
 
+49. ✅ **小程序 UI 设计规范 V1（2026-11-08，用户确认方向 A）**：用户判定小程序界面「模板感」严重，要求采用热门效果且禁止盲写样式；产出 `docs/小程序UI设计规范.md`——设计方向「Bento 数据现代 + 玻璃浮层」，含色彩/字体/间距/圆角阴影/玻璃配方 token、Bento 卡片/按钮/分段控件/Chip/Bottom Sheet/进度环/选项卡/数据可视化/玻璃 tabBar 组件规范、10 个页面蓝图、动效表、微信小程序实现约束、热门效果映射、验收清单与 P0~P7 落地顺序。**约定：先改全局 token 与外壳，再逐模块替换；未确认不进入下一阶段；本次零代码改动、未提交**
+
+50. ✅ **小程序 UI 全量改版落地（2026-11-08 18:17，方向 A，用户授权自主实施）**：P0 全局 token/全局类（`uni.scss` V2 + `App.vue` hero/bento/btn/glass/ring/tag/empty 等）→ P1 玻璃 tabBar + `AppSheet`（新建，替代系统 ActionSheet）+ `MentalResultPanel` 环形结算 → P2 首页 Bento（今日环/时长双卡/四入口/趋势柱/最近练习）→ P3 题库链路（题库筛选+抽屉选模式、答题四态选项/骨架/玻璃题号栏、记录列表、详情概览+逐题回顾）→ P4 速算链路（入口题型卡/分段配置、答题状态卡+三共享组件重写、记录正确率环、手册格子表）→ P5 计时链路（单题白计时卡+2 处 ActionSheet→AppSheet、整组设置/运行/标记三态、记录详情 modal→AppSheet）→ P6 我的（上浮用户卡+正确率环+指标格+分组列表）；`pages.json` 导航/tabBar 色值统一品牌色。验证：`npm run build:mp-weixin` exit 0（产物含 13 页+原生 custom-tab-bar）、`npm run type-check` exit 0、全库 `showActionSheet` 残留 0；详见 `docs/修改记录/11月/第1章 修改记录11-8.md`；**未提交（等用户验收）**
+
+51. ✅ **小程序 H5 真机宽度逐页核对与数据修复（2026-11-08 19:1x，承接第 50 条）**：本机无微信开发者工具，用 `build:h5` + 8889 静态服务 + 390×844 iframe 壳逐页真实截图（后端 8888，CORS 仅放行 8889；预览必须 8889）。据截图修 15 项：章节徽标实心化、题库卡题数去重、抽屉副标题按实际题量、速算描述精简、单题空态文案、三处正确率语义色（≥80 绿/≥60 蓝/≥40 橙/其余红，竖条同步）、计时明细 `maxCount` 字段、明细 `timeStr` 兜底、抽屉隐藏滚动条、删除按钮右对齐、练习回顾/答题页答案对错配色、首页趋势正序、自定义 tabBar 书本/人形选中白、分类 chip 末尾留白。测试产生的未完成练习会话 id=49 已 DELETE 清理。`build:mp-weixin` / `type-check` / `build:h5` 均在最新改动后 exit 0；未覆盖速算答题三组件（库内当前难度无题）、结算面板、整组 running/marking、单题 running/paused 与抽屉、错题重练、登录点击；真机玻璃/环/tabBar 仍未验收。**未提交（等用户验收）**
+
+52. ✅ **底部 tabBar 专项重做（2026-11-08 20:0x，承接用户「底栏是否合适」质疑）**：定位 H5 预览显示的是 uni 默认纯文字 `.uni-tabbar`，并非微信端玻璃 tabBar——① 新建 `src/components/AppTabBarH5.vue`（H5 专用，与微信端同源玻璃胶囊，`active` 四态，`#ifdef H5` 控制显示），四个 tab 页挂载；`App.vue` 追加 H5-only `.uni-tabbar{display:none!important}`；② 两轮视觉升级：选中态由「小圆角方块 + 蓝字」改为**整块品牌渐变胶囊 + 白色图标/白色加粗 label**，`.tab.active` 直接承载渐变与 `0 10rpx 24rpx rgba(47,107,255,.28)` 投影，内层 `.icon-wrap` 去底；③ 四图标统一纯 CSS，书本由「两片实心页（似暂停键）」改为**文档轮廓 + 两条文字线**，人形/房子/闪电保留实心；label 22rpx、`margin-top:2rpx`；④ 微信端 `custom-tab-bar/index.{wxss,wxml}` 与 H5 组件同步同款。H5 实测四页选中态正确、程序化点击可 switchTab；`build:h5`/`build:mp-weixin`/`type-check` 均 exit 0。**说明：`pages/timer/batch` 等非 tab 页在微信端本就不显示 tabBar，H5 原生栏出现在该页是预览假象，已一并隐藏。未提交（等用户验收）**
+
 **待办（建议优先级）**：
+0. ✅ **小程序 UI 改版落地（2026-11-08，规范已确认方向 A）**：P0~P7 已完成，H5 真机宽度逐页核对与 15 项数据/样式修复 + 底部 tabBar 专项重做（第 52 条）已完成，build + type-check 双绿；剩微信开发者工具/真机视觉验收（重点低端安卓玻璃与 conic 环表现）及未覆盖交互态抽查。见进度第 50、51、52 条。
+
 0.8. ⬜ **审查遗留待定项（2026-10-29 21:46）**：① v-html 题干/解析 XSS 面——需引入 DOMPurify 依赖做白名单过滤，待用户决策是否加依赖；② CatSelect 换大类双发 reload（正确性已由请求序号守卫兜底，仅剩一次冗余请求可优化）；③ 修复批次全部完成待用户人工验收（重点：多选题作答、速算抽题、计时改题量、收藏/取消收藏、导出导入往返）
 0. ⬜ **2 处点击删除无确认弹窗（2026-10-28 排查发现，方案 A/B 待用户选择）**：`CalendarView.vue clear()` 清空当日备忘直接删；`useTimer.ts cancelBatchRound()` 取消本轮丢弃未归档记录——均无 ElMessageBox.confirm，存在数据丢失风险
 0.5. ✅ **图片题目（图形推理）存储（方案C，2026-10-28 实现完成）**：`questions` 加 `stem_img JSON` + `options[].img`，base64 内嵌 ≤300KB/图、前端 canvas 压缩、批量导入/备份透传；web-app 与主版本双端同步实现，冒烟 12/12、build 全绿；**已随 2026-10-29 两次 commit 入库（见提交状态）**
