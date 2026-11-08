@@ -1,0 +1,33 @@
+<view class="tab-bar">
+  <view class="tab-bar-inner">
+    <view
+      wx:for="{{list}}"
+      wx:key="pagePath"
+      class="tab {{selected === index ? 'active' : ''}}"
+      data-index="{{index}}"
+      bindtap="onTap"
+    >
+      <view class="icon-wrap {{selected === index ? 'active' : ''}}">
+        <block wx:if="{{item.icon === 'home'}}">
+          <view class="glyph glyph-home {{selected === index ? 'on' : ''}}"></view>
+        </block>
+        <block wx:elif="{{item.icon === 'book'}}">
+          <view class="glyph glyph-book {{selected === index ? 'on' : ''}}">
+            <view class="book-page {{selected === index ? 'on' : ''}}"></view>
+            <view class="book-page {{selected === index ? 'on' : ''}}"></view>
+          </view>
+        </block>
+        <block wx:elif="{{item.icon === 'bolt'}}">
+          <view class="glyph glyph-bolt {{selected === index ? 'on' : ''}}"></view>
+        </block>
+        <block wx:else>
+          <view class="glyph glyph-user {{selected === index ? 'on' : ''}}">
+            <view class="u-head {{selected === index ? 'on' : ''}}"></view>
+            <view class="u-body {{selected === index ? 'on' : ''}}"></view>
+          </view>
+        </block>
+      </view>
+      <text class="label {{selected === index ? 'active' : ''}}">{{item.text}}</text>
+    </view>
+  </view>
+</view>

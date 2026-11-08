@@ -18,7 +18,7 @@
       <button class="fill-submit" @tap="$emit('submit')">提交</button>
     </view>
     <view class="fill-tip">
-      输入数字后点键盘「<text class="key-hint">完成</text>」提交，点「<text class="key-hint">下一题</text>」继续，自动弹出键盘
+      输入数字后点键盘「<text class="key-hint">完成</text>」提交；点「<text class="key-hint">下一题</text>」继续
     </view>
   </view>
 </template>
@@ -53,48 +53,50 @@ const suffix = computed(() => (props.fillDir === 'pct' ? '%' : ''))
 
 <style scoped lang="scss">
 .fill-box {
-  margin-top: 12rpx;
+  margin-top: 20rpx;
 }
 
 .fill-row {
   display: flex;
   align-items: center;
-  gap: $gap-item;
+  gap: 14rpx;
 }
 
 .fill-affix {
-  font-size: 44rpx;
-  font-weight: 700;
-  color: $text-main;
+  font-size: 40rpx;
+  font-weight: 800;
+  color: $ink;
+  flex-shrink: 0;
 }
 
 .fill-input {
   flex: 1;
   min-width: 0;
-  height: 100rpx;
-  border: 3rpx solid $brand-200;
+  height: 104rpx;
+  border: 2rpx solid $line-strong;
   border-radius: $radius-md;
   padding: 0 24rpx;
   font-size: 40rpx;
-  font-weight: 700;
+  font-weight: 800;
   text-align: center;
-  background-color: $brand-50;
-  color: $text-main;
-  box-shadow: $shadow-card-sm;
+  background-color: $bg-card;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
 }
 
 .fill-submit {
-  height: 100rpx;
-  line-height: 100rpx;
-  padding: 0 40rpx;
+  height: 104rpx;
+  line-height: 104rpx;
+  padding: 0 34rpx;
   border-radius: $radius-md;
   background: $brand-gradient;
   color: #ffffff;
-  font-size: 30rpx;
-  font-weight: 600;
+  font-size: 28rpx;
+  font-weight: 700;
   border: none;
   margin: 0;
-  box-shadow: $shadow-primary;
+  box-shadow: $shadow-glow;
+  flex-shrink: 0;
 }
 
 .fill-submit::after {
@@ -102,16 +104,19 @@ const suffix = computed(() => (props.fillDir === 'pct' ? '%' : ''))
 }
 
 .fill-tip {
-  font-size: 23rpx;
-  color: $text-weak;
   margin-top: 16rpx;
+  padding: 14rpx 18rpx;
+  border-radius: $radius-sm;
+  background-color: $bg-soft;
+  font-size: 22rpx;
+  color: $ink-3;
   line-height: 1.5;
 }
 
 .key-hint {
   background-color: $brand-50;
   color: $brand-600;
-  padding: 2rpx 12rpx;
+  padding: 2rpx 10rpx;
   border-radius: 8rpx;
   font-weight: 600;
 }

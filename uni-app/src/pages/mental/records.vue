@@ -1,54 +1,79 @@
 <template>
   <view class="page">
-    <!-- 统计条 -->
-    <view class="stats-bar">
-      <view class="st">
-        <view class="st-num">{{ stats.all.sessions }}</view>
-        <view class="st-label">累计练习</view>
-      </view>
-      <view class="st">
-        <view class="st-num">{{ stats.all.totalQ }}</view>
-        <view class="st-label">累计题量</view>
-      </view>
-      <view class="st">
-        <view class="st-num">{{ stats.all.rate }}%</view>
-        <view class="st-label">累计正确率</view>
-      </view>
+    <view class="hero">
+      <view class="hero-badge">累计 {{ stats.all.sessions }} 场 · 正确率 {{ stats.all.rate }}%</view>
+      <view class="hero-title">速算记录</view>
+      <view class="hero-sub">累计与今日数据 · 展开逐题明细 · 支持删除</view>
     </view>
-    <view class="st2row">
-      <view class="st2">
-        <view class="st2-num">{{ stats.today.totalQ }}</view>
-        <view class="st2-label">今日题量</view>
+
+    <!-- 累计数据 -->
+    <view class="stats-card bento">
+      <view class="ring stats-ring" :style="{ background: ringBg(stats.all.rate) }">
+        <view class="ring-inner stats-ring-inner">
+          <text class="stats-rate">{{ stats.all.rate }}<text class="stats-pct">%</text></text>
+          <text class="stats-label">正确率</text>
+        </view>
       </view>
-      <view class="st2">
-        <view class="st2-num">{{ todayMinutes }}</view>
-        <view class="st2-label">今日分钟</view>
+      <view class="stats-grid">
+        <view class="stats-cell">
+          <text class="sc-num">{{ stats.all.sessions }}</text>
+          <text class="sc-label">累计场次</text>
+        </view>
+        <view class="stats-cell">
+          <text class="sc-num">{{ stats.all.totalQ }}</text>
+          <text class="sc-label">累计题量</text>
+        </view>
+        <view class="stats-cell">
+          <text class="sc-num brand">{{ stats.today.totalQ }}</text>
+          <text class="sc-label">今日题量</text>
+        </view>
+        <view class="stats-cell">
+          <text class="sc-num mint">{{ todayMinutes }}</text>
+          <text class="sc-label">今日分钟</text>
+        </view>
       </view>
     </view>
 
     <!-- 列表 -->
-    <view v-if="list.length === 0 && !loading" class="empty">
-      <text>还没有速算记录，去「速算」页开始第一次练习吧</text>
+    <view v-if="list.length === 0 && !loading" class="empty-box">
+      <view class="empty-title">还没有速算记录</view>
+      <view class="empty-text">去「速算」页开始第一次练习，记录会自动归档</view>
     </view>
 
-    <view v-for="row in list" :key="row.id" class="rec-item" :class="{ open: openId === row.id }" @tap="toggleDetail(row.id)">
+    <view
+      v-for="row in list"
+      :key="row.id"
+      class="rec-card"
+      :class="{ open: openId === row.id }"
+      hover-class="rec-press"
+      @tap="toggleDetail(row.id)"
+    >
       <view class="rec-top">
-        <view class="rec-type">
-          {{ row.qtype_name }}
-          <text class="rec-sub">{{ diffName(row.difficulty) }}</text>
+        <view class="rec-type-wrap">
+          <view class="rec-type">{{ row.qtype_name }}</view>
+          <view class="rec-tags">
+            <text class="tag">{{ diffName(row.difficulty) }}</text>
+            <text class="tag amber">{{ formatDate(row.started_at) }}</text>
+          </view>
         </view>
-        <view class="rec-rate" :class="{ low: row.rate < 60 }">{{ row.rate }}%</view>
+        <view class="rec-rate" :class="{ low: row.rate < 60 }">{{ row.rate }}<text class="rec-pct">%</text></view>
       </view>
+
+      <view class="rec-bar">
+        <view class="rec-bar-inner" :style="{ width: donePct(row) + '%' }"></view>
+      </view>
+
       <view class="rec-meta">
-        <text class="rec-left">
-          {{ row.total_count }} 题 · 对 {{ row.correct_count }} / 错 {{ row.wrong_count }} / 跳
-          {{ row.skipped_count }} · {{ formatTime(row.total_ms) }}
-        </text>
-        <text class="rec-time">{{ formatDate(row.started_at) }}</text>
+        <text>{{ row.total_count }} 题</text>
+        <text class="ok">对 {{ row.correct_count }}</text>
+        <text class="ng">错 {{ row.wrong_count }}</text>
+        <text class="sk">跳 {{ row.skipped_count }}</text>
+        <text class="rec-time">{{ formatTime(row.total_ms) }}</text>
       </view>
-      <view class="rec-del-row">
-        <view class="rec-toggle">{{ openId === row.id ? '收起明细' : '查看明细' }}</view>
-        <view class="rec-del" @tap.stop="onDelete(row.id)">删除</view>
+
+      <view class="rec-actions">
+        <text class="rec-toggle">{{ openId === row.id ? '收起明细' : '查看明细' }}</text>
+        <text class="rec-del" @tap.stop="onDelete(row.id)">删除</text>
       </view>
 
       <!-- 明细 -->
@@ -68,9 +93,9 @@
       </view>
     </view>
 
-    <view v-if="loading" class="load-more">加载中…</view>
-    <view v-else-if="hasMore" class="load-more" @tap="loadMore">上滑加载更多</view>
-    <view v-else-if="list.length > 0" class="load-more">已加载全部</view>
+    <view v-if="loading" class="load-tip">加载中…</view>
+    <view v-else-if="hasMore" class="load-more" @tap="loadMore">加载更多</view>
+    <view v-else-if="list.length > 0" class="load-tip">已加载全部</view>
   </view>
 </template>
 
@@ -123,6 +148,19 @@ function mark(result: string): string {
   if (result === 'ok') return '✓'
   if (result === 'skip') return '○'
   return '✗'
+}
+
+/** 完成度百分比（防 0 除） */
+function donePct(row: MentalSessionRow): number {
+  if (!row.total_count) return 0
+  return Math.min(100, Math.round((row.done_count / row.total_count) * 100))
+}
+
+/** 正确率环（conic-gradient） */
+function ringBg(rate: number): string {
+  const r = Math.max(0, Math.min(100, rate))
+  const deg = r * 3.6
+  return `conic-gradient(from -90deg, #4f86ff 0deg, #2f6bff ${deg}deg, #e8eef7 ${deg}deg 360deg)`
 }
 
 /** 加载统计 */
@@ -221,97 +259,148 @@ onReachBottom(() => {
 </script>
 
 <style scoped lang="scss">
-/* 统计条：品牌渐变数据卡（Keep 式大数字反馈） */
-.stats-bar {
+.page {
+  padding-bottom: 80rpx;
+}
+
+/* ---- 统计卡 ---- */
+.stats-card {
   display: flex;
-  background: $brand-gradient;
-  border-radius: $radius-lg;
-  padding: 30rpx 0;
-  margin-bottom: $gap-item;
-  box-shadow: $shadow-btn;
+  align-items: center;
+  gap: 26rpx;
+  margin-top: 24rpx;
+  padding: 28rpx;
 }
 
-.st {
-  flex: 1;
-  text-align: center;
+.stats-ring {
+  width: 172rpx;
+  height: 172rpx;
+  padding: 14rpx;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.st + .st {
-  border-left: 1rpx solid rgba(255, 255, 255, 0.25);
+.stats-ring-inner {
+  width: 100%;
+  height: 100%;
 }
 
-.st-num {
-  font-size: 40rpx;
+.stats-rate {
+  font-size: 44rpx;
   font-weight: 800;
+  line-height: 1;
+  color: $ink;
   font-variant-numeric: tabular-nums;
-  color: #ffffff;
 }
 
-.st-label {
-  font-size: 23rpx;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 4rpx;
-}
-
-.st2row {
-  display: flex;
-  gap: $gap-item;
-  margin-bottom: $gap-item;
-}
-
-.st2 {
-  flex: 1;
-  background-color: $bg-card;
-  border-radius: $radius-md;
-  padding: 22rpx 0;
-  text-align: center;
-  box-shadow: $shadow-card-sm;
-}
-
-.st2-num {
-  font-size: 34rpx;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+.stats-pct {
+  font-size: 22rpx;
+  font-weight: 700;
   color: $brand-600;
 }
 
-.st2-label {
-  font-size: 23rpx;
-  color: $text-sub;
-  margin-top: 4rpx;
+.stats-label {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: $ink-3;
 }
 
-/* 会话卡片 */
-.rec-item {
+.stats-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.stats-cell {
+  background-color: $bg-soft;
+  border-radius: $radius-sm;
+  padding: 14rpx 18rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.sc-num {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-num.brand {
+  color: $brand-600;
+}
+
+.sc-num.mint {
+  color: $mint;
+}
+
+.sc-label {
+  font-size: 20rpx;
+  color: $ink-3;
+}
+
+/* ---- 会话卡 ---- */
+.rec-card {
+  position: relative;
   background-color: $bg-card;
   border-radius: $radius-md;
-  padding: 24rpx;
-  margin-bottom: $gap-item;
-  box-shadow: $shadow-card-sm;
+  padding: 24rpx 26rpx 22rpx 30rpx;
+  margin-top: 18rpx;
+  box-shadow: $shadow-l1;
+  overflow: hidden;
+}
+
+.rec-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 24rpx;
+  bottom: 24rpx;
+  width: 8rpx;
+  border-radius: 0 8rpx 8rpx 0;
+  background: $brand-gradient;
+}
+
+.rec-card.open {
+  box-shadow: $shadow-l2;
+}
+
+.rec-press {
+  background-color: #fbfcff;
 }
 
 .rec-top {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  gap: 16rpx;
+}
+
+.rec-type-wrap {
+  flex: 1;
+  min-width: 0;
 }
 
 .rec-type {
   font-size: 30rpx;
   font-weight: 700;
-  color: $text-main;
+  color: $ink;
 }
 
-.rec-sub {
-  font-size: 23rpx;
-  color: $text-weak;
-  font-weight: 400;
-  margin-left: 12rpx;
+.rec-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 8rpx;
 }
 
 .rec-rate {
-  font-size: 30rpx;
+  flex-shrink: 0;
+  font-size: 42rpx;
   font-weight: 800;
+  line-height: 1;
   color: $success;
   font-variant-numeric: tabular-nums;
 }
@@ -320,64 +409,90 @@ onReachBottom(() => {
   color: $danger;
 }
 
-.rec-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  color: $text-sub;
-  gap: 16rpx;
-  flex-wrap: wrap;
+.rec-pct {
+  font-size: 21rpx;
+  font-weight: 600;
 }
 
-.rec-left {
-  min-width: 0;
+.rec-bar {
+  height: 8rpx;
+  margin-top: 18rpx;
+  border-radius: $radius-full;
+  background-color: $line;
+  overflow: hidden;
+}
+
+.rec-bar-inner {
+  height: 100%;
+  border-radius: $radius-full;
+  background: $brand-gradient;
+}
+
+.rec-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6rpx 16rpx;
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: $ink-2;
+}
+
+.rec-meta .ok {
+  color: $success;
+}
+
+.rec-meta .ng {
+  color: $danger;
+}
+
+.rec-meta .sk {
+  color: $warning;
 }
 
 .rec-time {
-  min-width: 0;
-  color: $text-weak;
+  margin-left: auto;
+  color: $ink-3;
+  font-variant-numeric: tabular-nums;
 }
 
-.rec-del-row {
+.rec-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: 10rpx;
+  justify-content: space-between;
+  margin-top: 12rpx;
 }
 
 .rec-toggle {
-  font-size: 24rpx;
+  font-size: 23rpx;
   color: $brand-600;
   font-weight: 600;
 }
 
 .rec-del {
-  font-size: 24rpx;
+  font-size: 23rpx;
   color: $danger;
-  padding: 8rpx 4rpx;
+  padding: 6rpx 0 6rpx 20rpx;
 }
 
-/* 明细 */
+/* ---- 明细 ---- */
 .rec-detail {
   border-top: 1rpx dashed $line;
   margin-top: 16rpx;
-  padding-top: 16rpx;
+  padding-top: 14rpx;
 }
 
 .detail-loading {
-  font-size: 24rpx;
-  color: $text-weak;
+  font-size: 23rpx;
+  color: $ink-3;
   text-align: center;
-  padding: 24rpx 0;
+  padding: 22rpx 0;
 }
 
 .rd-cell {
   display: flex;
-  gap: 16rpx;
+  gap: 14rpx;
   padding: 14rpx 0;
-  font-size: 25rpx;
   border-bottom: 1rpx solid $line;
   align-items: flex-start;
 }
@@ -387,15 +502,14 @@ onReachBottom(() => {
 }
 
 .rd-mark {
-  width: 36rpx;
-  height: 36rpx;
+  width: 34rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  text-align: center;
   border-radius: 50%;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: #ffffff;
-  font-size: 22rpx;
+  font-size: 20rpx;
   font-weight: 700;
   margin-top: 2rpx;
 }
@@ -418,32 +532,41 @@ onReachBottom(() => {
 }
 
 .rd-stem {
-  line-height: 1.45;
-  color: $text-main;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: $ink;
 }
 
 .rd-ans {
+  font-size: 22rpx;
   color: $success;
   margin-top: 4rpx;
 }
 
 .rd-tip {
-  color: $text-sub;
+  font-size: 22rpx;
+  color: $ink-3;
   margin-top: 4rpx;
+  line-height: 1.5;
 }
 
-/* 空态 / 加载 */
-.empty {
+/* 加载 */
+.load-tip {
   text-align: center;
-  padding: 120rpx 20rpx;
-  color: $text-weak;
-  font-size: 27rpx;
+  font-size: 23rpx;
+  color: $ink-3;
+  padding: 24rpx 0;
 }
 
 .load-more {
+  margin-top: 18rpx;
+  padding: 22rpx 0;
   text-align: center;
-  font-size: 25rpx;
-  color: $text-weak;
-  padding: 20rpx 0 4rpx;
+  border-radius: $radius-full;
+  background-color: $bg-card;
+  color: $brand-600;
+  font-size: 24rpx;
+  font-weight: 600;
+  box-shadow: $shadow-l1;
 }
 </style>

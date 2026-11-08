@@ -1,46 +1,52 @@
 <template>
   <view class="page">
-    <view v-if="loading" class="center-box"><text class="center-text">加载中…</text></view>
+    <view v-if="loading" class="load-tip">加载中…</view>
 
     <template v-else-if="detail">
       <!-- 会话概览 -->
       <view class="overview">
-        <view class="ov-badge">{{ modeLabel }}</view>
-        <view class="ov-name">{{ detail.session.bank_name }}</view>
+        <view class="ov-top">
+          <text class="tag brand">{{ modeLabel }}</text>
+          <text class="ov-time">{{ fmtTime(detail.session.finished_at || detail.session.started_at) }}</text>
+        </view>
+        <text class="ov-name">{{ detail.session.bank_name }}</text>
         <view class="ov-tags">
-          <text v-if="detail.session.cat_name" class="ov-tag">{{ detail.session.cat_name }}</text>
-          <text v-if="detail.session.sub_name" class="ov-tag">{{ detail.session.sub_name }}</text>
+          <text v-if="detail.session.cat_name" class="tag">{{ detail.session.cat_name }}</text>
+          <text v-if="detail.session.sub_name" class="tag">{{ detail.session.sub_name }}</text>
         </view>
-        <view class="ov-stats">
-          <view class="ov-cell">
-            <view class="ov-num">{{ detail.session.rate }}%</view>
-            <view class="ov-label">正确率</view>
+
+        <view class="ov-main">
+          <view class="ring ov-ring" :style="{ background: ringBg(detail.session.rate) }">
+            <view class="ring-inner ov-ring-inner">
+              <text class="ov-rate">{{ detail.session.rate }}<text class="ov-pct">%</text></text>
+              <text class="ov-label">正确率</text>
+            </view>
           </view>
-          <view class="ov-cell">
-            <view class="ov-num">{{ detail.session.total_count }}</view>
-            <view class="ov-label">题量</view>
-          </view>
-          <view class="ov-cell">
-            <view class="ov-num ok">{{ detail.session.correct_count }}</view>
-            <view class="ov-label">答对</view>
-          </view>
-          <view class="ov-cell">
-            <view class="ov-num ng">{{ detail.session.wrong_count }}</view>
-            <view class="ov-label">答错</view>
-          </view>
-          <view class="ov-cell">
-            <view class="ov-num sk">{{ detail.session.skipped_count }}</view>
-            <view class="ov-label">跳过</view>
+
+          <view class="ov-grid">
+            <view class="ov-cell">
+              <text class="ov-num">{{ detail.session.total_count }}</text>
+              <text class="ov-cell-label">题量</text>
+            </view>
+            <view class="ov-cell">
+              <text class="ov-num ok">{{ detail.session.correct_count }}</text>
+              <text class="ov-cell-label">答对</text>
+            </view>
+            <view class="ov-cell">
+              <text class="ov-num ng">{{ detail.session.wrong_count }}</text>
+              <text class="ov-cell-label">答错</text>
+            </view>
+            <view class="ov-cell">
+              <text class="ov-num sk">{{ detail.session.skipped_count }}</text>
+              <text class="ov-cell-label">跳过</text>
+            </view>
           </view>
         </view>
-        <view class="ov-time">{{ fmtTime(detail.session.finished_at || detail.session.started_at) }} · 用时 {{ fmtMs(detail.session.total_ms) }}</view>
+
+        <text class="ov-foot">用时 {{ fmtMs(detail.session.total_ms) }}</text>
       </view>
 
-      <button
-        v-if="wrongCount > 0"
-        class="btn-primary replay-btn"
-        @tap="doReplay"
-      >
+      <button v-if="wrongCount > 0" class="btn-primary replay-btn" @tap="doReplay">
         错题重练（{{ wrongCount }} 题）
       </button>
 
@@ -50,7 +56,7 @@
         <view v-for="r in detail.records" :key="r.no" class="q-card" :class="'s-' + r.result">
           <view class="q-head">
             <text class="q-no">第 {{ r.no }} 题</text>
-            <view class="q-mark" :class="r.result">{{ markText(r.result) }}</view>
+            <text class="q-mark" :class="r.result">{{ markText(r.result) }}</text>
           </view>
           <view class="q-stem">{{ r.stem }}</view>
           <image
@@ -64,11 +70,16 @@
             <view v-for="(o, i) in r.options" :key="i" class="q-opt">
               <text class="q-opt-label">{{ letter(i) }}</text>
               <text class="q-opt-text">{{ optText(o) }}</text>
+              <image v-if="optImg(o)" class="q-opt-img" :src="optImg(o)" mode="widthFix" />
             </view>
           </view>
           <view class="q-ans">
-            <view v-if="r.result !== 'skip'" class="qa-line">你的答案：{{ r.userAnswer || '—' }}</view>
-            <view class="qa-line">正确答案：{{ r.correctAnswer }}</view>
+            <view
+              v-if="r.result !== 'skip'"
+              class="qa-line"
+              :class="r.result === 'ok' ? 'qa-ok' : 'qa-ng'"
+            >你的答案：{{ r.userAnswer || '—' }}</view>
+            <view class="qa-line qa-correct">正确答案：{{ r.correctAnswer }}</view>
           </view>
           <view v-if="r.analysis" class="q-tip">{{ r.analysis }}</view>
         </view>
@@ -84,7 +95,7 @@
 
 <script setup lang="ts">
 /**
- * 练习记录详情：会话概览 + 逐题回顾（题干/选项/你的答案/解析）+ 错题重练
+ * 练习记录详情：会话概览（环形正确率）+ 逐题回顾（题干/选项/你的答案/解析）+ 错题重练
  */
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
@@ -102,12 +113,23 @@ const wrongCount = computed(
   () => detail.value?.session.wrong_count || 0
 )
 
+/** 正确率环 */
+function ringBg(rate: number): string {
+  const r = Math.max(0, Math.min(100, rate))
+  const deg = r * 3.6
+  return `conic-gradient(from -90deg, #4f86ff 0deg, #2f6bff ${deg}deg, #e8eef7 ${deg}deg 360deg)`
+}
+
 function letter(i: number): string {
   return String.fromCharCode(65 + i)
 }
 
-function optText(o: string | { text?: string }): string {
+function optText(o: string | { text?: string; img?: string }): string {
   return typeof o === 'string' ? o : o.text || ''
+}
+
+function optImg(o: string | { text?: string; img?: string }): string {
+  return typeof o === 'string' ? '' : o.img || ''
 }
 
 function markText(r: string): string {
@@ -175,51 +197,278 @@ onLoad((query) => {
 </script>
 
 <style scoped lang="scss">
-.center-box { padding: 200rpx 32rpx; display: flex; flex-direction: column; align-items: center; }
-.center-text { font-size: 27rpx; color: $text-sub; }
+.load-tip {
+  padding: 160rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: $ink-3;
+}
 
+/* ---- 概览 ---- */
 .overview {
-  background: $brand-gradient; border-radius: $radius-lg; padding: 30rpx 28rpx;
-  color: #ffffff; box-shadow: $shadow-btn; margin-bottom: 20rpx;
+  background-color: $bg-card;
+  border-radius: $radius-lg;
+  padding: 28rpx;
+  box-shadow: $shadow-l2;
 }
-.ov-badge {
-  display: inline-block; font-size: 21rpx; background-color: rgba(255, 255, 255, 0.18);
-  border-radius: $radius-full; padding: 4rpx 18rpx; margin-bottom: 10rpx;
+
+.ov-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
 }
-.ov-name { font-size: 33rpx; font-weight: 800; }
-.ov-tags { display: flex; gap: 12rpx; margin-top: 8rpx; }
-.ov-tag { font-size: 21rpx; background-color: rgba(255, 255, 255, 0.14); border-radius: $radius-full; padding: 2rpx 14rpx; }
-.ov-stats { display: flex; justify-content: space-between; margin-top: 26rpx; }
-.ov-cell { text-align: center; flex: 1; }
-.ov-num { font-size: 34rpx; font-weight: 800; }
-.ov-num.ok { color: #bbf7d0; }
-.ov-num.ng { color: #fecaca; }
-.ov-num.sk { color: #fde68a; }
-.ov-label { font-size: 21rpx; opacity: 0.75; margin-top: 4rpx; }
-.ov-time { font-size: 22rpx; opacity: 0.8; margin-top: 20rpx; text-align: center; }
 
-.replay-btn { margin-bottom: 24rpx; }
+.ov-time {
+  font-size: 21rpx;
+  color: $ink-3;
+}
 
+.ov-name {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 34rpx;
+  font-weight: 800;
+  color: $ink;
+  letter-spacing: -0.3rpx;
+}
+
+.ov-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 10rpx;
+}
+
+.ov-main {
+  display: flex;
+  align-items: center;
+  gap: 26rpx;
+  margin-top: 24rpx;
+}
+
+.ov-ring {
+  width: 176rpx;
+  height: 176rpx;
+  padding: 14rpx;
+  box-sizing: border-box;
+}
+
+.ov-ring-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.ov-rate {
+  font-size: 48rpx;
+  font-weight: 800;
+  line-height: 1;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-pct {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: $brand-600;
+}
+
+.ov-label {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: $ink-3;
+}
+
+.ov-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.ov-cell {
+  background-color: $bg-soft;
+  border-radius: $radius-sm;
+  padding: 14rpx 18rpx;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.ov-num {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-num.ok {
+  color: $success;
+}
+
+.ov-num.ng {
+  color: $danger;
+}
+
+.ov-num.sk {
+  color: $warning;
+}
+
+.ov-cell-label {
+  font-size: 20rpx;
+  color: $ink-3;
+}
+
+.ov-foot {
+  display: block;
+  margin-top: 18rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: $ink-3;
+}
+
+.replay-btn {
+  margin-top: 20rpx;
+}
+
+/* ---- 逐题回顾 ---- */
 .q-card {
-  background-color: $bg-card; border-radius: $radius-md; padding: 24rpx 26rpx; margin-bottom: $gap-item;
-  box-shadow: $shadow-card-sm; border-left: 8rpx solid transparent;
+  background-color: $bg-card;
+  border-radius: $radius-md;
+  padding: 24rpx 26rpx;
+  margin-bottom: 18rpx;
+  box-shadow: $shadow-l1;
+  border-left: 8rpx solid transparent;
 }
-.q-card.s-ok { border-left-color: $success; }
-.q-card.s-ng { border-left-color: $danger; }
-.q-card.s-skip { border-left-color: $warning; }
-.q-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
-.q-no { font-size: 25rpx; color: $text-sub; font-weight: 600; }
-.q-mark { font-size: 22rpx; border-radius: $radius-full; padding: 4rpx 18rpx; color: #ffffff; }
-.q-mark.ok { background-color: $success; }
-.q-mark.ng { background-color: $danger; }
-.q-mark.skip { background-color: $warning; }
-.q-stem { font-size: 28rpx; line-height: 1.55; color: $text-main; margin-bottom: 14rpx; }
-.q-img { width: 100%; border-radius: $radius-sm; margin-bottom: 14rpx; display: block; }
-.q-opts { display: flex; flex-direction: column; gap: 10rpx; margin-bottom: 14rpx; }
-.q-opt { display: flex; align-items: center; gap: 14rpx; }
-.q-opt-label { font-size: 21rpx; color: $brand-600; background-color: $brand-50; width: 44rpx; height: 44rpx; line-height: 44rpx; text-align: center; border-radius: 50%; flex-shrink: 0; }
-.q-opt-text { font-size: 26rpx; color: $text-sub; min-width: 0; }
-.q-ans { background-color: $bg-page; border-radius: $radius-sm; padding: 12rpx 16rpx; margin-bottom: 12rpx; }
-.qa-line { font-size: 23rpx; color: $text-sub; line-height: 1.6; }
-.q-tip { font-size: 25rpx; color: $text-main; line-height: 1.55; background-color: $brand-50; border-radius: $radius-sm; padding: 14rpx 18rpx; }
+
+.q-card.s-ok {
+  border-left-color: $success;
+}
+
+.q-card.s-ng {
+  border-left-color: $danger;
+}
+
+.q-card.s-skip {
+  border-left-color: $warning;
+}
+
+.q-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.q-no {
+  font-size: 24rpx;
+  color: $ink-2;
+  font-weight: 600;
+}
+
+.q-mark {
+  font-size: 20rpx;
+  border-radius: $radius-full;
+  padding: 4rpx 16rpx;
+  color: #ffffff;
+}
+
+.q-mark.ok {
+  background-color: $success;
+}
+
+.q-mark.ng {
+  background-color: $danger;
+}
+
+.q-mark.skip {
+  background-color: $warning;
+}
+
+.q-stem {
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: $ink;
+  margin-bottom: 14rpx;
+}
+
+.q-img {
+  width: 100%;
+  border-radius: $radius-sm;
+  margin-bottom: 14rpx;
+  display: block;
+}
+
+.q-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-bottom: 14rpx;
+}
+
+.q-opt {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.q-opt-label {
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  border-radius: 50%;
+  background-color: $brand-50;
+  color: $brand-600;
+  font-size: 20rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.q-opt-text {
+  font-size: 25rpx;
+  color: $ink-2;
+  min-width: 0;
+}
+
+.q-opt-img {
+  width: 160rpx;
+  border-radius: $radius-xs;
+  flex-shrink: 0;
+}
+
+.q-ans {
+  background-color: $bg-soft;
+  border-radius: $radius-sm;
+  padding: 14rpx 18rpx;
+  margin-bottom: 12rpx;
+}
+
+.qa-line {
+  font-size: 22rpx;
+  color: $ink-2;
+  line-height: 1.6;
+}
+
+.qa-ok {
+  color: $success;
+}
+
+.qa-ng {
+  color: $danger;
+}
+
+.qa-correct {
+  color: $success;
+  font-weight: 600;
+}
+
+.q-tip {
+  font-size: 24rpx;
+  color: $ink-2;
+  line-height: 1.6;
+  background-color: $brand-50;
+  border-radius: $radius-sm;
+  padding: 14rpx 18rpx;
+}
 </style>

@@ -1,10 +1,12 @@
 <template>
-  <view class="page">
+  <view class="page practice-page">
     <!-- 加载/错误态 -->
     <view v-if="phase === 'loading'" class="center-box">
+      <view class="loader"></view>
       <text class="center-text">正在抽题…</text>
     </view>
     <view v-else-if="phase === 'error'" class="center-box">
+      <view class="err-badge">!</view>
       <text class="center-text">题目加载失败，请检查网络后重试</text>
       <button class="btn-primary retry" @tap="startSession">重试</button>
       <button class="btn-ghost retry" @tap="goBack">返回选题</button>
@@ -13,52 +15,65 @@
     <!-- 答题态 -->
     <view v-else-if="phase === 'run' && session">
       <view class="run-head">
-        <view class="run-left">
-          <view class="run-title">{{ session.qtypeName }} · {{ isFill ? '填空题' : '选择题' }}</view>
-          <view class="run-meta">{{ runMetaText }}</view>
-        </view>
-        <view class="run-right">
-          <view class="run-counts">
-            对 <text class="ok">{{ okCount }}</text> · 错 <text class="ng">{{ ngCount }}</text> · 跳
-            <text class="sk">{{ skCount }}</text>
+        <view class="run-top">
+          <view class="run-title-wrap">
+            <text class="run-title">{{ session.qtypeName }}</text>
+            <text class="run-meta">{{ runMetaText }}</text>
           </view>
+          <text class="run-pill">
+            {{ session.infinite ? '∞' : `${no}/${session.total}` }}
+          </text>
+        </view>
+        <view v-if="!session.infinite" class="run-bar">
+          <view class="run-bar-inner" :style="{ width: progress + '%' }"></view>
+        </view>
+        <view class="run-bottom">
+          <view class="run-stat"><text class="rs-num ok">{{ okCount }}</text><text class="rs-label">对</text></view>
+          <view class="run-stat"><text class="rs-num ng">{{ ngCount }}</text><text class="rs-label">错</text></view>
+          <view class="run-stat"><text class="rs-num sk">{{ skCount }}</text><text class="rs-label">跳</text></view>
           <view class="end-btn" @tap="onEnd">结束</view>
         </view>
       </view>
 
-      <view v-if="!session.infinite" class="run-bar">
-        <view class="run-bar-inner" :style="{ width: progress + '%' }"></view>
+      <!-- 题干卡 -->
+      <view class="q-card">
+        <view class="q-head">
+          <text class="q-no">第 {{ no }} 题</text>
+          <text class="q-type">{{ current ? typeName(current.qtype) : '' }} · {{ isFill ? '填空' : '选择' }}</text>
+        </view>
+        <view class="q-stem">{{ current ? current.stem : '' }}</view>
+        <view v-if="isFill && fillHint" class="q-hint">{{ fillHint }}</view>
       </view>
 
-      <view class="q-no">第 {{ no }} 题 · {{ current ? typeName(current.qtype) : '' }}</view>
-      <view class="q-stem">{{ current ? current.stem : '' }}</view>
+      <!-- 作答区 -->
+      <view class="answer-wrap">
+        <MentalChoiceList
+          v-if="current && !isFill"
+          :options="current.options"
+          :result="result"
+          :selected-index="selectedIndex"
+          @choose="submitChoice"
+        />
+        <MentalFillInput
+          v-if="current && isFill && !answered"
+          v-model="fillValue"
+          :focus="fillFocused"
+          :fill-dir="current.fillDir"
+          @submit="submitFill"
+        />
+      </view>
 
-      <MentalChoiceList
-        v-if="current && !isFill"
-        :options="current.options"
-        :result="result"
-        :selected-index="selectedIndex"
-        @choose="submitChoice"
-      />
-
-      <!-- 填空题：自动聚焦 + 完成键提交 -->
-      <MentalFillInput
-        v-if="current && isFill"
-        v-model="fillValue"
-        :focus="fillFocused"
-        :fill-dir="current.fillDir"
-        @submit="submitFill"
-      />
+      <view v-if="current && !isFill && !answered" class="skip-row">
+        <text class="skip-btn" @tap="skip">跳过本题</text>
+      </view>
 
       <MentalAnalysisPanel
         v-if="result"
         :result="result"
-        :my-answer-text="myAnswerText"
+        :my-answer-text="answerText"
         :is-last="isLast"
         @next="nextQ"
       />
-
-      <button v-if="current && !isFill && !answered" class="skip-btn" @tap="skip">跳过本题</button>
     </view>
 
     <MentalResultPanel
@@ -72,6 +87,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 速算答题页：抽题 → 选择/填空作答 → 即时判题与技巧 → 自动追加（无限流）→ 结算
+ */
 import { computed, ref } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import MentalAnalysisPanel from '@/components/MentalAnalysisPanel.vue'
@@ -137,7 +155,31 @@ const progress = computed(() => {
 
 const fillDir = computed<MentalFillDir | undefined>(() => current.value?.fillDir)
 const fillPrefix = computed(() => (fillDir.value === 'den' || fillDir.value === 'frac' ? '1/' : ''))
-const fillSuffix = computed(() => (fillDir.value === 'pct' ? '%' : ''))
+
+/** 填空提示语（按填写方向） */
+const fillHint = computed(() => {
+  switch (fillDir.value) {
+    case 'den':
+    case 'frac':
+      return '在「1/」后面填写分母'
+    case 'pct':
+      return '填写百分数数值，不需要输入 %'
+    case 'dec':
+      return '填写小数结果'
+    case 'val':
+      return '填写数值结果'
+    default:
+      return ''
+  }
+})
+
+/** 我的答案文本（选择题取所选项，填空取输入值） */
+const answerText = computed(() => {
+  if (selectedIndex.value !== null && current.value) {
+    return current.value.options[selectedIndex.value] || ''
+  }
+  return myAnswerText.value
+})
 
 const fillPattern = computed(() =>
   fillDir.value === 'den' || fillDir.value === 'frac' || fillDir.value === 'val'
@@ -148,8 +190,8 @@ const fillPattern = computed(() =>
 const runMetaText = computed(() => {
   if (!session.value) return ''
   const done = okCount.value + ngCount.value + skCount.value
-  const modeTxt = session.value.infinite ? '无限流 · 已答 ' + done + ' 题' : '共 ' + session.value.total + ' 题'
-  return '速算练习 · ' + modeTxt + ' · 用时 ' + timerText.value
+  const modeTxt = session.value.infinite ? `无限流 · 已答 ${done} 题` : `共 ${session.value.total} 题`
+  return `速算练习 · ${modeTxt} · 用时 ${timerText.value}`
 })
 
 function typeName(t: MentalQtype): string {
@@ -160,6 +202,11 @@ async function startSession(): Promise<void> {
   phase.value = 'loading'
   try {
     const res = await startMental(qtype.value, diff.value, count.value, mode.value)
+    if (!res.questions.length) {
+      phase.value = 'error'
+      uni.showToast({ title: '当前配置暂无可用题目', icon: 'none' })
+      return
+    }
     session.value = res
     list.value = res.questions
     idx.value = 0
@@ -250,14 +297,14 @@ async function submitFill(): Promise<void> {
   answering.value = true
   const q = current.value
   /* den/frac：界面显示 1/ 前缀，提交拼成 1/分母 */
-  const answerText = fillPrefix.value ? `1/${raw}` : raw
-  myAnswerText.value = answerText
+  const answerTextVal = fillPrefix.value ? `1/${raw}` : raw
+  myAnswerText.value = answerTextVal
   try {
     const res = await answerMental(
       session.value.sessionId,
       no.value,
       q.id,
-      answerText,
+      answerTextVal,
       Date.now() - qStartMs.value
     )
     applyAnswer(res, null)
@@ -306,6 +353,10 @@ async function appendMore(): Promise<void> {
   answering.value = true
   try {
     const res = await moreMental(session.value.sessionId)
+    if (!res.questions.length) {
+      await finishRun()
+      return
+    }
     list.value = list.value.concat(res.questions)
     idx.value += 1
     resetQ()
@@ -377,109 +428,230 @@ onUnload(() => {
 </script>
 
 <style scoped lang="scss">
-.center-box { padding: 200rpx 32rpx; display: flex; flex-direction: column; align-items: center; }
+.practice-page {
+  padding-bottom: 80rpx;
+}
 
-.center-text { font-size: 28rpx; color: $text-sub; }
-
-.retry { margin-top: 24rpx; width: 400rpx; }
-
-/* 顶部状态卡：品牌渐变，白字（沉浸答题感） */
-.run-head {
+/* ---- 加载/错误 ---- */
+.center-box {
+  padding: 200rpx 40rpx;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  background: $brand-gradient;
-  border-radius: $radius-lg;
-  padding: 26rpx 28rpx;
-  box-shadow: $shadow-btn;
+  flex-direction: column;
+  align-items: center;
 }
 
-.run-title { font-size: 31rpx; font-weight: 700; color: #ffffff; }
-
-.run-meta { font-size: 22rpx; color: rgba(255, 255, 255, 0.8); margin-top: 6rpx; }
-
-.run-right { text-align: right; }
-
-.run-counts { font-size: 24rpx; color: #ffffff; }
-
-.run-counts .ok {
-  color: #bbf7d0;
-  font-weight: 700;
+.loader {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  border: 5rpx solid $line;
+  border-top-color: $brand-600;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 24rpx;
 }
 
-.run-counts .ng {
-  color: #fecaca;
-  font-weight: 700;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.run-counts .sk {
-  color: #fde68a;
-  font-weight: 700;
-}
-
-.end-btn {
-  margin-top: 12rpx;
-  padding: 8rpx 24rpx;
-  border-radius: $radius-full;
-  background-color: rgba(255, 255, 255, 0.18);
-  border: 2rpx solid rgba(255, 255, 255, 0.5);
-  color: #ffffff;
-  font-size: 23rpx;
+.err-badge {
+  width: 88rpx;
+  height: 88rpx;
+  line-height: 88rpx;
   text-align: center;
-  display: inline-block;
+  border-radius: 50%;
+  background-color: $danger-bg;
+  color: $danger;
+  font-size: 44rpx;
+  font-weight: 800;
+  margin-bottom: 20rpx;
 }
 
-/* 进度条（卡片内白条） */
+.center-text {
+  font-size: 27rpx;
+  color: $ink-2;
+  text-align: center;
+}
+
+.retry {
+  margin-top: 24rpx;
+  width: 420rpx;
+}
+
+/* ---- 顶部状态卡 ---- */
+.run-head {
+  background-color: $bg-card;
+  border-radius: $radius-lg;
+  padding: 26rpx 28rpx 22rpx;
+  box-shadow: $shadow-l2;
+}
+
+.run-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.run-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.run-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 800;
+  color: $ink;
+}
+
+.run-meta {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: $ink-3;
+}
+
+.run-pill {
+  flex-shrink: 0;
+  padding: 6rpx 18rpx;
+  border-radius: $radius-full;
+  background-color: $brand-50;
+  color: $brand-600;
+  font-size: 22rpx;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .run-bar {
-  height: 8rpx;
-  background-color: rgba(255, 255, 255, 0.28);
-  border-radius: 4rpx;
-  margin: 20rpx 0 0;
+  height: 10rpx;
+  margin-top: 18rpx;
+  border-radius: $radius-full;
+  background-color: $line;
   overflow: hidden;
 }
 
 .run-bar-inner {
   height: 100%;
-  background-color: #ffffff;
-  border-radius: 4rpx;
+  border-radius: $radius-full;
+  background: $brand-gradient;
+  transition: width 0.25s ease;
 }
 
-/* 题目 */
+.run-bottom {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  margin-top: 16rpx;
+}
+
+.run-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4rpx;
+}
+
+.rs-num {
+  font-size: 26rpx;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: $ink;
+}
+
+.rs-num.ok {
+  color: $success;
+}
+
+.rs-num.ng {
+  color: $danger;
+}
+
+.rs-num.sk {
+  color: $warning;
+}
+
+.rs-label {
+  font-size: 20rpx;
+  color: $ink-3;
+}
+
+.end-btn {
+  margin-left: auto;
+  padding: 8rpx 26rpx;
+  border-radius: $radius-full;
+  background-color: $bg-soft;
+  color: $ink-2;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+/* ---- 题干卡 ---- */
+.q-card {
+  margin-top: 24rpx;
+  background-color: $bg-card;
+  border-radius: $radius-lg;
+  padding: 28rpx;
+  box-shadow: $shadow-l2;
+}
+
+.q-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
 .q-no {
-  display: inline-block;
-  font-size: 23rpx;
+  font-size: 22rpx;
+  font-weight: 700;
   color: $brand-600;
   background-color: $brand-50;
+  padding: 5rpx 16rpx;
   border-radius: $radius-full;
-  padding: 6rpx 20rpx;
-  font-weight: 600;
-  margin-bottom: 20rpx;
-  margin-top: 32rpx;
+}
+
+.q-type {
+  font-size: 20rpx;
+  color: $ink-3;
 }
 
 .q-stem {
-  font-size: 44rpx;
+  font-size: 42rpx;
   font-weight: 700;
-  line-height: 1.5;
-  margin-bottom: 28rpx;
+  line-height: 1.6;
+  color: $ink;
   font-variant-numeric: tabular-nums;
-  color: $text-main;
+  word-break: break-all;
+}
+
+.q-hint {
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: $ink-3;
+  background-color: $bg-soft;
+  border-radius: $radius-sm;
+  padding: 10rpx 16rpx;
+}
+
+/* ---- 作答区 ---- */
+.answer-wrap {
+  margin-top: 24rpx;
+}
+
+.skip-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 20rpx;
 }
 
 .skip-btn {
-  width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  border: 3rpx solid $line;
-  border-radius: $radius-md;
-  background-color: $bg-card;
-  color: $text-sub;
-  font-size: 30rpx;
-  margin-top: $gap-item;
-  box-shadow: $shadow-card-sm;
-}
-
-.skip-btn::after {
-  border: none;
+  padding: 16rpx 48rpx;
+  border-radius: $radius-full;
+  border: 1rpx solid $line-strong;
+  background-color: rgba(255, 255, 255, 0.7);
+  color: $ink-2;
+  font-size: 25rpx;
 }
 </style>

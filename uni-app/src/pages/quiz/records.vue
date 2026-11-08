@@ -7,32 +7,44 @@
     </view>
 
     <!-- 模式筛选 -->
-    <view class="sec">
-      <view class="chip-row">
-        <view
-          v-for="f in filters"
-          :key="f.value"
-          class="chip"
-          :class="{ active: curFilter === f.value }"
-          @tap="onFilter(f.value)"
-        >
-          {{ f.label }}
-        </view>
+    <view class="seg filter-seg">
+      <view
+        v-for="f in filters"
+        :key="f.value"
+        class="seg-item"
+        :class="{ active: curFilter === f.value }"
+        @tap="onFilter(f.value)"
+      >
+        {{ f.label }}
       </view>
     </view>
 
     <!-- 历史列表 -->
-    <view v-if="list.length" class="sec">
-      <view v-for="it in list" :key="it.id" class="rec-card" @tap="goDetail(it.id)">
+    <view v-if="list.length" class="rec-list">
+      <view
+        v-for="it in list"
+        :key="it.id"
+        class="rec-card"
+        :class="rateClass(it.rate)"
+        hover-class="rec-press"
+        @tap="goDetail(it.id)"
+      >
         <view class="rec-top">
-          <view class="rec-name">{{ it.bank_name }}</view>
-          <view class="rec-rate">{{ it.rate }}<text class="pct">%</text></view>
+          <view class="rec-name-wrap">
+            <view class="rec-name">{{ it.bank_name }}</view>
+            <view class="rec-tags">
+              <text v-if="it.cat_name" class="tag brand">{{ it.cat_name }}</text>
+              <text v-if="it.sub_name" class="tag">{{ it.sub_name }}</text>
+              <text class="tag amber">{{ modeLabel(it.mode) }}</text>
+            </view>
+          </view>
+          <view class="rec-rate" :class="rateClass(it.rate)">{{ it.rate }}<text class="pct">%</text></view>
         </view>
-        <view class="rec-tags">
-          <text v-if="it.cat_name" class="rec-tag cat">{{ it.cat_name }}</text>
-          <text v-if="it.sub_name" class="rec-tag">{{ it.sub_name }}</text>
-          <text class="rec-tag mode">{{ modeLabel(it.mode) }}</text>
+
+        <view class="rec-progress">
+          <view class="rec-progress-inner" :style="{ width: progressPct(it) + '%' }"></view>
         </view>
+
         <view class="rec-bottom">
           <text class="rec-stat">答 {{ it.done_count }}/{{ it.total_count }}</text>
           <text class="rec-stat ok">对 {{ it.correct_count }}</text>
@@ -40,6 +52,7 @@
           <text class="rec-stat sk">跳 {{ it.skipped_count }}</text>
           <text class="rec-time">{{ fmtTime(it.finished_at || it.started_at) }}</text>
         </view>
+
         <view class="rec-del" @tap.stop="confirmDel(it.id)">删除</view>
       </view>
     </view>
@@ -49,7 +62,7 @@
       <view class="empty-text">去「题库练习」刷一组题，记录会展示在这里</view>
     </view>
 
-    <view v-if="loading" class="center-box"><text class="center-text">加载中…</text></view>
+    <view v-if="loading" class="load-tip">加载中…</view>
     <view v-else-if="hasMore" class="load-more" @tap="loadMore">加载更多</view>
   </view>
 </template>
@@ -81,12 +94,26 @@ function modeLabel(m: PracticeMode): string {
   return m === 'random' ? '随机' : m === 'review' ? '错题重练' : '顺序'
 }
 
+function rateClass(rate: number): string {
+  const r = Number(rate) || 0
+  if (r >= 80) return 'good'
+  if (r >= 60) return 'mid'
+  if (r >= 40) return 'warn'
+  return 'bad'
+}
+
 function fmtTime(s: string): string {
   if (!s) return ''
   const d = new Date(s)
   if (Number.isNaN(d.getTime())) return s
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** 完成度百分比（防 0 除） */
+function progressPct(it: PracticeHistoryItem): number {
+  if (!it.total_count) return 0
+  return Math.min(100, Math.round((it.done_count / it.total_count) * 100))
 }
 
 async function load(reset: boolean): Promise<void> {
@@ -158,30 +185,183 @@ onReachBottom(() => {
 </script>
 
 <style scoped lang="scss">
-.center-box { padding: 120rpx 32rpx; display: flex; flex-direction: column; align-items: center; }
-.center-text { font-size: 26rpx; color: $text-weak; }
-.load-more { text-align: center; padding: 30rpx 0; color: $brand-600; font-size: 26rpx; }
+.filter-seg {
+  margin-top: 28rpx;
+}
+
+.filter-seg .seg-item {
+  font-size: 23rpx;
+}
+
+.rec-list {
+  margin-top: 28rpx;
+}
 
 .rec-card {
-  position: relative; background-color: $bg-card; border-radius: $radius-md; padding: 24rpx 26rpx;
-  margin-bottom: $gap-item; box-shadow: $shadow-card-sm;
+  position: relative;
+  background-color: $bg-card;
+  border-radius: $radius-lg;
+  padding: 26rpx 26rpx 26rpx 32rpx;
+  margin-bottom: 18rpx;
+  box-shadow: $shadow-l1;
+  overflow: hidden;
 }
-.rec-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16rpx; }
-.rec-name { font-size: 29rpx; font-weight: 700; color: $text-main; flex: 1; min-width: 0; }
-.rec-rate { font-size: 40rpx; font-weight: 800; color: $brand-600; flex-shrink: 0; }
-.pct { font-size: 22rpx; font-weight: 600; color: $brand-400; }
-.rec-tags { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 12rpx; }
-.rec-tag { font-size: 20rpx; color: $text-sub; background-color: #f1f5f9; border-radius: $radius-full; padding: 4rpx 14rpx; }
-.rec-tag.cat { color: $brand-600; background-color: $brand-50; }
-.rec-tag.mode { color: $warning; background-color: $warning-bg; }
-.rec-bottom { display: flex; flex-wrap: wrap; align-items: center; gap: 8rpx 20rpx; margin-top: 14rpx; }
-.rec-stat { font-size: 23rpx; color: $text-sub; }
-.rec-stat.ok { color: $success; }
-.rec-stat.ng { color: $danger; }
-.rec-stat.sk { color: $warning; }
-.rec-time { font-size: 22rpx; color: $text-weak; margin-left: auto; }
+
+.rec-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 26rpx;
+  bottom: 26rpx;
+  width: 8rpx;
+  border-radius: 0 8rpx 8rpx 0;
+  background: $brand-gradient;
+}
+
+.rec-card.good::before {
+  background: linear-gradient(180deg, #35d07f, $success);
+}
+
+.rec-card.warn::before {
+  background: linear-gradient(180deg, #ffc24d, $warning);
+}
+
+.rec-card.bad::before {
+  background: linear-gradient(180deg, #ff8a80, $danger);
+}
+
+.rec-press {
+  background-color: #fbfcff;
+}
+
+.rec-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.rec-name-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.rec-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: $ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rec-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 10rpx;
+}
+
+.rec-rate {
+  flex-shrink: 0;
+  font-size: 44rpx;
+  font-weight: 800;
+  line-height: 1;
+  color: $brand-600;
+  font-variant-numeric: tabular-nums;
+}
+
+.rec-rate.good {
+  color: $success;
+}
+
+.rec-rate.warn {
+  color: $warning;
+}
+
+.rec-rate.bad {
+  color: $danger;
+}
+
+.pct {
+  font-size: 22rpx;
+  font-weight: 600;
+  opacity: 0.62;
+}
+
+.rec-progress {
+  height: 8rpx;
+  margin-top: 20rpx;
+  border-radius: $radius-full;
+  background-color: $line;
+  overflow: hidden;
+}
+
+.rec-progress-inner {
+  height: 100%;
+  border-radius: $radius-full;
+  background: $brand-gradient;
+}
+
+.rec-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8rpx 18rpx;
+  margin-top: 16rpx;
+}
+
+.rec-stat {
+  font-size: 23rpx;
+  color: $ink-2;
+}
+
+.rec-stat.ok {
+  color: $success;
+}
+
+.rec-stat.ng {
+  color: $danger;
+}
+
+.rec-stat.sk {
+  color: $warning;
+}
+
+.rec-time {
+  margin-left: auto;
+  font-size: 21rpx;
+  color: $ink-3;
+}
+
 .rec-del {
-  position: absolute; top: 22rpx; right: 22rpx; font-size: 21rpx; color: $text-weak;
-  padding: 6rpx 16rpx; border: 2rpx solid $line; border-radius: $radius-full; background-color: $bg-page;
+  display: block;
+  width: fit-content;
+  margin-top: 12rpx;
+  margin-left: auto;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-full;
+  background-color: $danger-bg;
+  color: $danger;
+  font-size: 20rpx;
+}
+
+.load-tip {
+  padding: 28rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: $ink-3;
+}
+
+.load-more {
+  margin-top: 10rpx;
+  padding: 22rpx 0;
+  text-align: center;
+  border-radius: $radius-full;
+  background-color: $bg-card;
+  color: $brand-600;
+  font-size: 25rpx;
+  font-weight: 600;
+  box-shadow: $shadow-l1;
 }
 </style>

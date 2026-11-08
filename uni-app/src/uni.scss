@@ -1,74 +1,113 @@
 /**
- * 全局设计系统（Design Tokens）
- * 混合主题：教育品牌蓝（主视觉）+ 极简留白（信息层级）+ 数据统计卡（激励反馈）
+ * 全局设计系统（Design Tokens）V2
+ * 方向：Bento 数据现代 + 玻璃浮层
  *
- * 本文件变量由 uni-app 自动注入到所有 <style lang="scss">，页面可直接使用，
- * 无需手动 @import。全局换肤只需改这里 + App.vue 的全局类。
+ * 说明：
+ * - 本文件变量由 uni-app 自动注入到所有 <style lang="scss">，页面可直接使用。
+ * - 旧的 token 名保留为“兼容别名”，保证未迁移页面不会报错；别名全部指向新值。
+ * - 全局换肤只改这里 + App.vue 的全局类。
  */
 
-/* ===== 品牌色（教育蓝） ===== */
-$brand-50: #eff4ff; // 淡蓝底（选中/强调底色）
-$brand-100: #dbeafe;
-$brand-200: #bfdbfe;
-$brand-400: #60a5fa;
-$brand-500: #3b82f6; // 主色·亮
-$brand-600: #2563eb; // 主色（按钮/强调）
-$brand-700: #1d4ed8; // 主色·深（渐变末端）
-$brand-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
+/* ===== 品牌色（教育蓝，提亮后的现代感） ===== */
+$brand-50: #eef4ff;
+$brand-100: #dce8ff;
+$brand-200: #c7dbff;
+$brand-400: #7ba6ff;
+$brand-500: #4f86ff;
+$brand-600: #2f6bff;
+$brand-700: #1d4ed8;
+$brand-gradient: linear-gradient(135deg, #5b8cff 0%, #2f6bff 52%, #1d4ed8 100%);
+
+/* 柔光极光底（首页/计时页顶部环境光） */
+$aurora-bg:
+  radial-gradient(120% 90% at 8% 0%, rgba(47, 107, 255, 0.18) 0%, rgba(47, 107, 255, 0) 58%),
+  radial-gradient(90% 70% at 100% 8%, rgba(45, 212, 191, 0.14) 0%, rgba(45, 212, 191, 0) 55%),
+  radial-gradient(80% 60% at 50% 100%, rgba(255, 176, 32, 0.10) 0%, rgba(255, 176, 32, 0) 60%),
+  #f6f8fc;
+
+/* ===== 辅助强调色 ===== */
+$mint: #14b8a6;
+$mint-bg: #e6faf6;
+$coral: #ff6b6b;
+$coral-bg: #ffedec;
+$amber: #ffb020;
+$amber-bg: #fff5e2;
 
 /* ===== 功能色 ===== */
-$success: #10b981; // 对 / 正确
-$success-bg: #ecfdf5;
-$danger: #ef4444; // 错 / 删除
-$danger-bg: #fef2f2;
-$warning: #f59e0b; // 跳过 / 警示
-$warning-bg: #fffbeb;
+$success: #12b76a;
+$success-bg: #e8f8f0;
+$danger: #f04438;
+$danger-bg: #feebe9;
+$warning: #f79009;
+$warning-bg: #fff4e5;
 
 /* ===== 中性色 ===== */
-$text-main: #1e293b; // 主文字
-$text-sub: #64748b; // 次级文字
-$text-weak: #94a3b8; // 弱文字 / 占位
-$line: #eef1f6; // 极淡分割线
-$bg-page: #f5f7fb; // 页面背景（浅蓝灰）
-$bg-card: #ffffff; // 卡片背景
+$ink: #0f172a;
+$ink-2: #475467;
+$ink-3: #98a2b3;
+$bg-page: #f6f8fc;
+$bg-card: #ffffff;
+$bg-soft: #f1f5fb;
+$line: #e8eef7;
+$line-strong: #d7e0ee;
+
+/* 兼容别名（旧页面使用） */
+$text-main: $ink;
+$text-sub: $ink-2;
+$text-weak: $ink-3;
 
 /* ===== 圆角 ===== */
-$radius-sm: 16rpx;
-$radius-md: 24rpx;
-$radius-lg: 32rpx;
+$radius-xs: 12rpx;
+$radius-sm: 20rpx;
+$radius-md: 28rpx;
+$radius-lg: 40rpx;
+$radius-xl: 48rpx;
+$radius-sheet: 48rpx;
 $radius-full: 999rpx;
 
-/* ===== 阴影（替代细边框，制造层级） ===== */
-$shadow-card: 0 8rpx 24rpx rgba(30, 41, 59, 0.06);
-$shadow-card-sm: 0 4rpx 14rpx rgba(30, 41, 59, 0.05);
-$shadow-primary: 0 6rpx 18rpx rgba(37, 99, 235, 0.16);
-$shadow-btn: 0 12rpx 24rpx rgba(37, 99, 235, 0.28);
+/* ===== 阴影与光晕（三级 + 主色 glow） ===== */
+$shadow-l1: 0 6rpx 20rpx rgba(15, 23, 42, 0.05);
+$shadow-l2: 0 14rpx 36rpx rgba(15, 23, 42, 0.08);
+$shadow-l3: 0 24rpx 60rpx rgba(15, 23, 42, 0.14);
+$shadow-glow: 0 12rpx 32rpx rgba(47, 107, 255, 0.28);
 
-/* ===== 间距 ===== */
-$gap-page: 32rpx; // 页面左右留白
-$gap-sec: 32rpx; // 区块间距
-$gap-item: 20rpx; // 元素间距
+$shadow-card: $shadow-l2;
+$shadow-card-sm: $shadow-l1;
+$shadow-primary: $shadow-glow;
+$shadow-btn: 0 16rpx 40rpx rgba(47, 107, 255, 0.30);
+
+/* ===== 间距（8rpx 网格） ===== */
+$gap-page: 40rpx;
+$gap-sec: 56rpx;
+$gap-card: 20rpx;
+$gap-item: 20rpx;
 
 /* ===== 字号（rpx） ===== */
-$fs-title: 34rpx; // 区块标题
-$fs-body: 28rpx; // 正文
-$fs-sub: 24rpx; // 辅助
-$fs-num: 40rpx; // 数字强调
+$fs-display: 112rpx;
+$fs-h1: 56rpx;
+$fs-h2: 40rpx;
+$fs-h3: 32rpx;
+$fs-title: 32rpx;
+$fs-body: 28rpx;
+$fs-sub: 24rpx;
+$fs-caption: 24rpx;
+$fs-micro: 20rpx;
+$fs-num: 52rpx;
 
 /* ===== 兼容 uni 官方变量（第三方组件可用） ===== */
 $uni-color-primary: $brand-600;
 $uni-color-success: $success;
 $uni-color-warning: $warning;
 $uni-color-error: $danger;
-$uni-text-color: $text-main;
+$uni-text-color: $ink;
 $uni-text-color-inverse: #ffffff;
-$uni-text-color-grey: $text-weak;
+$uni-text-color-grey: $ink-3;
 $uni-text-color-placeholder: #9ca3af;
 $uni-text-color-disable: #c0c0c0;
 $uni-bg-color: #ffffff;
 $uni-bg-color-grey: $bg-page;
 $uni-bg-color-hover: #f1f5f9;
-$uni-bg-color-mask: rgba(15, 23, 42, 0.4);
+$uni-bg-color-mask: rgba(15, 23, 42, 0.45);
 $uni-border-color: $line;
 $uni-font-size-sm: 12px;
 $uni-font-size-base: 14px;

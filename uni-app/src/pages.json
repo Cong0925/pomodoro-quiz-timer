@@ -82,12 +82,13 @@
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
 		"navigationBarTitleText": "刷题计时器",
-		"navigationBarBackgroundColor": "#2563EB",
-		"backgroundColor": "#F5F7FB"
+		"navigationBarBackgroundColor": "#2F6BFF",
+		"backgroundColor": "#F6F8FC"
 	},
 	"tabBar": {
-		"color": "#94A3B8",
-		"selectedColor": "#2563EB",
+		"custom": true,
+		"color": "#98A2B3",
+		"selectedColor": "#2F6BFF",
 		"backgroundColor": "#FFFFFF",
 		"borderStyle": "white",
 		"list": [

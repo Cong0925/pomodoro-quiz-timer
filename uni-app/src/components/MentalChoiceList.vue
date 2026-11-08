@@ -5,9 +5,14 @@
       :key="i"
       class="opt-item"
       :class="optClass(i)"
+      hover-class="opt-press"
       @tap="$emit('choose', i)"
     >
-      <view class="opt-label">{{ letter(i) }}</view>
+      <view class="opt-label">
+        <text v-if="result && result.correctIndex === i">✓</text>
+        <text v-else-if="result && selectedIndex === i">✕</text>
+        <text v-else>{{ letter(i) }}</text>
+      </view>
       <text class="opt-text">{{ opt }}</text>
     </view>
   </view>
@@ -43,48 +48,50 @@ function optClass(i: number): string {
 .opt-list {
   display: flex;
   flex-direction: column;
-  gap: $gap-item;
+  gap: 16rpx;
 }
 
 .opt-item {
   min-height: 104rpx;
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: 20rpx;
   background-color: $bg-card;
-  border: 2rpx solid transparent;
+  border: 2rpx solid $line;
   border-radius: $radius-md;
-  padding: 16rpx 28rpx;
-  box-shadow: $shadow-card-sm;
+  padding: 18rpx 24rpx;
+  box-sizing: border-box;
+  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
 }
 
 .opt-item.correct {
   border-color: $success;
   background-color: $success-bg;
-  box-shadow: 0 6rpx 18rpx rgba(16, 185, 129, 0.16);
 }
 
 .opt-item.wrong {
   border-color: $danger;
   background-color: $danger-bg;
-  box-shadow: 0 6rpx 18rpx rgba(239, 68, 68, 0.14);
 }
 
 .opt-item.dim {
-  opacity: 0.5;
+  opacity: 0.45;
+}
+
+.opt-press {
+  background-color: $bg-soft;
 }
 
 .opt-label {
   width: 56rpx;
   height: 56rpx;
+  line-height: 56rpx;
+  text-align: center;
   border-radius: 50%;
-  background-color: $brand-50;
-  color: $brand-600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background-color: $bg-soft;
+  color: $ink-2;
   font-weight: 700;
-  font-size: 27rpx;
+  font-size: 26rpx;
   flex-shrink: 0;
 }
 
@@ -99,7 +106,8 @@ function optClass(i: number): string {
 }
 
 .opt-text {
-  font-size: 30rpx;
+  font-size: 29rpx;
+  color: $ink;
   min-width: 0;
   word-break: break-all;
 }

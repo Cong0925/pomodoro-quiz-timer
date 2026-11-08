@@ -1,0 +1,156 @@
+/* 自定义悬浮 tabBar：玻璃胶囊 + 品牌渐变选中态 + 纯 CSS 线性图标 */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  z-index: 999;
+  pointer-events: none;
+}
+
+.tab-bar-inner {
+  pointer-events: auto;
+  display: flex;
+  align-items: stretch;
+  height: 112rpx;
+  padding: 8rpx 10rpx;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.82) 100%);
+  border-radius: 44rpx;
+  box-shadow: 0 20rpx 50rpx rgba(15, 23, 42, 0.14);
+  border: 1rpx solid rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(24rpx) saturate(160%);
+  -webkit-backdrop-filter: blur(24rpx) saturate(160%);
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0 4rpx;
+  border-radius: 34rpx;
+  transition: background 0.22s ease, box-shadow 0.22s ease;
+}
+
+.tab.active {
+  background: linear-gradient(135deg, #5b8cff 0%, #2f6bff 52%, #1d4ed8 100%);
+  box-shadow: 0 10rpx 24rpx rgba(47, 107, 255, 0.28);
+}
+
+.icon-wrap {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.icon-wrap.active {
+  transform: translateY(-2rpx);
+}
+
+/* ===== 图标图形（纯 CSS） ===== */
+.glyph {
+  color: #98a2b3;
+  transition: color 0.2s ease;
+}
+
+.glyph.on {
+  color: #ffffff;
+}
+
+/* 房子 */
+.glyph-home {
+  width: 38rpx;
+  height: 34rpx;
+  background-color: currentColor;
+  clip-path: polygon(50% 0, 100% 42%, 100% 100%, 0 100%, 0 42%);
+}
+
+/* 书本（文档轮廓 + 两条文字线） */
+.glyph-book {
+  width: 36rpx;
+  height: 40rpx;
+  box-sizing: border-box;
+  border: 3rpx solid currentColor;
+  border-radius: 7rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding-left: 7rpx;
+}
+
+.book-page {
+  width: 15rpx;
+  height: 3rpx;
+  border-radius: 2rpx;
+  background-color: currentColor;
+}
+
+.book-page:first-child {
+  margin-bottom: 5rpx;
+}
+
+/* 选中态：书本/人形内部的 currentColor 不随容器 on 变化，单独提亮 */
+.book-page.on,
+.u-head.on,
+.u-body.on {
+  background-color: #ffffff;
+}
+
+/* 闪电 */
+.glyph-bolt {
+  width: 24rpx;
+  height: 38rpx;
+  background-color: currentColor;
+  clip-path: polygon(56% 0, 14% 62%, 40% 62%, 30% 100%, 88% 38%, 60% 38%);
+}
+
+/* 人形 */
+.glyph-user {
+  width: 42rpx;
+  height: 38rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.u-head {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.u-body {
+  width: 34rpx;
+  height: 16rpx;
+  margin-top: 4rpx;
+  border-radius: 16rpx 16rpx 8rpx 8rpx;
+  background-color: currentColor;
+}
+
+/* ===== 文字 ===== */
+.label {
+  display: block;
+  margin-top: 2rpx;
+  font-size: 22rpx;
+  line-height: 1;
+  color: #98a2b3;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.label.active {
+  color: #ffffff;
+  font-weight: 700;
+}

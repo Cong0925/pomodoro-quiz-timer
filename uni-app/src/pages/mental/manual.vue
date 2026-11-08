@@ -1,39 +1,54 @@
 <template>
   <view class="page">
+    <view class="hero">
+      <view class="hero-badge">速算 · 技巧速查</view>
+      <view class="hero-title">技巧手册</view>
+      <view class="hero-sub">百化分 · 平方数 · 幂次估算，练前背一遍</view>
+    </view>
+
     <!-- 百化分速查表 -->
-    <view class="card">
-      <view class="card-title">百化分速查表（1/2 ~ 1/20）</view>
-      <view class="tbl">
-        <view class="tbl-row" v-for="(row, i) in percentRows" :key="i">
-          <view class="tbl-cell key">{{ row[0] }}</view>
-          <view class="tbl-cell val">{{ row[1] }}</view>
+    <view class="sec">
+      <view class="sec-title"><text class="sec-no">01</text>百化分速查表</view>
+      <view class="bento manual-card">
+        <view class="tbl">
+          <view class="tbl-row" v-for="(row, i) in percentRows" :key="i">
+            <text class="tbl-key">{{ row[0] }}</text>
+            <text class="tbl-val">{{ row[1] }}</text>
+          </view>
         </view>
       </view>
     </view>
 
     <!-- 平方数速查表 -->
-    <view class="card">
-      <view class="card-title">平方数速查表（1² ~ 20²）</view>
-      <view class="tbl">
-        <view class="tbl-row" v-for="(row, i) in squareRows" :key="i">
-          <view class="tbl-cell key">{{ row[0] }}</view>
-          <view class="tbl-cell val">{{ row[1] }}</view>
+    <view class="sec">
+      <view class="sec-title"><text class="sec-no">02</text>平方数速查表</view>
+      <view class="bento manual-card">
+        <view class="tbl">
+          <view class="tbl-row" v-for="(row, i) in squareRows" :key="i">
+            <text class="tbl-key">{{ row[0] }}</text>
+            <text class="tbl-val">{{ row[1] }}</text>
+          </view>
         </view>
       </view>
     </view>
 
     <!-- 幂次估算速查表 -->
-    <view class="card">
-      <view class="card-title">幂次估算速查表（增长类常用）</view>
-      <view class="tbl">
-        <view class="tbl-row" v-for="(row, i) in powRows" :key="i">
-          <view class="tbl-cell key">{{ row[0] }}</view>
-          <view class="tbl-cell val">{{ row[1] }}</view>
+    <view class="sec">
+      <view class="sec-title"><text class="sec-no">03</text>幂次估算速查表</view>
+      <view class="bento manual-card">
+        <view class="tbl">
+          <view class="tbl-row" v-for="(row, i) in powRows" :key="i">
+            <text class="tbl-key">{{ row[0] }}</text>
+            <text class="tbl-val">{{ row[1] }}</text>
+          </view>
         </view>
       </view>
     </view>
 
-    <view class="note">技巧随答随看：练习中答完立即给出对应速算技巧，坚持练习形成肌肉记忆。</view>
+    <view class="note-card">
+      <text class="note-label">练习建议</text>
+      <text class="note-text">技巧随答随看：练习中答完立即给出对应速算技巧，坚持练习形成肌肉记忆。</text>
+    </view>
   </view>
 </template>
 
@@ -79,67 +94,73 @@ const powRows = ref<Array<[string, string]>>([
 </script>
 
 <style scoped lang="scss">
-.card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 28rpx;
-  margin-bottom: $gap-item;
-  box-shadow: $shadow-card;
+.page {
+  padding-bottom: 80rpx;
 }
 
-.card-title {
-  display: flex;
-  align-items: center;
-  font-size: 28rpx;
-  font-weight: 700;
-  color: $text-main;
-  margin-bottom: 20rpx;
-}
-
-.card-title::before {
-  content: '';
-  width: 8rpx;
-  height: 30rpx;
-  border-radius: 4rpx;
-  background: $brand-gradient;
-  margin-right: 14rpx;
+.manual-card {
+  padding: 20rpx;
 }
 
 .tbl {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
 }
 
 .tbl-row {
-  width: 50%;
   display: flex;
-  border: 1rpx solid $line;
-  margin-left: -1rpx;
-  margin-top: -1rpx;
-}
-
-.tbl-cell {
-  flex: 1;
-  text-align: center;
-  padding: 14rpx 4rpx;
-  font-size: 26rpx;
-  font-variant-numeric: tabular-nums;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 18rpx;
+  border-radius: $radius-xs;
+  background-color: $bg-soft;
   min-width: 0;
-  overflow: hidden;
-  color: $text-main;
 }
 
-.tbl-cell.key {
+/* 奇数尾行横跨两列并居中，避免 2 列网格留下半格空白 */
+.tbl-row:last-child:nth-child(odd) {
+  grid-column: span 2;
+  justify-content: center;
+  gap: 36rpx;
   background-color: $brand-50;
+}
+
+.tbl-key {
+  font-size: 25rpx;
   font-weight: 700;
   color: $brand-600;
+  font-variant-numeric: tabular-nums;
 }
 
-.note {
-  font-size: 24rpx;
-  color: $text-weak;
+.tbl-val {
+  font-size: 25rpx;
+  font-weight: 600;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-card {
+  margin-top: 32rpx;
+  padding: 22rpx 24rpx;
+  border-radius: $radius-md;
+  background-color: $bg-card;
+  border-left: 8rpx solid $amber;
+  box-shadow: $shadow-l1;
+}
+
+.note-label {
+  display: block;
+  font-size: 20rpx;
+  font-weight: 700;
+  color: $amber;
+  letter-spacing: 2rpx;
+  margin-bottom: 6rpx;
+}
+
+.note-text {
+  font-size: 23rpx;
+  color: $ink-2;
   line-height: 1.6;
-  text-align: center;
-  margin-top: 8rpx;
 }
 </style>
