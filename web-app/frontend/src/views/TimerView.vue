@@ -187,9 +187,26 @@ const modeDesc = computed(() =>
         </div>
       </div>
       <div class="btn-group">
-        <el-button type="danger" @click="timer.stop()">停止</el-button>
-        <el-button class="btn-gray" @click="timer.clearRound()">清空本轮</el-button>
-        <el-button v-if="timer.showNewRoundBtn.value" type="primary" @click="timer.startNewRound()">开启新一轮</el-button>
+        <!-- 主控按钮：未计时=开始/继续（空格），计时中=暂停（空格） -->
+        <el-button
+          v-if="!timer.showNewRoundBtn.value && !timer.isTiming.value"
+          type="primary"
+          size="large"
+          @click="timer.onSpace()"
+        >{{ timer.records.value.length ? '继续计时（空格）' : '开始计时（空格）' }}</el-button>
+        <el-button
+          v-else-if="!timer.showNewRoundBtn.value"
+          type="primary"
+          size="large"
+          @click="timer.onSpace()"
+        >暂停（空格）</el-button>
+        <el-button type="danger" @click="timer.stop()" :disabled="!timer.isTiming.value">停止</el-button>
+        <el-button
+          class="btn-gray"
+          @click="timer.clearRound()"
+          :disabled="timer.records.value.length === 0 && !timer.isTiming.value"
+        >清空本轮</el-button>
+        <el-button v-if="timer.showNewRoundBtn.value" type="primary" size="large" @click="timer.startNewRound()">开启新一轮</el-button>
       </div>
     </el-card>
 

@@ -31,15 +31,25 @@ export const useStudyStore = defineStore('study', () => {
   const todayTotal = computed(() => todayBaseMs.value + sessionMs.value + pendingMs.value)
 
   function report(addMs: number): void {
-    if (addMs > 0) sessionMs.value += addMs
     const sendMs = addMs + carryMs
     if (sendMs <= 0) return
     carryMs = 0
-    reportStudyDelta(todayKey(), sendMs).catch((e) => {
-      // 失败回队，下次上报一并补传，避免时长丢失
-      carryMs += sendMs
-      console.error('【学习时长上报失败，已回队待重试】', e)
-    })
+    reportStudyDelta(todayKey(), sendMs)
+      .then(() => {
+        // 上报成功才计入会话累计，避免失败重试期间本地虚高
+        sessionMs.value += sendMs
+      })
+      .catch((e) => {
+        // 失败回队，下次上报一并补传，避免时长丢失
+        carryMs += sendMs
+        console.error('【学习时长上报失败，已回队待重试】', e)
+      })
+  }
+
+  /** 以后端权威入库值为准刷新今日基数（统计页轮询时同步，消除本地会话累计与后端口径偏差） */
+  function syncTodayBase(ms: number): void {
+    todayBaseMs.value = Math.max(0, Number(ms) || 0)
+    sessionMs.value = 0
   }
 
   /* ---- 单实例计时锁（多开/刷新时防止时长重复累计） ---- */
@@ -175,5 +185,5 @@ export const useStudyStore = defineStore('study', () => {
     }
   }
 
-  return { running, todayTotal, pendingMs, startSession, start, pause, beaconReport, onPageShow, loadTodayBase, onStorageEvent }
+  return { running, todayTotal, pendingMs, startSession, start, pause, beaconReport, onPageShow, loadTodayBase, syncTodayBase, onStorageEvent }
 })

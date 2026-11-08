@@ -29,6 +29,8 @@ async function reload(): Promise<void> {
       return
     }
     data.value = d
+    /* 今日卡学习时长以后端权威入库值为基准，叠加本次会话未上报尾量，避免与按日表格口径打架 */
+    studyStore.syncTodayBase(Number(d.today?.studyMs ?? 0))
   } catch (e) {
     console.error('【加载学习统计失败】', e)
     ElMessage.error(e instanceof Error ? e.message : '加载统计失败')
