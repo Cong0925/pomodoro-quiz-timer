@@ -191,10 +191,10 @@ onMounted(() => {
     <div class="cal-layout">
       <el-card shadow="never" class="cal-card">
         <div class="cal-toolbar">
-          <el-button text @click="navBy(-1)">‹</el-button>
+          <el-button class="cal-nav" aria-label="上一页" @click="navBy(-1)">‹</el-button>
           <span class="cal-title" :class="{ picker: viewMode !== 'year' }" @click="onTitleClick">{{ title }}</span>
-          <el-button text @click="navBy(1)">›</el-button>
-          <el-button size="small" class="today-btn" @click="goToday">回到今天</el-button>
+          <el-button class="cal-nav" aria-label="下一页" @click="navBy(1)">›</el-button>
+          <el-button size="small" class="today-btn" plain @click="goToday">回到今天</el-button>
         </div>
 
         <!-- 日历视图 -->
@@ -270,14 +270,14 @@ onMounted(() => {
 
 <style scoped>
 .view-header {
-  margin-bottom: 14px;
+  margin-bottom: 20px;
 }
 .view-header h2 {
   margin: 0 0 4px;
 }
 .mode-desc {
   margin: 0;
-  color: var(--el-text-color-secondary);
+  color: var(--app-text-secondary);
   font-size: 13px;
 }
 .cal-layout {
@@ -289,20 +289,38 @@ onMounted(() => {
 .cal-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cal-nav {
+  width: 34px;
+  height: 34px !important;
+  padding: 0 !important;
+  margin-left: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 16px;
+  color: var(--app-text);
 }
 .cal-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   min-width: 140px;
   text-align: center;
+  color: var(--app-text);
 }
 .cal-title.picker {
   cursor: pointer;
-  color: var(--el-color-primary);
+  color: var(--app-primary);
 }
 .today-btn {
+  margin-left: auto;
+}
+.cal-toolbar :deep(.el-button) {
+  margin-left: 0;
+}
+.cal-toolbar .today-btn {
   margin-left: auto;
 }
 .calendar-grid {
@@ -312,44 +330,52 @@ onMounted(() => {
 }
 .cal-weekday {
   text-align: center;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  color: var(--app-text-secondary);
   padding: 4px 0;
 }
 .cal-day {
-  min-height: 64px;
-  border: 1px solid var(--el-border-color-lighter);
+  min-height: 78px;
+  border: 1px solid var(--app-border-light);
   border-radius: 8px;
-  padding: 4px 6px;
+  padding: 6px 8px;
   cursor: pointer;
-  background: var(--el-bg-color);
+  background: #fff;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cal-day:hover {
+  border-color: #c7d9ff;
 }
 .cal-day.other {
-  opacity: 0.4;
+  background: #f8fafc;
+  border-color: #f1f3f5;
+  color: #c6ccd4;
 }
 .cal-day.today {
-  border-color: var(--el-color-primary);
+  border-color: var(--app-primary);
 }
 .cal-day.selected {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary);
+  background: #eff6ff;
+  border-color: var(--app-primary);
 }
 .cal-day-num {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .cal-tag {
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 1.4;
   border-radius: 4px;
-  padding: 0 4px;
+  padding: 0 5px;
   align-self: flex-start;
 }
 .cal-memo-title {
-  font-size: 10px;
-  color: var(--el-text-color-regular);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -361,16 +387,16 @@ onMounted(() => {
 }
 .picker-cell {
   height: 56px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--app-border-light);
   border-radius: 10px;
-  background: var(--el-bg-color);
+  background: #fff;
   cursor: pointer;
   font-size: 14px;
 }
 .picker-cell.active {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  border-color: var(--app-primary);
+  background: #eff6ff;
+  color: var(--app-primary);
   font-weight: 700;
 }
 .picker-cell.today {
@@ -382,6 +408,12 @@ onMounted(() => {
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
+.type-row :deep(.el-check-tag) {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
 .memo-title {
   margin-bottom: 10px;
 }
@@ -389,5 +421,8 @@ onMounted(() => {
   margin-top: 12px;
   display: flex;
   gap: 8px;
+}
+.editor-actions :deep(.el-button) {
+  margin-left: 0;
 }
 </style>

@@ -201,9 +201,9 @@ async function restoreBuiltin(): Promise<void> {
           <span class="cat-name" :title="cat.name">{{ cat.name }}</span>
           <el-tag size="small" :type="cat.builtin ? 'info' : 'success'">{{ cat.builtin ? '内置' : '自定义' }}</el-tag>
           <div class="group-actions">
-            <el-button size="small" text type="primary" @click="addSub(cat)">+ 小类</el-button>
-            <el-button size="small" text @click="renameCat(cat)">重命名</el-button>
-            <el-button size="small" text @click="delCat(cat)">删除</el-button>
+            <el-button size="small" plain type="primary" @click="addSub(cat)">+ 小类</el-button>
+            <el-button size="small" plain @click="renameCat(cat)">重命名</el-button>
+            <el-button size="small" plain type="danger" @click="delCat(cat)">删除</el-button>
           </div>
         </div>
         <div class="subs">
@@ -249,20 +249,31 @@ async function restoreBuiltin(): Promise<void> {
 .header-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+.header-actions :deep(.el-button),
+.group-actions :deep(.el-button) {
+  margin-left: 0;
 }
 .cat-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+.cat-group :deep(.el-card__body) {
+  padding: 14px 16px;
 }
 .group-head {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .cat-name {
+  flex: 1;
+  min-width: 0;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
   max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -270,14 +281,22 @@ async function restoreBuiltin(): Promise<void> {
 }
 .group-actions {
   margin-left: auto;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 .subs {
   margin-top: 10px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 .sub-chip {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
   cursor: pointer;
   background: #f3f4f6 !important;
   border-color: #e5e7eb !important;

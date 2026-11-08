@@ -10,9 +10,9 @@ const study = useStudyStore()
 const display = ref('0 分')
 let renderTimer: number | null = null
 
-/* 可拖动：初始右上角（距右/上各 24px），位置存 localStorage */
+/* 可拖动：初始右下角（与主版本一致），位置存 localStorage */
 const ballRef = ref<HTMLDivElement | null>(null)
-const { pos, dragging, ready, onPointerDown } = useDraggable(ballRef, 'study-float-pos', { right: 24, top: 24 })
+const { pos, dragging, ready, onPointerDown } = useDraggable(ballRef, 'study-float-pos-v2', { right: 26, bottom: 26 })
 
 function fmt(ms: number): string {
   const s = formatDuration(ms)
@@ -54,7 +54,7 @@ onUnmounted(() => {
     @pointerdown="onPointerDown"
     @click="toggle"
   >
-    <el-icon :size="18">
+    <el-icon :size="20">
       <component :is="study.running ? 'VideoPause' : 'VideoPlay'" />
     </el-icon>
     <span class="sf-time">{{ display }}</span>
@@ -67,22 +67,31 @@ onUnmounted(() => {
   /* left/top 由拖动状态注入；ready 前隐藏防首帧闪现 */
   visibility: hidden;
   z-index: 900;
+  width: 66px;
+  height: 66px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: var(--el-color-primary);
+  justify-content: center;
+  gap: 3px;
+  border-radius: 50%;
+  background: var(--app-primary);
   color: #fff;
   cursor: grab;
-  box-shadow: var(--el-box-shadow-light);
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.4);
   user-select: none;
   /* 触屏拖动不触发页面滚动 */
   touch-action: none;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
 }
 .study-float.ready {
   visibility: visible;
+}
+.study-float:hover {
+  transform: scale(1.06);
+}
+.study-float:active {
+  transform: scale(0.96);
 }
 .study-float.dragging {
   cursor: grabbing;
@@ -90,10 +99,15 @@ onUnmounted(() => {
   transition: none;
 }
 .study-float.running {
-  background: var(--el-color-success);
+  background: #dc2626;
+  box-shadow: 0 4px 18px rgba(220, 38, 38, 0.4);
 }
 .sf-time {
-  font-size: 13px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
   font-variant-numeric: tabular-nums;
 }
 </style>

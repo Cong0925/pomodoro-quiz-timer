@@ -15,9 +15,9 @@ const data = ref<StatsData | null>(null)
 const loading = ref(false)
 let refreshTimer: number | null = null
 
-/* 分页（后端切页） */
+/* 分页（后端切页；默认 50 条，数据量与主版本表格一致时不再显示分页） */
 const page = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(50)
 
 async function reload(): Promise<void> {
   loading.value = true
@@ -72,6 +72,34 @@ function rowRate(questions: number, correct: number): string {
   return questions === 0 ? '—' : ((correct / questions) * 100).toFixed(1) + '%'
 }
 
+interface StatCard {
+  label: string
+  value: string | number
+}
+
+/* 今日 / 合计均为 6 张统计卡：2 行 3 列，避免单行 6 项挤成 5+1 */
+const todayCards = computed<StatCard[]>(() => {
+  const v = todayView.value
+  if (!v) return []
+  return [
+    { label: '做题数', value: v.questions },
+    { label: '跳过', value: v.skipped },
+    { label: '正确率', value: v.rate },
+    { label: '做题时长', value: formatDuration(v.work) },
+    { label: '笔记时长', value: formatDuration(v.note) },
+    { label: '学习时长', value: formatDuration(v.learn) },
+  ]
+})
+
+const sumCards = computed<StatCard[]>(() => [
+  { label: '做题数', value: sumView.value.questions },
+  { label: '跳过', value: sumView.value.skipped },
+  { label: '正确率', value: sumView.value.rate },
+  { label: '做题时长', value: formatDuration(sumView.value.workMs) },
+  { label: '笔记时长', value: formatDuration(sumView.value.note) },
+  { label: '学习时长', value: formatDuration(sumView.value.studyMs) },
+])
+
 onMounted(() => {
   reload()
   /* 每 30 秒刷新（今日学习时长实时增长） */
@@ -94,61 +122,21 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 今日情况：单行内联指标条（每项「数值 + 标签」横向平铺，细分隔线） -->
-    <h3 class="section-title">今日</h3>
-    <div v-if="todayView" class="metric-strip">
-      <div class="metric">
-        <div class="m-val">{{ todayView.questions }}</div>
-        <div class="m-label">做题数</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ todayView.skipped }}</div>
-        <div class="m-label">跳过</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ todayView.rate }}</div>
-        <div class="m-label">正确率</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ formatDuration(todayView.work) }}</div>
-        <div class="m-label">做题时长</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ formatDuration(todayView.note) }}</div>
-        <div class="m-label">笔记时长</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ formatDuration(todayView.learn) }}</div>
-        <div class="m-label">学习时长</div>
+    <!-- 今日情况：2 行 3 列蓝调统计卡（与主版本一致） -->
+    <h3 class="section-title today-title">今日</h3>
+    <div v-if="todayCards.length" class="stat-grid">
+      <div v-for="c in todayCards" :key="c.label" class="stat-card today">
+        <div class="s-val">{{ c.value }}</div>
+        <div class="s-label">{{ c.label }}</div>
       </div>
     </div>
 
-    <!-- 范围合计：单行内联指标条 -->
+    <!-- 范围合计：同规格 6 卡，白底与今日蓝卡区分 -->
     <h3 class="section-title">总计（当前粒度范围）</h3>
-    <div class="metric-strip">
-      <div class="metric">
-        <div class="m-val">{{ sumView.questions }}</div>
-        <div class="m-label">做题数</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ sumView.skipped }}</div>
-        <div class="m-label">跳过</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ sumView.rate }}</div>
-        <div class="m-label">正确率</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ formatDuration(sumView.workMs) }}</div>
-        <div class="m-label">做题时长</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ formatDuration(sumView.note) }}</div>
-        <div class="m-label">笔记时长</div>
-      </div>
-      <div class="metric">
-        <div class="m-val">{{ formatDuration(sumView.studyMs) }}</div>
-        <div class="m-label">学习时长</div>
+    <div class="stat-grid">
+      <div v-for="c in sumCards" :key="c.label" class="stat-card total">
+        <div class="s-val">{{ c.value }}</div>
+        <div class="s-label">{{ c.label }}</div>
       </div>
     </div>
 
@@ -163,28 +151,28 @@ onUnmounted(() => {
     <el-card shadow="never" class="table-card" v-loading="loading">
       <el-empty v-if="data && data.total === 0" description="暂无统计数据" />
       <template v-else>
-        <el-table :data="data?.list || []" size="default" stripe>
-          <el-table-column prop="label" label="周期" min-width="130" />
-          <el-table-column prop="rounds" label="轮次" min-width="70" align="center" />
-          <el-table-column prop="questions" label="做题数" min-width="80" align="center" />
-          <el-table-column prop="correct" label="答对" min-width="70" align="center" />
-          <el-table-column prop="skipped" label="跳过" min-width="70" align="center" />
-          <el-table-column label="正确率" min-width="80" align="center">
+        <el-table :data="data?.list || []" size="default" stripe class="stats-table">
+          <el-table-column prop="label" label="周期" min-width="100" />
+          <el-table-column prop="rounds" label="轮次" min-width="60" align="center" />
+          <el-table-column prop="questions" label="做题数" min-width="66" align="center" />
+          <el-table-column prop="correct" label="答对" min-width="60" align="center" />
+          <el-table-column prop="skipped" label="跳过" min-width="60" align="center" />
+          <el-table-column label="正确率" min-width="72" align="center">
             <template #default="{ row }">{{ rowRate(row.questions, row.correct) }}</template>
           </el-table-column>
-          <el-table-column label="做题时长" min-width="100" align="center">
+          <el-table-column label="做题时长" min-width="80" align="center">
             <template #default="{ row }">{{ formatDuration(row.workMs) }}</template>
           </el-table-column>
-          <el-table-column label="学习时长" min-width="100" align="center">
+          <el-table-column label="学习时长" min-width="80" align="center">
             <template #default="{ row }">{{ formatDuration(row.studyMs) }}</template>
           </el-table-column>
         </el-table>
-        <div class="stats-pager">
+        <div v-if="(data?.total || 0) > pageSize" class="stats-pager">
           <el-pagination
             v-model:current-page="page"
             v-model:page-size="pageSize"
             :total="data?.total || 0"
-            :page-sizes="[10, 20, 50, 100]"
+            :page-sizes="[50, 100, 200]"
             layout="total, sizes, prev, pager, next"
             background
             size="small"
@@ -212,44 +200,63 @@ onUnmounted(() => {
   font-size: 13px;
 }
 .section-title {
-  margin: 14px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+  margin: 18px 0 10px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--app-text);
 }
-/* 内联指标条：每项「数值 + 标签」纵向堆叠，项间细分隔线，窄屏自动换行 */
-.metric-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
+.today-title {
+  margin-top: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-primary);
+}
+/* 统计卡：2 行 3 列，今日蓝调 / 合计白底，规格完全一致 */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.stat-card {
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  min-height: 74px;
+}
+.stat-card.today {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.stat-card.total {
   background: #fff;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  overflow: hidden;
 }
-.metric {
-  flex: 1 1 120px;
-  min-width: 110px;
-  padding: 10px 8px;
-  text-align: center;
-}
-/* 除首项外左侧加分隔线（含换行后每行首项的视觉分隔交给容器背景，保持简洁） */
-.metric + .metric {
-  border-left: 1px solid var(--el-border-color-lighter);
-}
-.m-val {
-  font-size: 17px;
+.s-val {
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.3;
-  color: var(--el-text-color-primary);
+  color: var(--app-text);
+  font-variant-numeric: tabular-nums;
 }
-.m-label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-top: 2px;
+.stat-card.today .s-val {
+  color: #1d4ed8;
+}
+.s-label {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--app-text-secondary);
+}
+.stat-card.today .s-label {
+  color: #1e40af;
 }
 .table-card {
   margin-top: 14px;
+}
+.table-card :deep(.el-card__body) {
+  padding: 14px 12px;
+}
+.stats-table :deep(.el-table__header .cell) {
+  white-space: nowrap;
+  word-break: keep-all;
 }
 .stats-pager {
   margin-top: 10px;
@@ -264,19 +271,25 @@ onUnmounted(() => {
 }
 .gran-tab {
   padding: 7px 20px;
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--app-border);
   background: #fff;
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
-  color: var(--el-text-color-regular);
+  color: var(--app-text-regular);
 }
 .gran-tab.active {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--app-primary);
+  border-color: var(--app-primary);
   color: #fff;
+  font-weight: 600;
 }
 .gran-tab:hover:not(.active) {
   background: #f3f4f6;
+}
+@media (max-width: 900px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

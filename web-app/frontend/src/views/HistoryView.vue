@@ -364,19 +364,25 @@ async function loadMore(): Promise<void> {
 .summary-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 .sum-card {
   text-align: center;
 }
 .sum-card .num {
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
+  color: var(--app-text);
+  font-variant-numeric: tabular-nums;
 }
 .sum-card .label {
+  margin-top: 4px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--app-text-secondary);
+}
+.sum-card :deep(.el-card__body) {
+  padding: 14px 16px;
 }
 .history-list {
   display: flex;

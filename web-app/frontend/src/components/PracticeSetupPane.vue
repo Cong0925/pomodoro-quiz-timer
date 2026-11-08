@@ -104,7 +104,7 @@ const MODES = [
 
       <div class="start-row">
         <span class="hint">{{ startTip }}</span>
-        <el-button type="primary" size="large" @click="emit('start')">开始练习</el-button>
+        <el-button type="primary" @click="emit('start')">开始练习</el-button>
       </div>
     </div>
   </div>
@@ -112,14 +112,15 @@ const MODES = [
 
 <style scoped>
 .section-title {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 14px 0 8px;
+  font-size: 14.5px;
+  font-weight: 700;
+  margin: 18px 0 10px;
+  color: var(--app-text);
 }
 .hint {
   font-weight: 400;
   font-size: 12px;
-  color: var(--el-text-color-placeholder);
+  color: var(--app-text-placeholder);
   margin-left: 8px;
 }
 /* 两栏骨架：左大类竖排列表（固定 200px）+ 右侧主区 */
@@ -192,7 +193,7 @@ const MODES = [
   background: #fff;
   border: 1px solid #d3dbe6;
   border-radius: 12px;
-  padding: 16px 20px 18px;
+  padding: 18px 20px;
   box-shadow: 0 2px 12px rgba(31, 45, 61, 0.08);
 }
 /* 卡片内首尾间距修正 */
@@ -212,12 +213,14 @@ const MODES = [
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid var(--el-border-color-lighter);
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: var(--el-bg-color);
+  background: #fff;
   cursor: pointer;
   font-size: 13px;
+  color: var(--app-text-regular);
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 .sub-chip:hover {
@@ -252,11 +255,11 @@ const MODES = [
   gap: 10px;
 }
 .pick-card {
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--app-border);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   cursor: pointer;
-  background: var(--el-bg-color);
+  background: #fff;
   transition: border-color 0.15s;
 }
 .pick-card:hover {
@@ -273,15 +276,15 @@ const MODES = [
   gap: 8px;
 }
 .pc-name {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 14.5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .pc-desc {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--app-text-secondary);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -289,8 +292,8 @@ const MODES = [
 }
 .pc-count {
   flex-shrink: 0;
-  font-size: 12px;
-  color: var(--el-color-primary);
+  font-size: 11.5px;
+  color: var(--app-primary);
 }
 .mode-row {
   display: grid;
@@ -298,32 +301,42 @@ const MODES = [
   gap: 10px;
 }
 .mode-chip {
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--app-border);
   border-radius: 10px;
-  padding: 10px;
+  padding: 12px;
   cursor: pointer;
-  background: var(--el-bg-color);
+  background: #fff;
 }
 .mode-chip.selected {
-  border-color: var(--el-color-primary);
+  border-color: var(--app-primary);
   background: var(--el-color-primary-light-9);
 }
 .mode-chip b {
   display: block;
+  font-size: 14.5px;
+  color: var(--app-text);
 }
 .mode-chip span {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--app-text-secondary);
 }
 .count-row {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+.count-row :deep(.el-check-tag) {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
 }
 .start-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 18px 0;
+  margin: 20px 0 0;
 }
 </style>

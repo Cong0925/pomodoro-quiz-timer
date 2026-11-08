@@ -146,7 +146,6 @@ const modeDesc = computed(() =>
     </el-card>
 
     <el-card shadow="never" class="block-card">
-      <template #header><b>信息</b></template>
       <div class="meta-row">
         <span class="meta-label">标题</span>
         <el-input v-model="timer.roundMeta.title" maxlength="60" placeholder="本轮标题（回车确认后空格开始计时）" />
@@ -191,13 +190,11 @@ const modeDesc = computed(() =>
         <el-button
           v-if="!timer.showNewRoundBtn.value && !timer.isTiming.value"
           type="primary"
-          size="large"
           @click="timer.onSpace()"
         >{{ timer.records.value.length ? '继续计时（空格）' : '开始计时（空格）' }}</el-button>
         <el-button
           v-else-if="!timer.showNewRoundBtn.value"
           type="primary"
-          size="large"
           @click="timer.onSpace()"
         >暂停（空格）</el-button>
         <el-button type="danger" @click="timer.stop()" :disabled="!timer.isTiming.value">停止</el-button>
@@ -206,30 +203,33 @@ const modeDesc = computed(() =>
           @click="timer.clearRound()"
           :disabled="timer.records.value.length === 0 && !timer.isTiming.value"
         >清空本轮</el-button>
-        <el-button v-if="timer.showNewRoundBtn.value" type="primary" size="large" @click="timer.startNewRound()">开启新一轮</el-button>
+        <el-button v-if="timer.showNewRoundBtn.value" type="primary" @click="timer.startNewRound()">开启新一轮</el-button>
       </div>
     </el-card>
 
-    <!-- 本轮记录（5 题一列） -->
-    <div v-if="timer.records.value.length" class="record-wrap">
-      <div v-for="(col, ci) in timer.recordColumns.value" :key="ci" class="record-column">
-        <div class="col-title">第{{ ci + 1 }}组</div>
-        <div v-for="rec in col" :key="rec.no" class="record-item">
-          <template v-if="timer.mode.value === 'single'">
-            第{{ rec.no }}题：{{ rec.timeStr }}
-            <span
-              class="mark mark-toggle"
-              :class="'mark-' + rec.result"
-              title="点击修正本题状态（计时中请先暂停）"
-              @click="timer.toggleRecordResult(rec.no)"
-            >{{ rec.result === 'ok' ? '✓' : rec.result === 'skip' ? '○' : '✗' }}</span>
-          </template>
-          <template v-else>
-            第{{ rec.no }}题
-            <span class="mark" :class="'mark-' + rec.result">{{ rec.result === 'ok' ? '✓' : rec.result === 'skip' ? '○' : '✗' }}</span>
-          </template>
+    <!-- 本轮记录（5 题一列，主版本同款白底记录面板） -->
+    <div class="record-panel">
+      <div v-if="timer.records.value.length" class="record-wrap">
+        <div v-for="(col, ci) in timer.recordColumns.value" :key="ci" class="record-column">
+          <div class="col-title">第{{ ci + 1 }}组</div>
+          <div v-for="rec in col" :key="rec.no" class="record-item">
+            <template v-if="timer.mode.value === 'single'">
+              第{{ rec.no }}题：{{ rec.timeStr }}
+              <span
+                class="mark mark-toggle"
+                :class="'mark-' + rec.result"
+                title="点击修正本题状态（计时中请先暂停）"
+                @click="timer.toggleRecordResult(rec.no)"
+              >{{ rec.result === 'ok' ? '✓' : rec.result === 'skip' ? '○' : '✗' }}</span>
+            </template>
+            <template v-else>
+              第{{ rec.no }}题
+              <span class="mark" :class="'mark-' + rec.result">{{ rec.result === 'ok' ? '✓' : rec.result === 'skip' ? '○' : '✗' }}</span>
+            </template>
+          </div>
         </div>
       </div>
+      <div v-else class="record-empty">本轮暂无记录，开始计时后这里会显示每题的用时与对错标记</div>
     </div>
 
     <!-- 单题对错弹窗 -->
@@ -298,13 +298,10 @@ const modeDesc = computed(() =>
   color: var(--el-text-color-secondary);
 }
 .block-card {
-  margin-bottom: 14px;
-}
-.block-card :deep(.el-card__header) {
-  padding: 10px 16px;
+  margin-bottom: 16px;
 }
 .block-card :deep(.el-card__body) {
-  padding-top: 14px;
+  padding: 18px 24px;
 }
 .cat-row {
   display: flex;
@@ -330,22 +327,24 @@ const modeDesc = computed(() =>
 }
 .stage-card {
   text-align: center;
-  padding: 8px 0;
+  padding: 12px 0 8px;
 }
 .time-display {
-  font-size: 64px;
+  font-size: 104px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 2px;
-  margin: 12px 0;
+  line-height: 1.15;
+  margin: 8px 0 14px;
+  color: var(--app-text);
 }
 .info-bar {
   color: var(--el-text-color-regular);
   margin-bottom: 16px;
-  line-height: 1.9;
+  line-height: 1.7;
 }
 .info-line {
-  font-size: 14px;
+  font-size: 20px;
 }
 .info-gap {
   margin-left: 24px;
@@ -353,7 +352,11 @@ const modeDesc = computed(() =>
 .btn-group {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.btn-group :deep(.el-button) {
+  margin-left: 0;
 }
 .btn-gray {
   background: #6b7280;
@@ -365,6 +368,14 @@ const modeDesc = computed(() =>
   border-color: #4b5563;
   color: #fff;
 }
+/* 本轮记录：主版本同款白底面板 + 5 题一列 */
+.record-panel {
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 18px 24px;
+  min-height: 112px;
+}
 .record-wrap {
   display: flex;
   gap: 16px;
@@ -375,17 +386,34 @@ const modeDesc = computed(() =>
 }
 .col-title {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--app-text-secondary);
   margin-bottom: 6px;
 }
 .record-item {
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
-  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid var(--app-border-light);
+  border-radius: 8px;
+  padding: 8px 12px;
   margin-bottom: 6px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+.record-empty {
+  padding: 18px 0;
+  text-align: center;
+  font-size: 13px;
+  color: #9aa1ac;
+}
+@media (max-width: 900px) {
+  .time-display {
+    font-size: 72px;
+  }
+  .info-line {
+    font-size: 16px;
+  }
+  .info-gap {
+    margin-left: 12px;
+  }
 }
 .mark {
   font-weight: 700;

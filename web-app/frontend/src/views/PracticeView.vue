@@ -530,23 +530,27 @@ onUnmounted(() => {
   font-size: 13px;
 }
 .p-tabs {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
   margin-bottom: 16px;
+  background: #fff;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
 }
 .p-tab {
   padding: 7px 18px;
-  border: 1px solid var(--el-border-color);
-  background: #fff;
-  border-radius: 6px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 13px;
-  color: var(--el-text-color-regular);
+  font-size: 13.5px;
+  color: #6b7280;
 }
 .p-tab.active {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--app-primary);
   color: #fff;
+  font-weight: 600;
 }
 .p-tab:hover:not(.active) {
   background: #f3f4f6;

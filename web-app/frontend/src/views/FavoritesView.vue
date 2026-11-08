@@ -144,7 +144,7 @@ async function loadMore(): Promise<void> {
         <i class="tb-dot">·</i> 轮次 {{ summary.rounds }}
         <i class="tb-dot">·</i> 单题 {{ summary.single }}
       </span>
-      <el-button size="small" type="danger" plain @click="clearAll">清空收藏</el-button>
+      <el-button type="danger" plain @click="clearAll">清空收藏</el-button>
     </div>
 
     <el-empty v-if="!loading && favStore.list.length === 0" description="暂无收藏的错题" />
@@ -202,11 +202,11 @@ async function loadMore(): Promise<void> {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 8px 12px;
-  margin-bottom: 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  background: var(--el-bg-color);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: #fff;
 }
 .tb-filters {
   display: flex;
@@ -218,13 +218,12 @@ async function loadMore(): Promise<void> {
   width: 130px;
 }
 .tb-count {
-  flex: 1;
-  text-align: center;
+  order: 3;
+  flex: 1 1 100%;
+  text-align: left;
   font-size: 13px;
-  color: var(--el-text-color-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--app-text-secondary);
+  line-height: 1.5;
 }
 .tb-dot {
   color: var(--el-border-color);

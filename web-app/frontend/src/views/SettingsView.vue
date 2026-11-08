@@ -106,7 +106,12 @@ onMounted(() => {
 
 <template>
   <div class="settings-view">
-    <h2>设置</h2>
+    <div class="view-header">
+      <div>
+        <h2>设置</h2>
+        <p class="mode-desc">本地化保存 · 数据库运行信息 · 关于</p>
+      </div>
+    </div>
     <el-tabs v-model="tab">
       <!-- 本地化保存 -->
       <el-tab-pane label="本地化保存" name="backup">
@@ -114,8 +119,8 @@ onMounted(() => {
           <h3 class="s-title">本地化保存（JSON 备份 / 迁移）</h3>
           <p class="s-desc">把数据库中的全部数据导出为 JSON 文件保存到本地，或从 JSON 文件导入数据。适合定期备份、换电脑迁移数据。</p>
           <div class="s-actions">
-            <el-button size="large" @click="doExport">保存 JSON（导出全部数据）</el-button>
-            <el-button size="large" @click="pickImportFile">导入 JSON（合并数据）</el-button>
+            <el-button @click="doExport">保存 JSON（导出全部数据）</el-button>
+            <el-button @click="pickImportFile">导入 JSON（合并数据）</el-button>
           </div>
           <p class="s-tip">
             <strong>说明：</strong>导出会下载一个 <code>data-日期.json</code> 文件；导入会自动合并数据（按轮次去重），不会重复、不会丢失。建议每周导出一次作为备份。
@@ -161,34 +166,36 @@ onMounted(() => {
 </template>
 
 <style scoped>
-h2 {
-  margin: 0 0 10px;
-}
 .s-card {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 .s-title {
   margin: 0 0 10px;
   font-size: 16px;
+  font-weight: 700;
 }
 .s-desc {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
+  font-size: 13.5px;
+  color: var(--app-text-secondary);
   margin: 0 0 16px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 .s-actions {
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.s-actions :deep(.el-button) {
+  margin-left: 0;
 }
 .s-tip {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  background: #f9fafb;
-  border: 1px dashed var(--el-border-color-light);
-  border-radius: 6px;
-  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+  background: #f8fafc;
+  border: 1px dashed var(--app-border);
+  border-radius: 8px;
+  padding: 12px 14px;
   margin: 0;
   line-height: 1.6;
 }

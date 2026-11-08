@@ -110,9 +110,11 @@ onUnmounted(() => {
   <el-config-provider :locale="zhCn">
   <el-container class="app-shell">
     <!-- 左侧菜单 -->
-    <el-aside width="200px" class="sidebar">
+    <el-aside width="230px" class="sidebar">
       <div class="brand">
-        <el-icon :size="26" color="var(--el-color-primary)"><Timer /></el-icon>
+        <div class="brand-logo">
+          <el-icon :size="20" color="#fff"><Timer /></el-icon>
+        </div>
         <div class="brand-text">
           <div class="brand-name">刷题计时器</div>
           <div class="brand-sub">计时 · 统计 · 留痕</div>
@@ -163,40 +165,79 @@ onUnmounted(() => {
 .sidebar {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--el-border-color-light);
-  background: var(--el-bg-color);
+  width: 230px;
+  padding: 20px 14px;
+  border-right: 1px solid var(--app-border);
+  background: var(--app-bg);
   overflow: hidden;
+  box-sizing: border-box;
 }
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 18px 16px 12px;
+  padding: 4px 8px 18px;
+  border-bottom: 1px solid var(--app-border-light);
+  margin-bottom: 14px;
+}
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--app-primary);
 }
 .brand-name {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
+  line-height: 1.3;
+  color: var(--app-text);
 }
 .brand-sub {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  color: var(--app-text-secondary);
 }
 .menu {
   flex: 1;
   border-right: none;
   overflow-y: auto;
+  background: transparent;
 }
-/* 原版风格：active 整行浅蓝底 + 蓝字，不要左边框 */
-.menu :deep(.el-menu-item.is-active) {
-  background: #eff6ff;
-  color: #2563eb;
-  border-right: none;
+.menu :deep(.el-menu-item-group__title) {
+  padding: 12px 10px 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #9aa1ac;
+  letter-spacing: 0.05em;
 }
-.menu :deep(.el-menu-item.is-active::before) {
-  display: none;
+.menu :deep(.el-menu-item) {
+  height: 40px;
+  line-height: 40px;
+  padding: 0 12px !important;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--app-text-regular);
+}
+.menu :deep(.el-menu-item .el-icon) {
+  font-size: 18px;
+  margin-right: 10px;
 }
 .menu :deep(.el-menu-item:hover) {
   background: #f3f4f6;
+  color: var(--app-text);
+}
+/* 主版本同款 active：整行浅蓝底 + 蓝字 + 600 */
+.menu :deep(.el-menu-item.is-active) {
+  background: #eaf1ff;
+  color: var(--app-primary);
+  font-weight: 600;
+}
+.menu :deep(.el-menu-item.is-active::before) {
+  display: none;
 }
 .menu-badge {
   margin-left: auto;
@@ -204,7 +245,7 @@ onUnmounted(() => {
   height: 20px;
   padding: 0 6px;
   border-radius: 10px;
-  background: #2563eb;
+  background: var(--app-primary);
   color: #fff;
   font-size: 12px;
   line-height: 20px;
@@ -213,20 +254,22 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 .data-file-card {
-  margin: 8px 10px 12px;
-  padding: 10px 12px;
+  margin-top: 20px;
+  padding: 12px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
-  background: #f9fafb;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  line-height: 1.5;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
 }
 .data-file-card .tip {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
+  color: #94a3b8;
 }
 .content {
   overflow-y: auto;
-  background: var(--el-fill-color-light);
+  background: var(--app-page-bg);
 }
 </style>

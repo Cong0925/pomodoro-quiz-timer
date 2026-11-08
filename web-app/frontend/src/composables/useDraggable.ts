@@ -13,7 +13,7 @@ const DRAG_THRESHOLD = 5
 export function useDraggable(
   elRef: Ref<HTMLElement | null>,
   storageKey: string,
-  defaultOffset: { right: number; top: number } = { right: 24, top: 24 }
+  defaultOffset: { right: number; top?: number; bottom?: number } = { right: 24, top: 24 }
 ) {
   const pos = ref<DragPos>({ x: 0, y: 0 })
   const dragging = ref(false)
@@ -61,11 +61,14 @@ export function useDraggable(
       console.warn(`【拖动位置读取失败】键名 ${storageKey}，已回退默认位置`, e)
     }
     if (!p) {
-      /* 默认位置：距右、距上 defaultOffset（初始为右上角） */
+      /* 默认位置：距右、距上或距下（主版本悬浮球在右下角） */
       const el = elRef.value
       p = {
         x: window.innerWidth - (el?.offsetWidth ?? 0) - defaultOffset.right,
-        y: defaultOffset.top,
+        y:
+          defaultOffset.bottom != null
+            ? window.innerHeight - (el?.offsetHeight ?? 0) - defaultOffset.bottom
+            : (defaultOffset.top ?? 24),
       }
     }
     pos.value = clampToViewport(p)
