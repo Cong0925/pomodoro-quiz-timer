@@ -18,9 +18,9 @@ router.post('/', asyncHandler(async (req, res) => {
         if (addMs <= 0) return res.json({ ok: true, added: 0 });
 
         await pool.query(
-            `INSERT INTO study_daily (study_date, ms) VALUES (?,?)
+            `INSERT INTO study_daily (study_date, user_id, ms) VALUES (?,?,?)
              ON DUPLICATE KEY UPDATE ms = ms + VALUES(ms)`,
-            [date, addMs]
+            [date, 1, addMs]
         );
         res.json({ ok: true, added: addMs });
 }));
@@ -29,7 +29,7 @@ router.post('/', asyncHandler(async (req, res) => {
 router.get('/', asyncHandler(async (req, res) => {
         const date = req.query.date;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return res.status(400).json({ error: '日期格式应为 YYYY-MM-DD' });
-        const [rows] = await pool.query('SELECT ms FROM study_daily WHERE study_date=?', [date]);
+        const [rows] = await pool.query('SELECT ms FROM study_daily WHERE study_date=? AND user_id=1', [date]);
         res.json({ date, ms: rows.length ? rows[0].ms : 0 });
 }));
 
