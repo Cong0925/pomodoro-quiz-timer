@@ -375,12 +375,14 @@ async function restoreQ(id: number): Promise<void> {
             <div class="q-title">{{ curBankInfo ? curBankInfo.name : '未选题库' }}</div>
             <div class="q-sub">{{ curBankInfo ? `${curBankInfo.catName || ''}${curBankInfo.subName ? ' / ' + curBankInfo.subName : ''} · ${curBankInfo.count} 道题` : '' }}</div>
           </div>
-          <el-button type="primary" :disabled="!curBank" @click="openQDialog(0)">+ 新增题目</el-button>
-          <el-select v-model="statusFilter" style="width: 130px" @change="qPage = 1">
-            <el-option value="normal" label="仅正常" />
-            <el-option value="deleted" label="仅已停用" />
-            <el-option value="all" label="全部状态" />
-          </el-select>
+          <div class="q-head-ops">
+            <el-button type="primary" :disabled="!curBank" @click="openQDialog(0)">+ 新增题目</el-button>
+            <el-select v-model="statusFilter" style="width: 130px" @change="qPage = 1">
+              <el-option value="normal" label="仅正常" />
+              <el-option value="deleted" label="仅已停用" />
+              <el-option value="all" label="全部状态" />
+            </el-select>
+          </div>
         </div>
 
         <el-table v-loading="qLoading" :data="questions" size="default" stripe :row-class-name="({ row }: { row: PracticeQuestion }) => (row.is_deleted ? 'row-deleted' : '')" :height="questions.length ? 500 : undefined">
@@ -532,8 +534,15 @@ async function restoreQ(id: number): Promise<void> {
 <style scoped>
 .mg-toolbar {
   display: flex;
+  align-items: center;
   gap: 10px;
   margin-bottom: 12px;
+}
+/* 筛选下拉与同排按钮统一为 38px，避免 Element 默认 select 32px、button 38px 的高度差 */
+.mg-toolbar :deep(.el-select__wrapper),
+.q-head-ops :deep(.el-select__wrapper) {
+  min-height: 38px;
+  box-sizing: border-box;
 }
 .mg-body {
   display: grid;

@@ -456,6 +456,12 @@ onMounted(() => load())
   flex-wrap: wrap;
   margin-bottom: 8px;
 }
+/* 筛选下拉/搜索框与同排按钮统一 38px，避免默认 select 32px、button 38px 的高度差 */
+.toolbar :deep(.el-select__wrapper),
+.toolbar :deep(.el-input__wrapper) {
+  min-height: 38px;
+  box-sizing: border-box;
+}
 .stat-line {
   font-size: 12px;
   color: var(--el-text-color-secondary);

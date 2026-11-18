@@ -2399,6 +2399,29 @@ button:hover {
 .p-op-btn.danger:hover { background: #fef2f2; color: #dc2626; }
 .p-manage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; padding: 4px 2px 14px; border-bottom: 1px solid #f0f2f5; }
 .p-manage-ops { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.p-manage-ops .p-status-select {
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    font-size: 12.5px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+}
+.p-manage-ops .pq-btn--small {
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 12px;
+}
+.p-bank-toolbar .df-btn.small {
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 12px;
+}
 .p-deleted-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #6b7280; cursor: pointer; user-select: none; }
 .p-deleted-toggle input { accent-color: #2563eb; cursor: pointer; }
 .p-manage-info { min-width: 0; }
