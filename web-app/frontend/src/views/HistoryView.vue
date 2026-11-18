@@ -348,10 +348,15 @@ async function loadMore(): Promise<void> {
   font-size: 13px;
 }
 .filter-card {
+  /* 与错题收藏工具栏一致的内边距，同时覆盖 Element 默认卡片 padding */
+  --el-card-padding: 10px 14px;
   margin-bottom: 12px;
+}
+/* 筛选条件从左开始排列，给后续新增条件留出右侧空间 */
+.filter-card :deep(.el-card__body) {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .filter-count {
