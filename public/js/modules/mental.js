@@ -424,13 +424,17 @@
         state.run.finished = true;
         state.run.phase = 'result';
         if (state.timer) { clearInterval(state.timer); state.timer = null; }
-        const ms = Date.now() - state.run.startTs;
+        const endTs = Date.now();
+        const ms = endTs - state.run.startTs;
         try {
             const r = await api.post(`/api/mental/${state.run.sessionId}/finish`, { ms });
             /* 刷新历史总数（侧边栏徽标） */
             try { await PQ.data.loadHistoryPage({ page: 1, limit: (PQ.data.historyPage || {}).limit || 20 }); if (PQ.app) PQ.app.updateBadges(); } catch (e) { /* 不阻塞结算 */ }
-            /* 与题库练习一致：时长并入今日学习时长 */
-            try { await api.post('/api/study-daily', { date: U.todayKey(new Date()), addMs: ms }); } catch (e) { /* 不阻塞结算 */ }
+            /* 与题库练习一致：按开始/结束真实区间拆日并入学习时长 */
+            const studySegs = U.splitStudyRange(state.run.startTs, endTs);
+            await Promise.all(studySegs.map(seg =>
+                api.post('/api/study-daily', { date: seg.date, addMs: seg.ms }).catch(() => { /* 不阻塞结算 */ })
+            ));
             el('mPaneRun').hidden = true;
             el('mPaneResult').hidden = false;
             el('mScore').textContent = r.rate + '%';

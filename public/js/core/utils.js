@@ -43,6 +43,25 @@
     /* 日期键 YYYY-MM-DD */
     function todayKey(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
 
+    /* 把一段真实时间按本地 00:00 切成按日片段：
+       返回 [{ date: 'YYYY-MM-DD', ms }]，跨零点不会把前一天时长并入后一天 */
+    function splitStudyRange(startTs, endTs) {
+        const start = Number(startTs);
+        const end = Number(endTs);
+        if (!isFinite(start) || !isFinite(end) || end <= start) return [];
+        const segs = [];
+        let cursor = Math.floor(start);
+        while (cursor < end) {
+            const d = new Date(cursor);
+            const nextMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0);
+            const segEnd = Math.min(Math.floor(end), nextMidnight.getTime());
+            if (segEnd <= cursor) break;
+            segs.push({ date: todayKey(d), ms: segEnd - cursor });
+            cursor = segEnd;
+        }
+        return segs;
+    }
+
     /* "YYYY-MM-DD HH:mm:ss" -> Date（本地时区） */
     function parseDateStr(s) {
         const parts = String(s).split(' ');
@@ -84,6 +103,6 @@
     window.PQ = window.PQ || {};
     PQ.utils = {
         showToast, formatTime, formatMs, formatDate, escapeHtml, pad2, todayKey,
-        parseDateStr, mondayOf, formatDuration, normCalTitle, uid
+        splitStudyRange, parseDateStr, mondayOf, formatDuration, normCalTitle, uid
     };
 })();

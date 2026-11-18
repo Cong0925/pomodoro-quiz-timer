@@ -180,23 +180,39 @@
        - 关闭页面：仅上报计时中未上报的部分（sendBeacon） */
     let studyRunning = false;      // 是否正在计时（用户控制）
     let lastTick = null;           // 当前连续计时段的起点
-    let sessionStudyMs = 0;        // 本次页面运行已上报的累计时长（毫秒）
-    let todayBaseMs = 0;           // 今日已入库时长基数（页面加载时读取，不含本次会话）
+    let sessionStudyMsByDay = Object.create(null); // 本次页面运行已上报的累计时长（按日期分开）
+    let todayBaseMs = 0;           // 当前日期已入库时长基数（页面加载时读取，不含本次会话）
+    let todayBaseDate = U.todayKey(new Date());
     let reportTimer = null;
 
-    function todayKeyStr() {
-        return U.todayKey(new Date());
+    function todayKeyStr(d) {
+        return U.todayKey(d || new Date());
     }
 
-    let carryStudyMs = 0; // 上报失败待重试的时长（下次上报一并补传）
-    function reportStudy(addMs) {
-        if (addMs > 0) sessionStudyMs += addMs;
-        const sendMs = (addMs > 0 ? addMs : 0) + carryStudyMs;
-        if (sendMs <= 0) return;
-        carryStudyMs = 0;
-        A.post('/api/study-daily', { date: todayKeyStr(), addMs: sendMs }).catch((e) => {
-            carryStudyMs += sendMs; // 失败回队，避免时长丢失
-            console.error('【学习时长上报失败，已回队待重试】', e);
+    /* 跨零点的时长按本地日期切段；上报失败时连同日期一起回队，重试不会串日 */
+    let carryStudySegs = []; // [{date, ms}]
+    function mergeSegs(segs) {
+        const map = Object.create(null);
+        segs.forEach(s => {
+            if (s && s.ms > 0) map[s.date] = (map[s.date] || 0) + s.ms;
+        });
+        return Object.keys(map).map(date => ({ date, ms: map[date] }));
+    }
+
+    function reportStudy(startTs, endTs) {
+        const fresh = U.splitStudyRange(startTs, endTs);
+        if (fresh.length === 0 && carryStudySegs.length === 0) return;
+        const sendSegs = mergeSegs(carryStudySegs.concat(fresh));
+        carryStudySegs = [];
+        sendSegs.forEach(seg => {
+            A.post('/api/study-daily', { date: seg.date, addMs: seg.ms })
+                .then(() => {
+                    sessionStudyMsByDay[seg.date] = (sessionStudyMsByDay[seg.date] || 0) + seg.ms;
+                })
+                .catch((e) => {
+                    carryStudySegs.push(seg); // 失败回队，保留原日期
+                    console.error('【学习时长上报失败，已回队待重试】', e);
+                });
         });
     }
 
@@ -256,7 +272,7 @@
         reportTimer = setInterval(() => {
             if (studyRunning && lastTick) {
                 const now = Date.now();
-                reportStudy(now - lastTick);
+                reportStudy(lastTick, now);
                 lastTick = now;
             }
         }, 60000);
@@ -274,33 +290,36 @@
     function pauseStudy() {
         if (!studyRunning) return;
         const now = Date.now();
-        if (lastTick) reportStudy(now - lastTick);
+        if (lastTick) reportStudy(lastTick, now);
         studyRunning = false;
         lastTick = null;
         releaseOwner();
     }
 
-    /* 页面关闭：仅上报计时中未上报的部分（sendBeacon 可靠送达） */
+    /* 页面关闭：仅上报计时中未上报的部分（sendBeacon 可靠送达）
+       跨零点时按日期拆成多条，前一天尾量不会被记到后一天 */
     function beaconReport() {
         if (!studyRunning || !lastTick) return;
-        const addMs = Date.now() - lastTick;
-        if (addMs <= 0) return;
-        try {
-            const ok = navigator.sendBeacon('/api/study-daily',
-                new Blob([JSON.stringify({ date: todayKeyStr(), addMs })], { type: 'application/json' }));
-            if (!ok) {
-                /* beacon 入队失败（队列满）时降级 keepalive fetch，尽量不丢尾量 */
-                fetch('/api/study-daily', {
-                    method: 'POST', keepalive: true,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date: todayKeyStr(), addMs })
-                }).catch((e) => console.error('【学习时长 fetch 补尾失败】', e));
+        const now = Date.now();
+        const segs = U.splitStudyRange(lastTick, now);
+        segs.forEach(seg => {
+            try {
+                const ok = navigator.sendBeacon('/api/study-daily',
+                    new Blob([JSON.stringify({ date: seg.date, addMs: seg.ms })], { type: 'application/json' }));
+                if (!ok) {
+                    /* beacon 入队失败（队列满）时降级 keepalive fetch，尽量不丢尾量 */
+                    fetch('/api/study-daily', {
+                        method: 'POST', keepalive: true,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: seg.date, addMs: seg.ms })
+                    }).catch((e) => console.error('【学习时长 fetch 补尾失败】', e));
+                }
+            } catch (e) {
+                console.error('【学习时长 beacon 上报失败】', e);
             }
-        } catch (e) {
-            console.error('【学习时长 beacon 上报失败】', e);
-        }
+        });
         /* 推进起点：bfcache 恢复后不重复计已上报区间 */
-        lastTick = Date.now();
+        lastTick = now;
     }
 
     /* bfcache 恢复：重新锚定计时起点，防止把已上报区间重复计 */
@@ -308,15 +327,34 @@
         if (e.persisted && studyRunning) lastTick = Date.now();
     });
 
+    /* 页面切到后台立即落一次账：浏览器节流/休眠前先按日切分上报，减少尾量丢失 */
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden' && studyRunning && lastTick) {
+            const now = Date.now();
+            reportStudy(lastTick, now);
+            lastTick = now;
+        }
+    });
+
     /* 本次会话尚未上报的时长（仅计时中有效，暂停时为 0） */
     function pendingStudyMs() {
-        if (studyRunning && lastTick) return Date.now() - lastTick;
+        if (studyRunning && lastTick) return Math.max(0, Date.now() - lastTick);
         return 0;
     }
 
-    /* 本次页面运行已计学习时长（已上报 + 未上报） */
+    /* 某个日期在本次会话中尚未上报的时长（跨零点按日期切分） */
+    function pendingStudyMsForDay(key) {
+        if (!studyRunning || !lastTick) return 0;
+        return U.splitStudyRange(lastTick, Date.now())
+            .filter(seg => seg.date === key)
+            .reduce((sum, seg) => sum + seg.ms, 0);
+    }
+
+    /* 本次页面运行已计学习时长（全部日期已上报 + 当前未上报） */
     function sessionStudyMsTotal() {
-        return sessionStudyMs + pendingStudyMs();
+        let total = pendingStudyMs();
+        Object.keys(sessionStudyMsByDay).forEach(k => { total += sessionStudyMsByDay[k]; });
+        return total;
     }
 
     /* 页面加载时读取今日已入库时长作为基数（与统计面板同源） */
@@ -324,15 +362,20 @@
         try {
             const r = await A.get('/api/stats?gran=day');
             todayBaseMs = (r && r.today) ? Number(r.today.studyMs) : 0;
+            todayBaseDate = todayKeyStr();
+            sessionStudyMsByDay = Object.create(null);
         } catch (e) {
             todayBaseMs = 0;
+            todayBaseDate = todayKeyStr();
         }
     }
 
     /* 今日总学习时长（悬浮窗显示用，与统计面板完全同步）：
-       今日已入库基数 + 本次会话已上报 + 尚未上报 */
+       今日已入库基数 + 今日已上报 + 今日尚未上报；跨零点后旧基数不再计入 */
     function todayStudyTotal() {
-        return todayBaseMs + sessionStudyMs + pendingStudyMs();
+        const key = todayKeyStr();
+        const base = todayBaseDate === key ? todayBaseMs : 0;
+        return base + (sessionStudyMsByDay[key] || 0) + pendingStudyMsForDay(key);
     }
 
     /* ==================== 导入导出 ==================== */
