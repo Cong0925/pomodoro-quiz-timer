@@ -1,7 +1,7 @@
 ---
 description: Claude 会话备忘：项目理解、多版本架构、web-app 当前进度与待办（每次会话开始读取，任务完成后更新）
 created: 2026-10-28
-last_modified: 2026-11-08
+last_modified: 2026-11-18
 ---
 
 # Claude 会话备忘（project memo）
@@ -57,7 +57,7 @@ web-app/
 
 > 仓库根另有 `database/` 一键数据库初始化工具箱（`init-all.js` + `seed-data.sql.gz` + `README.md`，双版本共用，跨电脑加载数据库用，见进度第 39 条）。
 
-## 四、当前进度（截至 2026-11-01 18:34）
+## 四、当前进度（截至 2026-11-18 15:56）
 
 **已完成**：
 1. ✅ 分支切到 `version-vue+node`，web-app 前后端分离骨架（方案A）搭建完毕
@@ -133,6 +133,18 @@ web-app/
 52. ✅ **底部 tabBar 专项重做（2026-11-08 20:0x，承接用户「底栏是否合适」质疑）**：定位 H5 预览显示的是 uni 默认纯文字 `.uni-tabbar`，并非微信端玻璃 tabBar——① 新建 `src/components/AppTabBarH5.vue`（H5 专用，与微信端同源玻璃胶囊，`active` 四态，`#ifdef H5` 控制显示），四个 tab 页挂载；`App.vue` 追加 H5-only `.uni-tabbar{display:none!important}`；② 两轮视觉升级：选中态由「小圆角方块 + 蓝字」改为**整块品牌渐变胶囊 + 白色图标/白色加粗 label**，`.tab.active` 直接承载渐变与 `0 10rpx 24rpx rgba(47,107,255,.28)` 投影，内层 `.icon-wrap` 去底；③ 四图标统一纯 CSS，书本由「两片实心页（似暂停键）」改为**文档轮廓 + 两条文字线**，人形/房子/闪电保留实心；label 22rpx、`margin-top:2rpx`；④ 微信端 `custom-tab-bar/index.{wxss,wxml}` 与 H5 组件同步同款。H5 实测四页选中态正确、程序化点击可 switchTab；`build:h5`/`build:mp-weixin`/`type-check` 均 exit 0。**说明：`pages/timer/batch` 等非 tab 页在微信端本就不显示 tabBar，H5 原生栏出现在该页是预览假象，已一并隐藏。已提交（commit `840531f1`，2026-11-08 用户指令「根据修改进行提交和推送」）。**
 
 53. ✅ **web-app 与主版本界面样式统一（2026-11-08 20:05，用户反馈「没有统一、有的大有的小」，直接修改）**：以主版本视觉规格为基准，web-app 重写 `style.css` 设计令牌（主色 `#2563eb`、边框/文字/圆角/控件高度统一，删除暗色分支），侧栏 200→230px、品牌 36 图标/17 名/12 副、菜单 15px/40 高/选中 `#eaf1ff` 600、底部虚线卡；页面 h2 统一 22px、header 间距 20px，设置页补 header；计时大数字 64→104px、信息行 20px、按钮统一 38px 高、记录区白底面板；统计单行 6 项改 2×3 统计卡 + 表格 8 列压缩不裁切；速算题型 4 列 + 图标块 + 难度卡片；练习/速算 tab 改整块分段胶囊；分类 16px + 30px 胶囊 + 描边操作按钮；日历 78px 日期格 + 34px 方钮；历史汇总 26px；悬浮球改 66×66 右下圆形、运行红、保留拖拽。主版本同步收小全局按钮（15px/10 22）与速算管理表字号（18→13/14）。`npm run build` exit 0；1004×892 视口逐页截图复核。残余：练习页首屏「开始练习」仍会被右下悬浮球压住一角（已加 104px 底部留白，滚到页尾可完整点击），是否改停靠位待确认；**已提交并推送（`c0b71293` web-app、`b5edf12a` 主版本、`eb4ba123` docs，2026-11-08 用户指令「提交并推送」）**。详见 `docs/修改记录/11月/第1章 修改记录11-8.md`。
+
+54. ✅ **双端内容区改真正弹性布局（2026-11-12 20:42，用户反馈「两边留白像停车场、东拼西凑没整体感」）**：主版本 `.view` 去掉 1040/1280/1500 固定上限，`width:100%; max-width:none; margin:0`，内容 padding 改 `32px clamp(24px,2vw,40px) 48px`；web-app `#app .el-main.content > *` 去 1040 居中，改 `width:100%; max-width:none; margin:0`，padding 改 `32px clamp(24px,2vw,36px) 104px`。统计页 ≥1400px 双端改 6 卡一行（主版本 `display:contents` 拉平两行 `.stats-row`，web-app `repeat(6,minmax(0,1fr))`），1904px 实测卡片 253.8/256.2px、全宽表格铺满；设置备份卡 ≥1200px 改左内容+右说明两栏（`1fr + 440px`），避免全宽卡内容偏左。1904px 同源 iframe 实测主版本内容 1659px、`#viewStats` 1583px，web-app 内容 1659px、练习主卡 1368px/题库 5 列；967px 原生视口逐页无横向溢出。`npm run build` exit 0（1794 modules）。详见 `docs/修改记录/11月/第1章 修改记录11-12.md`；**未提交（等用户指令）**。
+
+55. ✅ **题量按钮样式修复（2026-11-12 20:50，用户指出内边距/文字不对、选中「5」看不清）**：根因不是全局 `.el-button`（`el-check-tag` 不是 button），而是 Element 默认 `el-check-tag` 灰底 `#f4f4f5` + 灰字 `#909399`、无边框，选中态 `primary-light-8` 浅蓝底 + 蓝字、无描边；原组件只覆盖了高度/内边距。给 `PracticeSetupPane.vue`、`MentalSetupPane.vue` 的标签加独立 `count-tag` 类，显式定死 `44×34`、`padding:0 12px`、白底 `#fff`、文字 `#4b5563`/13px/500、`1px #e5e7eb` 边框、圆角 8px；选中态改 `#eaf1ff` 底 + `#2563eb` 字 + 1px 蓝边 + 700。967px 与 1904px 同源 iframe 实测 6 个标签均 44×34、等距，速算页 `/mental` 同步生效。`npm run build` exit 0。详见 `docs/修改记录/11月/第1章 修改记录11-12.md`；**未提交（等用户指令）**。
+
+56. ✅ **学习时长跨零点归属修复 + 本周数据补偿（2026-11-18 15:56，用户反馈前一天时长被并入后一天或过零点丢失）**：根因是主版本 `dataModel.js` 与 web-app `studyStore.ts` 都用**上报时刻**的 `todayKey()` 归日；后台节流/休眠/刷新/`pagehide` 补尾时，积压的跨零点时长会整段挂到新日期。修复：主版本 `utils.js` 新增 `splitStudyRange(startTs,endTs)`，web-app `format.ts` 新增同口径 `splitStudyByDay`；两端的 60s 定时上报、暂停、`sendBeacon` 全部改传真实区间并按本地 00:00 拆成多条分别写 `/api/study-daily`，失败队列保存 `{date,ms}`；会话累计改按日期存储，`todayTotal` 只汇总当前日期，跨零点旧基数归零；新增 `visibilitychange` 切后台立即落账；主版本 `practice.js` / `mental.js` 与 web-app `PracticeView.vue` / `MentalView.vue` 的结算上报也改用真实 `startTs -> endTs` 区间拆日，避免一轮练习跨零点整段记到结束日。实测 22:00→00:30 拆为 2.000h + 0.500h；web-app `npm run build` exit 0（1794 modules）。数据库写前完整备份 `data/backups/2026-11-18-1556/`；本周 11-16/17/18 原 17,637ms、无记录、无记录，按不足 2 小时口径随机补到 6.03h / 7.15h / 6.05h（日志与回滚 SQL 同目录）。uni-app 无计时上报入口，不改。详见 `docs/修改记录/11月/第1章 修改记录11-12.md`；**未提交（等用户指令）**。
+
+57. ✅ **截图框选历史学习时长补偿（2026-11-18 16:12）**：按用户截图范围 2026-11-06 至 2026-11-15，对低于 5 小时的日期随机补到 5-8 小时；11-12 原 6h25m 已在区间内保留。9 天写入 5h15m—7h42m（11-14 为新增行），未改 11-16 至 11-18 当前周数据。写前 `study_daily` 全表快照、执行日志与专用回滚 SQL 在 `data/backups/2026-11-18-1611/`。
+
+58. ✅ **web-app 题库管理筛选控件高度统一（2026-11-18 16:23）**：用户指出下拉框与按钮高度不一致。根因是全局按钮固定 38px，Element 默认 select wrapper 仍是 32px；`PracticeManage.vue` 的 q-head 还缺 `.q-head-ops` 包裹导致按钮被推到中间。已把 `mg-toolbar` / `q-head-ops` 内 select wrapper 统一为 38px，把「新增题目 + 仅正常」包回右侧成组；`MentalManage.vue` 的筛选 select/input 同设 38px；主版本同步把题库管理状态下拉、操作按钮和新增题库按钮统一到 32px。浏览器实测 web-app 各控件与 q-head-ops 均 38px，build exit 0。
+
+59. ✅ **全站“回到顶部”补齐（2026-11-18 16:47）**：主版本原来只有历史记录页有回顶按钮，改为 `index.html` 全站唯一 `#backTopBtn` + `app.js` 统一监听滚动/切页归顶，删除 `history.js` 内重复创建；web-app 原来只在历史记录页有 `el-backtop`，改为 `App.vue` 外壳全站唯一组件（target `.el-main`），并在路由切换时把内容区滚回顶部。两端按钮底部改为 100px，避开学习时长悬浮球。实测主版本统计页与 web-app 统计页滚动后按钮出现、点击可回顶，build exit 0。
 
 
 **待办（建议优先级）**：
