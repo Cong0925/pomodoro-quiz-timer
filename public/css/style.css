@@ -165,12 +165,13 @@ body {
 .content {
     flex: 1;
     min-width: 0;
-    padding: 32px 24px 48px;
+    padding: 32px clamp(24px, 2vw, 40px) 48px;
 }
 
 .view {
-    max-width: 1040px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
 }
 
 .view[hidden] {
@@ -768,6 +769,29 @@ button:hover {
 @media (max-width: 1000px) {
     .stats-table-wrap {
         overflow-x: auto;
+    }
+}
+
+/* 宽屏：统计卡一行 6 项，随内容宽度摊开，避免 3 列大卡片显得松散 */
+@media (min-width: 1400px) {
+    .stats-today-cards,
+    .stats-summary {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .stats-today-cards .stats-row,
+    .stats-summary .stats-row {
+        display: contents;
+    }
+
+    .stats-summary-card {
+        padding: 14px 16px;
+    }
+
+    .stats-summary-card .num {
+        font-size: 22px;
     }
 }
 
@@ -1957,7 +1981,7 @@ button:hover {
     border-bottom-color: #2563eb;
     font-weight: 600;
 }
-.settings-panel { max-width: 720px; }
+.settings-panel { max-width: none; }
 .settings-card {
     background: #fff;
     border: 1px solid #e5e7eb;
@@ -1993,6 +2017,38 @@ button:hover {
     padding: 1px 6px;
     border-radius: 4px;
     font-family: Consolas, Menlo, monospace;
+}
+
+/* 宽屏设置卡：主操作在左、说明固定在右栏，避免整张卡只剩左侧一小块内容 */
+@media (min-width: 1200px) {
+    .settings-card-backup {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+        column-gap: 32px;
+        align-items: start;
+    }
+
+    .settings-card-backup h3 {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .settings-card-backup .settings-card-desc {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .settings-card-backup .settings-actions {
+        grid-column: 1;
+        grid-row: 3;
+        margin-bottom: 0;
+    }
+
+    .settings-card-backup .settings-tip {
+        grid-column: 2;
+        grid-row: 1 / span 3;
+        align-self: stretch;
+    }
 }
 /* 数据库信息 */
 .db-info-grid {
@@ -2068,11 +2124,6 @@ button:hover {
 
 /* ===== 宽屏弹性布局（≥1280px） ===== */
 @media (min-width: 1280px) {
-    /* 内容区放宽，减少大屏两侧留白 */
-    .view {
-        max-width: 1280px;
-    }
-
     /* 计时视图：左侧配置 + 右侧计时 双栏布局（hidden 时保持隐藏） */
     #viewTimer:not([hidden]) {
         display: grid;
@@ -2107,8 +2158,6 @@ button:hover {
 
 /* ===== 超宽屏（≥1600px） ===== */
 @media (min-width: 1600px) {
-    .view { max-width: 1500px; }
-
     #viewTimer:not([hidden]) {
         grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
     }

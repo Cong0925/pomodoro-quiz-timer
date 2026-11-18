@@ -99,7 +99,7 @@ const MODES = [
 
       <div class="section-title">题量</div>
       <div class="count-row">
-        <el-check-tag v-for="c in countOptions" :key="c" :checked="count === c" @change="emit('update:count', c)">{{ c }}</el-check-tag>
+        <el-check-tag v-for="c in countOptions" :key="c" class="count-tag" :checked="count === c" @change="emit('update:count', c)">{{ c }}</el-check-tag>
       </div>
 
       <div class="start-row">
@@ -325,12 +325,37 @@ const MODES = [
   gap: 8px;
   flex-wrap: wrap;
 }
-.count-row :deep(.el-check-tag) {
+/* 题量标签独立规格：覆盖 Element check-tag 默认灰底/浅色选中态 */
+.count-row :deep(.count-tag) {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
   height: 34px;
-  padding: 0 16px;
+  padding: 0 12px;
+  border: 1px solid var(--app-border);
   border-radius: 8px;
-  font-size: 13.5px;
+  background: #fff;
+  color: var(--app-text-regular);
+  font-size: 13px;
   font-weight: 500;
+  line-height: 1;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.count-row :deep(.count-tag:hover) {
+  border-color: #93c5fd;
+  background: #fff;
+}
+.count-row :deep(.count-tag.is-checked) {
+  border-color: var(--app-primary);
+  background: #eaf1ff;
+  color: var(--app-primary);
+  font-weight: 700;
+}
+.count-row :deep(.count-tag.is-checked:hover) {
+  border-color: var(--app-primary);
+  background: #eaf1ff;
 }
 .start-row {
   display: flex;

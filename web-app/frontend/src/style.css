@@ -75,17 +75,18 @@ body {
   min-height: 100svh;
 }
 
-/* ===== 页面骨架：与主版本 1040px 内容宽度、32/24/48 内边距对齐 ===== */
+/* ===== 页面骨架：内容随视口弹性铺满，仅保留统一内边距 ===== */
 #app .el-main.content {
   /* 底部预留悬浮球高度，滚到页尾时主操作按钮不被 66px 悬浮球压住 */
-  padding: 32px 24px 104px;
+  padding: 32px clamp(24px, 2vw, 36px) 104px;
   background: var(--app-page-bg);
 }
 
 #app .el-main.content > * {
-  max-width: 1040px;
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 /* 页面标题：所有视图共用同一字号/间距 */

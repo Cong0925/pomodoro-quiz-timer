@@ -287,6 +287,18 @@ onUnmounted(() => {
 .gran-tab:hover:not(.active) {
   background: #f3f4f6;
 }
+@media (min-width: 1400px) {
+  .stat-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .stat-card {
+    padding: 16px 18px;
+    min-height: 82px;
+  }
+  .s-val {
+    font-size: 22px;
+  }
+}
 @media (max-width: 900px) {
   .stat-grid {
     grid-template-columns: repeat(2, 1fr);

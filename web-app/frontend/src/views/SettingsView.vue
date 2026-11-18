@@ -115,7 +115,7 @@ onMounted(() => {
     <el-tabs v-model="tab">
       <!-- 本地化保存 -->
       <el-tab-pane label="本地化保存" name="backup">
-        <el-card shadow="never" class="s-card">
+        <el-card shadow="never" class="s-card s-card-backup">
           <h3 class="s-title">本地化保存（JSON 备份 / 迁移）</h3>
           <p class="s-desc">把数据库中的全部数据导出为 JSON 文件保存到本地，或从 JSON 文件导入数据。适合定期备份、换电脑迁移数据。</p>
           <div class="s-actions">
@@ -204,5 +204,31 @@ onMounted(() => {
   padding: 0 4px;
   border-radius: 3px;
   color: #2563eb;
+}
+@media (min-width: 1200px) {
+  .settings-view :deep(.s-card-backup .el-card__body) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+    column-gap: 32px;
+    align-items: start;
+  }
+  .s-card-backup .s-title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .s-card-backup .s-desc {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .s-card-backup .s-actions {
+    grid-column: 1;
+    grid-row: 3;
+    margin-bottom: 0;
+  }
+  .s-card-backup .s-tip {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: stretch;
+  }
 }
 </style>
