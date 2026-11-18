@@ -2807,11 +2807,11 @@ button:hover {
     white-space: pre-wrap;
 }
 
-/* ===== 回到顶部按钮（右下角，滚动超 300px 显示） ===== */
+/* ===== 回到顶部按钮（全站通用，右下角，滚动超 300px 显示） ===== */
 .back-to-top {
     position: fixed;
     right: 24px;
-    bottom: 80px;
+    bottom: 100px;
     width: 42px;
     height: 42px;
     border-radius: 50%;

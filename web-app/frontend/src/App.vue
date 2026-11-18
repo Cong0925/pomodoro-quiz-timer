@@ -1,6 +1,6 @@
 <!-- 应用外壳：左侧菜单 + 右侧路由视图 + 学习时长悬浮球 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import StudyFloat from './components/StudyFloat.vue'
@@ -66,6 +66,15 @@ function menuRoute(index: string): string {
 function onMenuSelect(index: string): void {
   router.push(menuRoute(index))
 }
+
+/* 路由切换后让内容区回到顶部，避免沿用上一个页面的滚动位置 */
+watch(
+  () => route.fullPath,
+  () => {
+    const main = document.querySelector('.el-main') as HTMLElement | null
+    if (main) main.scrollTop = 0
+  },
+)
 
 function onStorage(e: StorageEvent): void {
   studyStore.onStorageEvent(e)
@@ -160,6 +169,8 @@ onUnmounted(() => {
     </el-main>
 
     <StudyFloat />
+    <!-- 回到顶部（全站通用；滚动容器为布局主区 .el-main，滚动超 200px 显示） -->
+    <el-backtop target=".el-main" :right="24" :bottom="100" />
   </el-container>
   </el-config-provider>
 </template>

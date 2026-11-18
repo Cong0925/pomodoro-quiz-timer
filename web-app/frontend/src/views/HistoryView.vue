@@ -329,9 +329,6 @@ async function loadMore(): Promise<void> {
     <div v-if="historyStore.page < historyStore.totalPages" class="load-more">
       <el-button plain @click="loadMore">加载更多（{{ historyStore.list.length }}/{{ historyStore.total }}）</el-button>
     </div>
-
-    <!-- 回到顶部（Element Plus 组件；滚动容器为布局主区 .el-main，滚动超 200px 显示） -->
-    <el-backtop target=".el-main" :right="24" :bottom="80" />
   </div>
 </template>
 

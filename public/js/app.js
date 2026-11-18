@@ -23,6 +23,15 @@
     const favBadge = document.getElementById('favBadge');
     const menuItems = document.querySelectorAll('.menu-item');
     const dataFileStatus = document.getElementById('dataFileStatus');
+    const backTopBtn = document.getElementById('backTopBtn');
+
+    /* ---- 回到顶部：全站通用，滚动超 300px 显示 ---- */
+    function toggleBackTop() {
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        backTopBtn.classList.toggle('show', y > 300);
+    }
+    window.addEventListener('scroll', toggleBackTop, { passive: true });
+    backTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
     /* ---- 徽标（总数来自后端分页 total） ---- */
     function updateBadges() {
@@ -60,6 +69,9 @@
         viewCategories.hidden = view !== 'categories';
         viewSettings.hidden = view !== 'settings';
         setMenuActive(view, PQ.timer.workMode);
+        /* 切换页面时回到顶部，并立即刷新回顶按钮显隐 */
+        window.scrollTo(0, 0);
+        toggleBackTop();
         if (view === 'history') { PQ.history.renderFilter(); PQ.history.renderHistory(); }
         if (view === 'favorites') { PQ.favorites.renderFilter(); PQ.favorites.renderFavs(); }
         if (view === 'stats') PQ.stats.renderStats();
