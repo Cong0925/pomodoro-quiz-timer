@@ -871,9 +871,14 @@
     </div>
 
     <!-- 学习时长悬浮窗（右下角，点击开始 / 暂停学习计时） -->
-    <div class="study-float" id="studyFloat" title="学习时长计时：点击开始 / 暂停">
-        <svg class="sf-icon" id="sfIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
-        <div class="sf-time" id="sfTime">0 分</div>
+    <div class="study-float" id="studyFloat" title="学习时长计时：点击开始 / 暂停" role="button" tabindex="0" aria-label="开始学习计时">
+        <span class="sf-orb" aria-hidden="true">
+            <svg class="sf-icon" id="sfIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+        </span>
+        <span class="sf-copy">
+            <span class="sf-state"><i class="sf-dot" aria-hidden="true"></i><span id="sfLabel">今日学习</span></span>
+            <span class="sf-time" id="sfTime">0 分</span>
+        </span>
     </div>
 
     <!-- 回到顶部（全站通用，滚动超过 300px 显示） -->

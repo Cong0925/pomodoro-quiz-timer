@@ -12,6 +12,7 @@
     const floatEl = document.getElementById('studyFloat');
     const iconEl = document.getElementById('sfIcon');
     const timeEl = document.getElementById('sfTime');
+    const labelEl = document.getElementById('sfLabel');
 
     const ICON_PLAY = '<path d="M8 5v14l11-7z" fill="currentColor"/>';
     const ICON_PAUSE = '<path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z" fill="currentColor"/>';
@@ -27,10 +28,12 @@
         floatEl.classList.toggle('running', running);
         iconEl.innerHTML = running ? ICON_PAUSE : ICON_PLAY;
         timeEl.textContent = fmt(D.todayStudyTotal());
+        labelEl.textContent = running ? '学习计时中' : '今日学习';
         floatEl.title = running ? '学习中 ' + fmt(D.todayStudyTotal()) + '，点击暂停' : '已暂停，点击开始学习计时';
+        floatEl.setAttribute('aria-label', running ? '暂停学习计时' : '开始学习计时');
     }
 
-    floatEl.addEventListener('click', () => {
+    function toggle() {
         if (D.studyRunning) {
             D.pauseStudy();
             U.showToast('学习计时已暂停');
@@ -39,6 +42,13 @@
             U.showToast('开始学习计时');
         }
         render();
+    }
+
+    floatEl.addEventListener('click', toggle);
+    floatEl.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        toggle();
     });
 
     /* 每秒刷新显示 */
