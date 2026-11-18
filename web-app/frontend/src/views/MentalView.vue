@@ -16,7 +16,7 @@ import type { MentalStartQuestion } from '../api/mental'
 import { useHistoryStore } from '../stores/historyStore'
 import { useStudyStore } from '../stores/studyStore'
 import { reportStudyDelta } from '../api/stats'
-import { formatMs, todayKey } from '../utils/format'
+import { formatMs, splitStudyByDay } from '../utils/format'
 
 const historyStore = useHistoryStore()
 const studyStore = useStudyStore()
@@ -266,14 +266,18 @@ async function finish(): Promise<void> {
   if (!r) return
   r.finished = true
   if (clockTimer) clearInterval(clockTimer)
-  const ms = Date.now() - r.startTs
+  const endTs = Date.now()
+  const ms = endTs - r.startTs
   try {
     const res = await mentalApi.finishMental(r.sessionId, ms)
     finishInfo.value = res
     wrongReview.value = r.answers.filter((a): a is RunAnswer => !!a && a.result !== 'ok')
     phase.value = 'result'
     historyStore.loadPage({ page: 1 }).catch(() => {})
-    reportStudyDelta(todayKey(), ms).catch(() => {})
+    const reportTasks = splitStudyByDay(r.startTs, endTs).map((seg) => {
+      return reportStudyDelta(seg.date, seg.ms).catch(() => {})
+    })
+    await Promise.all(reportTasks)
     studyStore.loadTodayBase().catch(() => {})
   } catch (e) {
     /* 恢复到末题保持界面可操作（可重试结算），避免答题区空白卡死 */

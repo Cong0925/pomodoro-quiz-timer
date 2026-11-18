@@ -33,6 +33,32 @@ export function todayKey(d: Date = new Date()): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
+export interface StudySegment {
+  date: string
+  ms: number
+}
+
+/**
+ * 把一段真实计时区间按本地 00:00 切成按日片段。
+ * 跨零点时前一天与后一天各自归账，不会把整段时长挂到上报时刻的日期。
+ */
+export function splitStudyByDay(startTs: number, endTs: number): StudySegment[] {
+  const start = Number(startTs)
+  const end = Number(endTs)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return []
+  const segs: StudySegment[] = []
+  let cursor = Math.floor(start)
+  while (cursor < end) {
+    const d = new Date(cursor)
+    const nextMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0)
+    const segEnd = Math.min(Math.floor(end), nextMidnight.getTime())
+    if (segEnd <= cursor) break
+    segs.push({ date: todayKey(d), ms: segEnd - cursor })
+    cursor = segEnd
+  }
+  return segs
+}
+
 /** 时长人性化：不足 1 分钟 / X 分钟 / X 小时 Y 分 */
 export function formatDuration(ms: number): string {
   const totalMin = Math.round(ms / 60000)

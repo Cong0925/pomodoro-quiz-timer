@@ -10,7 +10,7 @@ import { useHistoryStore } from '../stores/historyStore'
 import { useStudyStore } from '../stores/studyStore'
 import * as practiceApi from '../api/practice'
 import { reportStudyDelta } from '../api/stats'
-import { formatMs, todayKey } from '../utils/format'
+import { formatMs, splitStudyByDay } from '../utils/format'
 
 const catStore = useCategoriesStore()
 const historyStore = useHistoryStore()
@@ -260,14 +260,18 @@ async function finish(): Promise<void> {
   if (!r) return
   r.finished = true
   if (clockTimer) clearInterval(clockTimer)
-  const ms = Date.now() - r.startTs
+  const endTs = Date.now()
+  const ms = endTs - r.startTs
   try {
     const res = await practiceApi.finishPractice(r.sessionId, ms)
     finishInfo.value = res
     phase.value = 'result'
-    /* 联动：历史徽标刷新 + 练习时长并入今日学习时长（失败不阻塞结算） */
+    /* 联动：历史徽标刷新 + 练习时长并入学习时长（按真实区间拆日，失败不阻塞结算） */
     historyStore.loadPage({ page: 1 }).catch(() => {})
-    reportStudyDelta(todayKey(), ms).catch(() => {})
+    const reportTasks = splitStudyByDay(r.startTs, endTs).map((seg) => {
+      return reportStudyDelta(seg.date, seg.ms).catch(() => {})
+    })
+    await Promise.all(reportTasks)
     studyStore.loadTodayBase().catch(() => {})
   } catch (e) {
     /* 恢复到末题保持界面可操作（可点「完成」重试结算），避免答题区空白卡死 */

@@ -75,6 +75,10 @@ function onPageHide(): void {
   studyStore.beaconReport()
 }
 
+function onVisibilityChange(): void {
+  if (document.visibilityState === 'hidden') studyStore.flush()
+}
+
 function onPageShow(e: PageTransitionEvent): void {
   studyStore.onPageShow(e)
 }
@@ -83,6 +87,7 @@ onMounted(async () => {
   window.addEventListener('storage', onStorage)
   window.addEventListener('pagehide', onPageHide)
   window.addEventListener('pageshow', onPageShow)
+  document.addEventListener('visibilitychange', onVisibilityChange)
   /* 初始化：分类 + 今日学习基数 + 学习计时会话 + 历史/收藏徽标 */
   try {
     await catStore.load()
@@ -103,6 +108,7 @@ onUnmounted(() => {
   window.removeEventListener('storage', onStorage)
   window.removeEventListener('pagehide', onPageHide)
   window.removeEventListener('pageshow', onPageShow)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 
