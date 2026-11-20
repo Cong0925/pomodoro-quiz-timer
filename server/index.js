@@ -34,10 +34,21 @@ app.use('/api/study-daily', require('./routes/study'));
 app.use('/api/memos', require('./routes/memos'));
 app.use('/api/practice', require('./routes/practice'));
 app.use('/api/mental', require('./routes/mental'));
+const materialsRouter = require('./routes/materials');
+app.use('/api/materials', materialsRouter);
 app.use('/api', require('./routes/data')); // /api/export  /api/import
 
 /* ---- 行测真题图片库静态服务：/qi-bank → data/qi-images（与 web-app 同一 URL 规范） ---- */
 app.use('/qi-bank', express.static(path.join(__dirname, '..', 'data', 'qi-images'), { maxAge: '7d', fallthrough: true }));
+
+/* ---- 资料文件静态服务：/materials → data/materials（数据库只存相对路径） ---- */
+app.use('/materials', express.static(materialsRouter.MATERIAL_ROOT, {
+    maxAge: '7d',
+    fallthrough: true,
+    setHeaders(res) {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+    }
+}));
 
 /* ---- 前端静态文件 ---- */
 app.use(express.static(path.join(__dirname, '..', 'public'), {
@@ -57,7 +68,7 @@ app.use((req, res) => {
 /* ---- 错误兜底 ---- */
 app.use((err, req, res, next) => {
     console.error('[server error]', err);
-    res.status(500).json({ error: '服务器内部错误：' + err.message });
+    res.status(err.status || err.statusCode || 500).json({ error: '服务器内部错误：' + err.message });
 });
 
 app.listen(PORT, () => {

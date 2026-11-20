@@ -33,6 +33,12 @@ const menuGroups = computed(() => [
     ],
   },
   {
+    label: '资料',
+    items: [
+      { key: 'materials', icon: 'FolderOpened', label: '资料管理', to: '/resources' },
+    ],
+  },
+  {
     label: '数据',
     items: [
       { key: 'history', icon: 'Clock', label: '历史记录', to: '/history' },
@@ -60,6 +66,7 @@ const activeKey = computed(() => {
 function menuRoute(index: string): string {
   if (index === 'timer-single') return '/timer/single'
   if (index === 'timer-batch') return '/timer/batch'
+  if (index === 'materials') return '/resources'
   return `/${index}`
 }
 

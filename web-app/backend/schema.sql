@@ -381,6 +381,69 @@ SET @c4 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema =
 SET @s4 := IF(@c4 = 0, 'ALTER TABLE questions ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT ''逻辑删除/停用 0=正常 1=已停用(软删,可恢复)'' AFTER source', 'SELECT 1');
 PREPARE st4 FROM @s4; EXECUTE st4; DEALLOCATE PREPARE st4;
 
+-- ============================================================
+-- 资料管理：文件夹 + 资料文件
+-- 数据库只存逻辑路径 /materials/YYYY/MM/uuid.ext，
+-- 实体文件在仓库根 data/materials/...，迁移数据库不改路径。
+-- ============================================================
+CREATE TABLE IF NOT EXISTS material_folders (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '文件夹ID',
+    user_id     BIGINT          NOT NULL DEFAULT 1 COMMENT '所属用户ID（默认1=root）',
+    name        VARCHAR(80)     NOT NULL COMMENT '文件夹名称',
+    sort_order  INT             NOT NULL DEFAULT 0 COMMENT '排序权重，越小越靠前',
+    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_material_folder_user_name (user_id, name),
+    KEY idx_material_folder_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资料文件夹';
+
+CREATE TABLE IF NOT EXISTS materials (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '资料ID',
+    user_id         BIGINT          NOT NULL DEFAULT 1 COMMENT '所属用户ID（默认1=root）',
+    folder_id       BIGINT UNSIGNED NULL COMMENT '资料文件夹ID；NULL=未分类',
+    title           VARCHAR(200)    NOT NULL COMMENT '显示标题',
+    description     VARCHAR(500)    NOT NULL DEFAULT '' COMMENT '资料说明',
+    original_name   VARCHAR(255)    NOT NULL COMMENT '上传时的原始文件名',
+    file_path       VARCHAR(500)    NOT NULL COMMENT '逻辑相对路径 /materials/YYYY/MM/uuid.ext',
+    file_ext        VARCHAR(20)     NOT NULL DEFAULT '' COMMENT '扩展名，如 pdf/docx',
+    mime_type       VARCHAR(120)    NOT NULL DEFAULT 'application/octet-stream' COMMENT 'MIME类型',
+    size_bytes      BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
+    checksum_sha256 CHAR(64)        NULL COMMENT 'SHA-256，用于去重与完整性校验',
+    preview_type    VARCHAR(16)     NOT NULL DEFAULT 'other' COMMENT 'pdf/image/text/audio/video/office/archive/other',
+    category        VARCHAR(24)     NOT NULL DEFAULT 'other' COMMENT '用途分类 knowledge/paper/answer/other',
+    download_count  INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT '下载次数',
+    last_viewed_at  DATETIME        NULL COMMENT '最近打开时间',
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_material_file_path (file_path),
+    KEY idx_material_user (user_id),
+    KEY idx_material_folder (folder_id),
+    KEY idx_material_created (created_at),
+    KEY idx_material_category (category),
+    KEY idx_material_checksum (checksum_sha256),
+    CONSTRAINT fk_material_folder FOREIGN KEY (folder_id) REFERENCES material_folders (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资料文件';
+
+-- 存量库补 category 字段：先用空值接收，再按文件名回填用途，最后保持默认 other
+SET @mc := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'materials' AND column_name = 'category');
+SET @ms := IF(@mc = 0, 'ALTER TABLE materials ADD COLUMN category VARCHAR(24) NOT NULL DEFAULT '''' COMMENT ''用途分类 knowledge/paper/answer/other'' AFTER preview_type', 'SELECT 1');
+PREPARE mstmt FROM @ms; EXECUTE mstmt; DEALLOCATE PREPARE mstmt;
+
+UPDATE materials
+SET category = CASE
+    WHEN original_name REGEXP '答案|解析|answer|solution' THEN 'answer'
+    WHEN original_name REGEXP '试卷|套卷|模考|题本|题库|真题|刷题|练习|500题|100题|20题|十套卷|模拟卷' THEN 'paper'
+    WHEN original_name REGEXP '知识点|讲义|课件|专题|手册|清单|笔记|考点|冲刺' THEN 'knowledge'
+    ELSE 'other'
+END
+WHERE category = '';
+
+SET @mic := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'materials' AND index_name = 'idx_material_category');
+SET @mis := IF(@mic = 0, 'ALTER TABLE materials ADD KEY idx_material_category (category)', 'SELECT 1');
+PREPARE mistmt FROM @mis; EXECUTE mistmt; DEALLOCATE PREPARE mistmt;
+
 -- 用户体系迁移：记录类根表加 user_id（存量数据默认 1=root，即现有数据全部绑定 root 账户）
 SET @c5 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'rounds' AND column_name = 'user_id');
 SET @s5 := IF(@c5 = 0, 'ALTER TABLE rounds ADD COLUMN user_id BIGINT NOT NULL DEFAULT 1 COMMENT ''所属用户ID(默认1=root)'' AFTER id, ADD KEY idx_user (user_id)', 'SELECT 1');

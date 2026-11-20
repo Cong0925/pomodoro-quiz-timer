@@ -211,3 +211,58 @@ export const MEMO_TYPES: Record<MemoType, { label: string; color: string; bg: st
   travel: { label: '旅行', color: '#0e7490', bg: '#cffafe' },
   other: { label: '其他', color: '#4b5563', bg: '#f3f4f6' },
 }
+
+/* ==================== 资料管理 ==================== */
+
+export type MaterialCategory = 'knowledge' | 'paper' | 'answer' | 'other'
+
+export interface MaterialCategoryCount {
+  value: MaterialCategory
+  label: string
+  count: number
+}
+
+export type MaterialPreviewType =
+  | 'pdf'
+  | 'image'
+  | 'text'
+  | 'audio'
+  | 'video'
+  | 'office'
+  | 'archive'
+  | 'other'
+
+export interface MaterialFolder {
+  id: number
+  name: string
+  sortOrder: number
+  count: number
+}
+
+export interface MaterialItem {
+  id: number
+  title: string
+  description: string
+  folderId: number | null
+  folderName: string
+  originalName: string
+  filePath: string
+  fileUrl: string
+  fileExt: string
+  mimeType: string
+  sizeBytes: number
+  previewType: MaterialPreviewType
+  category: MaterialCategory
+  categoryLabel: string
+  downloadCount: number
+  lastViewedAt: string | null
+  createdAt: string
+}
+
+export interface MaterialListResult {
+  list: MaterialItem[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}

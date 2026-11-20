@@ -45,6 +45,12 @@
                     <span>速算练习</span>
                 </a>
 
+                <div class="menu-group-label">资料</div>
+                <a class="menu-item" data-view="materials" href="javascript:void(0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 10h18" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                    <span>资料管理</span>
+                </a>
+
                 <div class="menu-group-label">数据</div>
                 <a class="menu-item" data-view="history" href="javascript:void(0)">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -137,6 +143,201 @@
                 </div>
 
                 <div class="record-wrap" id="recordWrap"></div>
+            </section>
+
+            <!-- 资料管理视图 -->
+            <section class="view mat-view" id="viewMaterials" hidden>
+                <div class="view-header">
+                    <div>
+                        <h2>资料管理</h2>
+                        <p class="mode-desc">上传备考资料，按文件夹归档；PDF、图片、文本、音视频直接在页面内阅读</p>
+                    </div>
+                </div>
+
+                <div class="mat-filter-card">
+                    <div class="mat-folder-row" id="matFolderRow"></div>
+                    <div class="mat-category-row" id="matCategoryRow"></div>
+                    <div class="mat-toolbar">
+                        <div class="mat-search">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m20 20-3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+                            <input type="text" id="matSearch" placeholder="搜索标题、文件名或说明" autocomplete="off">
+                            <button type="button" class="mat-search-clear" id="matSearchClear" hidden aria-label="清空搜索">×</button>
+                        </div>
+                        <select class="pq-select mat-type-select" id="matType">
+                            <option value="all">全部类型</option>
+                            <option value="pdf">PDF 文档</option>
+                            <option value="image">图片</option>
+                            <option value="text">文本 / Markdown</option>
+                            <option value="audio">音频</option>
+                            <option value="video">视频</option>
+                            <option value="office">Office 文档</option>
+                            <option value="archive">压缩包</option>
+                            <option value="other">其他文件</option>
+                        </select>
+                        <div class="mat-toolbar-meta" id="matMeta"></div>
+                        <div class="mat-view-toggle" id="matViewToggle" role="group" aria-label="切换资料展示方式">
+                            <button type="button" class="mat-view-btn active" data-mat-view="grid" title="卡片视图" aria-label="卡片视图">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+                            </button>
+                            <button type="button" class="mat-view-btn" data-mat-view="list" title="列表视图" aria-label="列表视图">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <button class="pq-btn pq-btn--primary mat-upload-open mat-toolbar-upload" id="matUploadBtn" type="button">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+                            <span>上传资料</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mat-list" id="matList"></div>
+                <div class="mat-pager" id="matPager"></div>
+
+                <!-- 上传弹窗 -->
+                <div class="mat-modal" id="matUploadModal" hidden>
+                    <div class="mat-modal-mask" data-mat-close="upload"></div>
+                    <div class="mat-modal-panel mat-upload-panel" role="dialog" aria-modal="true" aria-label="上传资料">
+                        <div class="mat-modal-head">
+                            <div>
+                                <h3>上传资料</h3>
+                                <p>文件实体按年月归档，数据库只保存稳定的相对路径</p>
+                            </div>
+                            <button type="button" class="mat-modal-close" data-mat-close="upload" aria-label="关闭">×</button>
+                        </div>
+                        <div class="mat-modal-body">
+                            <label class="mat-drop" id="matDrop" for="matFileInput">
+                                <input type="file" id="matFileInput" multiple hidden>
+                                <span class="mat-drop-icon">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+                                </span>
+                                <span class="mat-drop-title">拖拽一个或多个文件到这里，或 <em>批量选择</em></span>
+                                <span class="mat-drop-hint">一次最多 30 个文件，单个不超过 100MB；Word / Excel / PPT / 压缩包仅支持下载</span>
+                            </label>
+                            <div class="mat-file-list" id="matFileList" hidden></div>
+
+                            <div class="mat-form-grid" id="matFormGrid">
+                                <div id="matTitleField">
+                                    <label class="mat-label" for="matTitle">标题（单文件可选）</label>
+                                    <input class="pq-input" type="text" id="matTitle" maxlength="200" placeholder="留空则使用原文件名">
+                                </div>
+                                <div>
+                                    <label class="mat-label" for="matUploadFolder">归属文件夹</label>
+                                    <div class="mat-folder-select-row">
+                                        <select class="pq-select" id="matUploadFolder"></select>
+                                        <button class="mat-inline-link" type="button" id="matUploadNewFolder">新建</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <label class="mat-label" for="matUploadCategory">资料分类</label>
+                            <div class="mat-category-select-row">
+                                <select class="pq-select" id="matUploadCategory">
+                                    <option value="auto">自动识别（按文件名判断）</option>
+                                </select>
+                                <span class="mat-category-hint">自动识别会先看「答案 / 解析」，再看「试卷 / 套卷 / 500题」，最后按讲义、课件等归入知识点</span>
+                            </div>
+                            <div class="mat-batch-note" id="matBatchNote" hidden>批量上传会按每个文件的原文件名自动命名，不需要逐个填写标题。</div>
+                            <label class="mat-label" for="matDesc">说明（可选，应用到本批全部资料）</label>
+                            <textarea class="pq-textarea" id="matDesc" rows="2" maxlength="500" placeholder="例如：2026 国考申论范文合集"></textarea>
+
+                            <div class="mat-progress" id="matProgress" hidden>
+                                <div class="mat-progress-bar"><i id="matProgressBar"></i></div>
+                                <div class="mat-progress-text" id="matProgressText">正在上传…</div>
+                            </div>
+                        </div>
+                        <div class="mat-modal-foot">
+                            <button type="button" class="pq-btn" data-mat-close="upload">取消</button>
+                            <button type="button" class="pq-btn pq-btn--primary" id="matUploadSubmit">开始上传</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 编辑资料弹窗 -->
+                <div class="mat-modal" id="matEditModal" hidden>
+                    <div class="mat-modal-mask" data-mat-close="edit"></div>
+                    <div class="mat-modal-panel" role="dialog" aria-modal="true" aria-label="编辑资料信息">
+                        <div class="mat-modal-head">
+                            <div>
+                                <h3>编辑资料信息</h3>
+                                <p>只修改标题、说明与归档位置，不会改动文件本身</p>
+                            </div>
+                            <button type="button" class="mat-modal-close" data-mat-close="edit" aria-label="关闭">×</button>
+                        </div>
+                        <div class="mat-modal-body">
+                            <label class="mat-label" for="matEditTitle">标题</label>
+                            <input class="pq-input" type="text" id="matEditTitle" maxlength="200">
+                            <label class="mat-label" for="matEditDesc">说明</label>
+                            <textarea class="pq-textarea" id="matEditDesc" rows="3" maxlength="500"></textarea>
+                            <label class="mat-label" for="matEditFolder">归属文件夹</label>
+                            <select class="pq-select" id="matEditFolder"></select>
+                            <label class="mat-label" for="matEditCategory">资料分类</label>
+                            <select class="pq-select" id="matEditCategory"></select>
+                        </div>
+                        <div class="mat-modal-foot">
+                            <button type="button" class="pq-btn" data-mat-close="edit">取消</button>
+                            <button type="button" class="pq-btn pq-btn--primary" id="matEditSubmit">保存</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新建文件夹弹窗 -->
+                <div class="mat-modal" id="matFolderModal" hidden>
+                    <div class="mat-modal-mask" data-mat-close="folder"></div>
+                    <div class="mat-modal-panel mat-small-panel" role="dialog" aria-modal="true" aria-label="新建文件夹">
+                        <div class="mat-modal-head">
+                            <div>
+                                <h3>新建文件夹</h3>
+                                <p>例如「申论素材」「面试真题」</p>
+                            </div>
+                            <button type="button" class="mat-modal-close" data-mat-close="folder" aria-label="关闭">×</button>
+                        </div>
+                        <div class="mat-modal-body">
+                            <input class="pq-input" type="text" id="matFolderName" maxlength="80" placeholder="文件夹名称">
+                            <div class="mat-form-error" id="matFolderError" hidden></div>
+                        </div>
+                        <div class="mat-modal-foot">
+                            <button type="button" class="pq-btn" data-mat-close="folder">取消</button>
+                            <button type="button" class="pq-btn pq-btn--primary" id="matFolderSubmit">创建</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 确认弹窗 -->
+                <div class="mat-modal" id="matConfirmModal" hidden>
+                    <div class="mat-modal-mask" data-mat-close="confirm"></div>
+                    <div class="mat-modal-panel mat-small-panel" role="dialog" aria-modal="true" aria-label="操作确认">
+                        <div class="mat-modal-head">
+                            <div>
+                                <h3 id="matConfirmTitle">确认操作</h3>
+                                <p id="matConfirmText">此操作不可恢复</p>
+                            </div>
+                            <button type="button" class="mat-modal-close" data-mat-close="confirm" aria-label="关闭">×</button>
+                        </div>
+                        <div class="mat-modal-foot">
+                            <button type="button" class="pq-btn" data-mat-close="confirm">取消</button>
+                            <button type="button" class="pq-btn pq-btn--danger" id="matConfirmOk">确认</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 资料预览抽屉 -->
+                <div class="mat-modal mat-preview-modal" id="matPreviewModal" hidden>
+                    <div class="mat-modal-mask" data-mat-close="preview"></div>
+                    <div class="mat-preview-panel" role="dialog" aria-modal="true" aria-label="资料预览">
+                        <div class="mat-preview-head">
+                            <div class="mat-preview-title-wrap">
+                                <div class="mat-preview-title" id="matPreviewTitle"></div>
+                                <div class="mat-preview-sub" id="matPreviewMeta"></div>
+                            </div>
+                            <div class="mat-preview-actions">
+                                <button type="button" class="pq-btn" id="matPreviewDownload">下载</button>
+                                <button type="button" class="pq-btn" id="matPreviewEdit">编辑</button>
+                                <button type="button" class="mat-modal-close" data-mat-close="preview" aria-label="关闭">×</button>
+                            </div>
+                        </div>
+                        <div class="mat-preview-desc" id="matPreviewDesc" hidden></div>
+                        <div class="mat-preview-body" id="matPreviewBody"></div>
+                    </div>
+                </div>
             </section>
 
             <!-- 历史记录视图 -->
@@ -938,6 +1139,7 @@
     <script src="./js/modules/settings.js"></script>
     <script src="./js/modules/practice.js"></script>
     <script src="./js/modules/mental.js"></script>
+    <script src="./js/modules/materials.js"></script>
     <script src="./js/modules/studyFloat.js"></script>
     <script src="./js/app.js"></script>
 </body>

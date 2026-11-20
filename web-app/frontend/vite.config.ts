@@ -31,6 +31,11 @@ export default defineConfig({
         target: 'http://localhost:8888',
         changeOrigin: true,
       },
+      // 资料文件（data/materials 静态服务，数据库只存相对路径）
+      '/materials': {
+        target: 'http://localhost:8888',
+        changeOrigin: true,
+      },
     },
   },
 })

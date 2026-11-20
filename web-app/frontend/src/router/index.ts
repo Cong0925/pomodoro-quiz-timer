@@ -22,6 +22,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '速算练习' },
   },
   {
+    path: '/resources',
+    name: 'materials',
+    component: () => import('../views/MaterialsView.vue'),
+    meta: { title: '资料管理' },
+  },
+  {
     path: '/history',
     name: 'history',
     component: () => import('../views/HistoryView.vue'),
