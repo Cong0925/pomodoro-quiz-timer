@@ -69,13 +69,10 @@ const customCount = ref<number | null>(null)
 watch(batchCount, (v) => {
   if (v === 'custom') return
   timer.maxRound.value = Number(v)
-  // 本轮已有记录时只改题量上限，不重开（防止中途改题量丢弃整轮记录）
-  if (timer.records.value.length === 0) timer.newRound()
 })
 watch(customCount, (v) => {
   if (batchCount.value === 'custom' && v && v > 0) {
     timer.maxRound.value = v
-    if (timer.records.value.length === 0) timer.newRound()
   }
 })
 
@@ -245,9 +242,34 @@ const modeDesc = computed(() =>
       </div>
     </el-dialog>
 
-    <!-- 整组错题标记面板 -->
-    <el-dialog v-model="timer.showBatchPanel.value" title="整组完成 · 标记错题与跳过" width="560px" :close-on-click-modal="false" :show-close="false" align-center>
-      <div class="result-grid">
+    <!-- 整组错题标记面板：≤50 题 5 列，>50 题 10 列，避免纵向过长 -->
+    <el-dialog
+      v-model="timer.showBatchPanel.value"
+      :width="timer.maxRound.value > 50 ? '720px' : '560px'"
+      :close-on-click-modal="false"
+      :show-close="false"
+      align-center
+      class="batch-dialog"
+    >
+      <template #header>
+        <div class="batch-head">
+          <div class="batch-head-main">
+            <span class="batch-eyebrow">✓ 整组完成</span>
+            <h3 class="batch-title">标记错题与跳过</h3>
+          </div>
+          <span class="batch-total">共 {{ timer.maxRound.value }} 题</span>
+        </div>
+        <p class="batch-subtitle">
+          默认全部正确，点击题号切换：
+          <span class="batch-legend ng"><i></i>错</span>
+          <span class="batch-arrow">→</span>
+          <span class="batch-legend skip"><i></i>没做</span>
+          <span class="batch-arrow">→</span>
+          <span class="batch-legend ok"><i></i>恢复</span>
+        </p>
+      </template>
+
+      <div class="result-grid" :class="{ 'result-grid--wide': timer.maxRound.value > 50 }">
         <button
           v-for="(_, i) in timer.batchResults.value"
           :key="i"
@@ -259,12 +281,36 @@ const modeDesc = computed(() =>
           <span class="mark">{{ timer.batchResults.value[i] === 'ng' ? '✗' : timer.batchResults.value[i] === 'skip' ? '○' : '' }}</span>
         </button>
       </div>
-      <div class="batch-progress">{{ timer.batchProgress.value.text }}</div>
+
+      <div class="batch-summary">
+        <div class="batch-stat ng">
+          <span class="batch-stat-label"><i></i>已标错</span>
+          <span class="batch-stat-value">{{ timer.batchProgress.value.wrong }}<small>题</small></span>
+        </div>
+        <div class="batch-stat skip">
+          <span class="batch-stat-label"><i></i>没做</span>
+          <span class="batch-stat-value">{{ timer.batchProgress.value.skipped }}<small>题</small></span>
+        </div>
+        <div class="batch-stat ok">
+          <span class="batch-stat-label"><i></i>默认正确</span>
+          <span class="batch-stat-value">{{ timer.batchProgress.value.correct }}<small>题</small></span>
+        </div>
+      </div>
+
       <template #footer>
-        <el-button @click="timer.cancelBatchRound()">取消本轮</el-button>
-        <el-button type="primary" @click="timer.finishBatchRound()">完成归档（Enter/空格）</el-button>
+        <div class="batch-footer">
+          <div class="batch-shortcuts">
+            <span><kbd>N</kbd>错</span>
+            <span><kbd>Y</kbd>正确</span>
+            <span><kbd>P</kbd>跳过</span>
+            <span><kbd>←→ ↑↓</kbd>移动/翻页</span>
+          </div>
+          <div class="batch-actions">
+            <el-button size="large" @click="timer.cancelBatchRound()">取消本轮</el-button>
+            <el-button size="large" type="primary" @click="timer.finishBatchRound()">完成归档</el-button>
+          </div>
+        </div>
       </template>
-      <div class="key-hint">快捷键：N=错 · Y=对 · P=跳过 ←→=移动 · 上下=翻页</div>
     </el-dialog>
   </div>
 </template>
@@ -446,10 +492,100 @@ const modeDesc = computed(() =>
   flex: 1;
   margin-left: 0;
 }
+:global(.batch-dialog .el-dialog) {
+  max-width: calc(100vw - 24px);
+}
+:global(.batch-dialog .el-dialog__header) {
+  padding: 20px 24px 0;
+  margin: 0;
+}
+:global(.batch-dialog .el-dialog__body) {
+  padding: 0 24px 16px;
+}
+:global(.batch-dialog .el-dialog__footer) {
+  padding: 0 24px 20px;
+}
+.batch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.batch-head-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.batch-eyebrow {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 23px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--el-color-success-light-9);
+  color: var(--el-color-success-dark-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.batch-title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+}
+.batch-total {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.batch-subtitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 10px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.batch-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+.batch-legend i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.batch-legend.ng { color: var(--el-color-danger); }
+.batch-legend.ng i { background: var(--el-color-danger); }
+.batch-legend.skip { color: var(--el-color-warning-dark-2); }
+.batch-legend.skip i { background: var(--el-color-warning); }
+.batch-legend.ok { color: var(--el-color-success); }
+.batch-legend.ok i { background: var(--el-color-success); }
+.batch-arrow {
+  color: var(--el-text-color-placeholder);
+}
 .result-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
+  margin-top: 18px;
+}
+.result-grid--wide {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
 }
 .result-cell {
   position: relative;
@@ -473,16 +609,115 @@ const modeDesc = computed(() =>
 .result-cell.ng { background: var(--el-color-danger-light-9); border-color: var(--el-color-danger); }
 .result-cell.skip { background: var(--el-color-warning-light-9); border-color: var(--el-color-warning); }
 .result-cell.selected { outline: 2px solid var(--el-color-primary); }
-.batch-progress {
-  margin-top: 10px;
-  font-size: 13px;
+.batch-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
+  background: var(--el-fill-color-lighter);
+  overflow: hidden;
+}
+.batch-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-right: 1px solid var(--el-border-color-lighter);
+}
+.batch-stat:last-child {
+  border-right: 0;
+}
+.batch-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--el-text-color-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.batch-stat-label i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.batch-stat.ng .batch-stat-label i { background: var(--el-color-danger); }
+.batch-stat.skip .batch-stat-label i { background: var(--el-color-warning); }
+.batch-stat.ok .batch-stat-label i { background: var(--el-color-success); }
+.batch-stat-value {
+  color: var(--el-text-color-primary);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.batch-stat-value small {
+  margin-left: 2px;
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+.batch-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 14px;
+}
+.batch-shortcuts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.batch-shortcuts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.batch-shortcuts kbd {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--el-border-color);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--el-fill-color-lighter);
+  color: var(--el-text-color-regular);
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 16px;
   text-align: center;
 }
-.key-hint {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
-  text-align: center;
+.batch-actions {
+  display: flex;
+  flex: none;
+  gap: 10px;
+  margin-left: auto;
+}
+:global(.batch-dialog .batch-actions .el-button) {
+  margin-left: 0;
+}
+@media (max-width: 640px) {
+  .batch-head-main {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .batch-title {
+    font-size: 17px;
+  }
+  .batch-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .batch-actions {
+    justify-content: flex-end;
+    margin-left: 0;
+  }
 }
 </style>

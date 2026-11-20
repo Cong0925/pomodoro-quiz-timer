@@ -26,7 +26,10 @@
     const btnN = document.getElementById('btnN');
     const batchModalMask = document.getElementById('batchModalMask');
     const resultGrid = document.getElementById('resultGrid');
-    const resultProgress = document.getElementById('resultProgress');
+    const batchTotal = document.getElementById('batchTotal');
+    const batchWrong = document.getElementById('batchWrong');
+    const batchSkipped = document.getElementById('batchSkipped');
+    const batchCorrect = document.getElementById('batchCorrect');
     const batchCancelBtn = document.getElementById('batchCancelBtn');
     const batchDoneBtn = document.getElementById('batchDoneBtn');
     const batchCountSelect = document.getElementById('batchCountSelect');
@@ -239,6 +242,12 @@
 
     function renderResultGrid() {
         resultGrid.innerHTML = '';
+        /* ≤50 题 5 列，>50 题 10 列，避免长题量面板纵向过长 */
+        const wide = MAX_ROUND > 50;
+        resultGrid.classList.toggle('wide', wide);
+        const modalBox = resultGrid.closest('.batch-modal');
+        if (modalBox) modalBox.classList.toggle('wide', wide);
+        if (batchTotal) batchTotal.textContent = `共 ${MAX_ROUND} 题`;
         for (let i = 0; i < MAX_ROUND; i++) {
             const cell = document.createElement('button');
             cell.className = 'result-cell';
@@ -286,7 +295,10 @@
     function updateResultProgress() {
         const wrong = batchResults.filter(x => x === 'ng').length;
         const skipped = batchResults.filter(x => x === 'skip').length;
-        resultProgress.textContent = `已标错 ${wrong} 题 · 没做 ${skipped} 题（其余默认正确）`;
+        const correct = Math.max(0, MAX_ROUND - wrong - skipped);
+        if (batchWrong) batchWrong.textContent = wrong;
+        if (batchSkipped) batchSkipped.textContent = skipped;
+        if (batchCorrect) batchCorrect.textContent = correct;
     }
 
     function finishBatchRound() {
@@ -362,14 +374,15 @@
         }
         customBatchInput.style.display = 'none';
         MAX_ROUND = clampCount(Number(this.value));
-        /* 本轮已有记录时只改题量上限，不重开（防止中途改题量丢弃整轮记录） */
-        if (roundRecords.length === 0) newRound();
+        /* 只改题量上限，不清空本轮，保留已填写的标题与描述 */
+        updateStat();
     };
 
     customBatchInput.addEventListener('input', () => {
         const val = Number(customBatchInput.value);
         if (val > 0) MAX_ROUND = clampCount(val);
-        if (roundRecords.length === 0) newRound();
+        /* 只改题量上限，保留已填写的标题与描述 */
+        updateStat();
     });
 
     /* ---- 模式切换 ---- */

@@ -717,13 +717,47 @@
     <!-- 整组完成对错录入面板 -->
     <div class="modal-mask" id="batchModalMask">
         <div class="modal-box batch-modal">
-            <p>整组计时结束，标记做错的题</p>
-            <div class="modal-hint">默认全部正确：点击题号 标错 → 标没做 → 恢复 · N=标错 Y=恢复 P=标没做 · 方向键移动 · 回车完成</div>
+            <div class="batch-head">
+                <div class="batch-head-main">
+                    <span class="batch-eyebrow">✓ 整组完成</span>
+                    <p class="batch-title">标记错题与跳过</p>
+                </div>
+                <span class="batch-total" id="batchTotal">共 0 题</span>
+            </div>
+            <div class="batch-subtitle">
+                默认全部正确，点击题号切换：
+                <span class="batch-legend ng"><i></i>错</span>
+                <span class="batch-arrow">→</span>
+                <span class="batch-legend skip"><i></i>没做</span>
+                <span class="batch-arrow">→</span>
+                <span class="batch-legend ok"><i></i>恢复</span>
+            </div>
             <div class="result-grid" id="resultGrid"></div>
-            <div class="result-progress" id="resultProgress">已标记 0 题</div>
-            <div class="modal-buttons">
-                <button id="batchCancelBtn">取消本轮</button>
-                <button id="batchDoneBtn">完成录入</button>
+            <div class="batch-summary">
+                <div class="batch-stat ng">
+                    <span class="batch-stat-label"><i></i>已标错</span>
+                    <span class="batch-stat-value"><b id="batchWrong">0</b><small>题</small></span>
+                </div>
+                <div class="batch-stat skip">
+                    <span class="batch-stat-label"><i></i>没做</span>
+                    <span class="batch-stat-value"><b id="batchSkipped">0</b><small>题</small></span>
+                </div>
+                <div class="batch-stat ok">
+                    <span class="batch-stat-label"><i></i>默认正确</span>
+                    <span class="batch-stat-value"><b id="batchCorrect">0</b><small>题</small></span>
+                </div>
+            </div>
+            <div class="batch-foot">
+                <div class="batch-shortcuts">
+                    <span><kbd>N</kbd>错</span>
+                    <span><kbd>Y</kbd>正确</span>
+                    <span><kbd>P</kbd>跳过</span>
+                    <span><kbd>←→ ↑↓</kbd>移动/翻页</span>
+                </div>
+                <div class="modal-buttons">
+                    <button id="batchCancelBtn">取消本轮</button>
+                    <button id="batchDoneBtn">完成归档</button>
+                </div>
             </div>
         </div>
     </div>

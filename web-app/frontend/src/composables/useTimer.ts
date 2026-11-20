@@ -178,7 +178,8 @@ export function useTimer(options: UseTimerOptions) {
   const batchProgress = computed(() => {
     const wrong = batchResults.value.filter((x) => x === 'ng').length
     const skipped = batchResults.value.filter((x) => x === 'skip').length
-    return { wrong, skipped, text: `已标错 ${wrong} 题 · 没做 ${skipped} 题（其余默认正确）` }
+    const correct = Math.max(0, maxRound.value - wrong - skipped)
+    return { wrong, skipped, correct, text: `已标错 ${wrong} 题 · 没做 ${skipped} 题（其余默认正确）` }
   })
 
   function finishBatchRound(): void {
