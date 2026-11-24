@@ -198,8 +198,10 @@ async function restoreBuiltin(): Promise<void> {
     <div v-loading="loading" class="cat-list">
       <el-card v-for="cat in catStore.categories" :key="cat.id" shadow="never" class="cat-group">
         <div class="group-head">
-          <span class="cat-name" :title="cat.name">{{ cat.name }}</span>
-          <el-tag size="small" :type="cat.builtin ? 'info' : 'success'">{{ cat.builtin ? '内置' : '自定义' }}</el-tag>
+          <div class="group-title">
+            <span class="cat-name" :title="cat.name">{{ cat.name }}</span>
+            <el-tag size="small" :type="cat.builtin ? 'info' : 'success'">{{ cat.builtin ? '内置' : '自定义' }}</el-tag>
+          </div>
           <div class="group-actions">
             <el-button size="small" plain type="primary" @click="addSub(cat)">+ 小类</el-button>
             <el-button size="small" plain @click="renameCat(cat)">重命名</el-button>
@@ -269,12 +271,17 @@ async function restoreBuiltin(): Promise<void> {
   gap: 8px;
   flex-wrap: wrap;
 }
-.cat-name {
-  flex: 1;
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+}
+.cat-name {
+  min-width: 0;
+  max-width: 340px;
   font-weight: 700;
   font-size: 16px;
-  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
