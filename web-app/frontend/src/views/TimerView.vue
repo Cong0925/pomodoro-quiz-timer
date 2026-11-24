@@ -76,6 +76,111 @@ watch(customCount, (v) => {
   }
 })
 
+/* ---- 整组完成面板排版：默认按 50 题断点换列，130 题可切国考答题卡版式 ---- */
+type BatchLayoutPreset = 'default' | 'gk2025-before' | 'gk2025-after'
+interface BatchLayoutRowDef {
+  count: number
+  subs?: Array<{ label: string; count: number }>
+}
+interface BatchLayoutGroupDef {
+  label: string
+  rows: BatchLayoutRowDef[]
+}
+interface BatchLayoutRow {
+  cells: number[]
+  subs?: Array<{ label: string; count: number }>
+}
+interface BatchLayoutGroup {
+  label: string
+  total: number
+  rows: BatchLayoutRow[]
+}
+
+const BATCH_LAYOUT_PRESETS: Record<Exclude<BatchLayoutPreset, 'default'>, BatchLayoutGroupDef[]> = {
+  'gk2025-before': [
+    { label: '常识判断', rows: [{ count: 20 }] },
+    { label: '言语理解与表达', rows: [{ count: 20 }, { count: 20 }] },
+    { label: '数量关系', rows: [{ count: 10 }] },
+    {
+      label: '判断推理',
+      rows: [
+        { count: 20, subs: [{ label: '图形推理', count: 10 }, { label: '定义判断', count: 10 }] },
+        { count: 20, subs: [{ label: '类比推理', count: 10 }, { label: '逻辑判断', count: 10 }] },
+      ],
+    },
+    { label: '资料分析', rows: [{ count: 20 }] },
+  ],
+  'gk2025-after': [
+    { label: '政治理论', rows: [{ count: 20 }] },
+    { label: '常识判断', rows: [{ count: 15 }] },
+    { label: '言语理解与表达', rows: [{ count: 20 }, { count: 10 }] },
+    { label: '数量关系', rows: [{ count: 10 }] },
+    {
+      label: '判断推理',
+      rows: [
+        { count: 20, subs: [{ label: '图形推理', count: 10 }, { label: '定义判断', count: 10 }] },
+        { count: 15, subs: [{ label: '类比推理', count: 5 }, { label: '逻辑判断', count: 10 }] },
+      ],
+    },
+    { label: '资料分析', rows: [{ count: 20 }] },
+  ],
+}
+
+const batchLayout = ref<BatchLayoutPreset>('default')
+const batchLayoutOptions = computed(() => {
+  const base = [{ value: 'default', label: '默认' }]
+  if (timer.maxRound.value !== 130) return base
+  return [
+    ...base,
+    { value: 'gk2025-before', label: '国考2025前' },
+    { value: 'gk2025-after', label: '国考2025后' },
+  ]
+})
+
+/* 130 题默认进入「国考2025后」版式；题量不足 130 时自动收回默认 */
+watch(
+  () => timer.maxRound.value,
+  (total) => {
+    if (total === 130 && batchLayout.value === 'default') {
+      batchLayout.value = 'gk2025-after'
+      return
+    }
+    if (total !== 130 && batchLayout.value !== 'default') batchLayout.value = 'default'
+  },
+  { immediate: true }
+)
+
+const batchCustomGroups = computed<BatchLayoutGroup[]>(() => {
+  if (batchLayout.value === 'default' || timer.maxRound.value !== 130) return []
+  const defs = BATCH_LAYOUT_PRESETS[batchLayout.value]
+  let cursor = 0
+  return defs.map((group) => {
+    const rows = group.rows.map((row) => {
+      const start = cursor
+      cursor += row.count
+      return {
+        cells: Array.from({ length: row.count }, (_, i) => start + i),
+        subs: row.subs,
+      }
+    })
+    return {
+      label: group.label,
+      total: rows.reduce((sum, row) => sum + row.cells.length, 0),
+      rows,
+    }
+  })
+})
+
+const batchColumnCount = computed(() => {
+  if (batchCustomGroups.value.length) return 20
+  return timer.maxRound.value > 50 ? 10 : 5
+})
+
+const batchDialogWidth = computed(() => {
+  if (batchCustomGroups.value.length) return 'min(960px, calc(100vw - 28px))'
+  return timer.maxRound.value > 50 ? '720px' : '560px'
+})
+
 /* ---- 全局键盘 ---- */
 function isInputFocused(): boolean {
   const tag = document.activeElement && document.activeElement.tagName
@@ -93,8 +198,8 @@ function onKeydown(e: KeyboardEvent): void {
     if (key === 'p') { e.preventDefault(); timer.setCell(timer.batchCurIdx.value, 'skip'); timer.moveSel(1); return }
     if (e.key === 'ArrowLeft') { e.preventDefault(); timer.moveSel(-1); return }
     if (e.key === 'ArrowRight') { e.preventDefault(); timer.moveSel(1); return }
-    if (e.key === 'ArrowUp') { e.preventDefault(); timer.moveSel(-10); return }
-    if (e.key === 'ArrowDown') { e.preventDefault(); timer.moveSel(10); return }
+    if (e.key === 'ArrowUp') { e.preventDefault(); timer.moveSel(-batchColumnCount.value); return }
+    if (e.key === 'ArrowDown') { e.preventDefault(); timer.moveSel(batchColumnCount.value); return }
     if (e.key === 'Enter') { e.preventDefault(); timer.finishBatchRound(); return }
     if (e.code === 'Space') { e.preventDefault(); timer.finishBatchRound(); return }
     return
@@ -121,7 +226,7 @@ const modeTitle = computed(() => (timer.mode.value === 'single' ? '单题模式'
 const modeDesc = computed(() =>
   timer.mode.value === 'single'
     ? '每题独立计时 · 空格开始 / 结束一题 · Y=对 N=错 P=没做跳过'
-    : '空格开始整组计时，做完后再次按空格停止并标记错题'
+    : '空格开始整组计时，再次按空格结束并标记错题；中途可点「暂停」停表，再点「继续」接着计时'
 )
 </script>
 
@@ -157,6 +262,8 @@ const modeDesc = computed(() =>
           <el-option value="10" label="10 题" />
           <el-option value="15" label="15 题" />
           <el-option value="20" label="20 题" />
+          <el-option value="100" label="100 题" />
+          <el-option value="130" label="130 题" />
           <el-option value="custom" label="自定义" />
         </el-select>
         <el-input-number
@@ -183,22 +290,45 @@ const modeDesc = computed(() =>
         </div>
       </div>
       <div class="btn-group">
-        <!-- 主控按钮：未计时=开始/继续（空格），计时中=暂停（空格） -->
+        <!-- 单题模式：空格开始 / 结束当前题 -->
+        <template v-if="timer.mode.value === 'single'">
+          <el-button
+            v-if="!timer.showNewRoundBtn.value && !timer.isTiming.value"
+            type="primary"
+            @click="timer.onSpace()"
+          >{{ timer.records.value.length ? '继续计时（空格）' : '开始计时（空格）' }}</el-button>
+          <el-button
+            v-else-if="!timer.showNewRoundBtn.value"
+            type="primary"
+            @click="timer.onSpace()"
+          >暂停（空格）</el-button>
+        </template>
+        <!-- 整组模式：空格开始 / 结束；暂停、继续只走按钮，暂停时间不计入本轮 -->
+        <template v-else>
+          <el-button
+            v-if="!timer.showNewRoundBtn.value && !timer.isTiming.value && !timer.isPaused.value"
+            type="primary"
+            @click="timer.onSpace()"
+          >开始计时（空格）</el-button>
+          <el-button
+            v-if="!timer.showNewRoundBtn.value && (timer.isTiming.value || timer.isPaused.value)"
+            type="primary"
+            @click="timer.toggleBatchPause()"
+          >{{ timer.isPaused.value ? '继续计时' : '暂停计时' }}</el-button>
+          <el-button
+            v-if="!timer.showNewRoundBtn.value && (timer.isTiming.value || timer.isPaused.value)"
+            @click="timer.onSpace()"
+          >结束（空格）</el-button>
+        </template>
         <el-button
-          v-if="!timer.showNewRoundBtn.value && !timer.isTiming.value"
-          type="primary"
-          @click="timer.onSpace()"
-        >{{ timer.records.value.length ? '继续计时（空格）' : '开始计时（空格）' }}</el-button>
-        <el-button
-          v-else-if="!timer.showNewRoundBtn.value"
-          type="primary"
-          @click="timer.onSpace()"
-        >暂停（空格）</el-button>
-        <el-button type="danger" @click="timer.stop()" :disabled="!timer.isTiming.value">停止</el-button>
+          type="danger"
+          @click="timer.stop()"
+          :disabled="!timer.isTiming.value && !timer.isPaused.value"
+        >停止</el-button>
         <el-button
           class="btn-gray"
           @click="timer.clearRound()"
-          :disabled="timer.records.value.length === 0 && !timer.isTiming.value"
+          :disabled="timer.records.value.length === 0 && !timer.isTiming.value && !timer.isPaused.value"
         >清空本轮</el-button>
         <el-button v-if="timer.showNewRoundBtn.value" type="primary" @click="timer.startNewRound()">开启新一轮</el-button>
       </div>
@@ -242,10 +372,10 @@ const modeDesc = computed(() =>
       </div>
     </el-dialog>
 
-    <!-- 整组错题标记面板：≤50 题 5 列，>50 题 10 列，避免纵向过长 -->
+    <!-- 整组错题标记面板：默认 ≤50 题 5 列、>50 题 10 列；130 题可切国考答题卡版式 -->
     <el-dialog
       v-model="timer.showBatchPanel.value"
-      :width="timer.maxRound.value > 50 ? '720px' : '560px'"
+      :width="batchDialogWidth"
       :close-on-click-modal="false"
       :show-close="false"
       align-center
@@ -257,7 +387,13 @@ const modeDesc = computed(() =>
             <span class="batch-eyebrow">✓ 整组完成</span>
             <h3 class="batch-title">标记错题与跳过</h3>
           </div>
-          <span class="batch-total">共 {{ timer.maxRound.value }} 题</span>
+          <div class="batch-head-side">
+            <span class="batch-layout-label">排版</span>
+            <el-select v-model="batchLayout" size="small" class="batch-layout-select">
+              <el-option v-for="opt in batchLayoutOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+            </el-select>
+            <span class="batch-total">共 {{ timer.maxRound.value }} 题</span>
+          </div>
         </div>
         <p class="batch-subtitle">
           默认全部正确，点击题号切换：
@@ -269,7 +405,39 @@ const modeDesc = computed(() =>
         </p>
       </template>
 
-      <div class="result-grid" :class="{ 'result-grid--wide': timer.maxRound.value > 50 }">
+      <div v-if="batchCustomGroups.length" class="result-sections">
+        <section v-for="group in batchCustomGroups" :key="group.label" class="result-section">
+          <div class="result-section-head">
+            <span class="result-section-title">{{ group.label }}</span>
+            <span class="result-section-count">{{ group.total }} 题</span>
+          </div>
+          <div v-for="(row, rowIdx) in group.rows" :key="rowIdx" class="result-row-block">
+            <div v-if="row.subs" class="result-subrow">
+              <span
+                v-for="sub in row.subs"
+                :key="sub.label"
+                :style="{ gridColumn: `span ${sub.count}` }"
+              >
+                {{ sub.label }}<em>{{ sub.count }}</em>
+              </span>
+            </div>
+            <div class="result-row">
+              <button
+                v-for="i in row.cells"
+                :key="i"
+                class="result-cell"
+                :class="{ ng: timer.batchResults.value[i] === 'ng', skip: timer.batchResults.value[i] === 'skip', selected: i === timer.batchCurIdx.value }"
+                @click="timer.cycleCell(i)"
+              >
+                <span class="no">{{ i + 1 }}</span>
+                <span class="mark">{{ timer.batchResults.value[i] === 'ng' ? '✗' : timer.batchResults.value[i] === 'skip' ? '○' : '' }}</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div v-else class="result-grid" :class="{ 'result-grid--wide': timer.maxRound.value > 50 }">
         <button
           v-for="(_, i) in timer.batchResults.value"
           :key="i"
@@ -547,6 +715,27 @@ const modeDesc = computed(() =>
   font-size: 12px;
   line-height: 1.5;
 }
+.batch-head-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.batch-layout-label {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+.batch-layout-select {
+  width: 118px;
+}
+.batch-layout-select :deep(.el-select__wrapper) {
+  min-height: 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--el-border-color-lighter) inset;
+}
+.batch-layout-select :deep(.el-select__selected-item) {
+  font-size: 12px;
+}
 .batch-subtitle {
   display: flex;
   align-items: center;
@@ -586,6 +775,76 @@ const modeDesc = computed(() =>
 .result-grid--wide {
   grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 6px;
+}
+.result-sections {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+}
+.result-section {
+  padding: 4px 9px 5px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  background: var(--el-fill-color-blank);
+}
+.result-section-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+}
+.result-section-title {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+.result-section-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.result-row-block + .result-row-block {
+  margin-top: 5px;
+}
+.result-subrow {
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.result-subrow span {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.result-subrow em {
+  color: var(--el-text-color-placeholder);
+  font-size: 10.5px;
+  font-style: normal;
+}
+.result-row {
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  gap: 6px;
+}
+.result-row .result-cell {
+  height: 41px;
+  border-radius: 8px;
+}
+.result-row .result-cell .no {
+  top: 4px;
+  left: 5px;
+  font-size: 13px;
+}
+.result-row .result-cell .mark {
+  font-size: 20px;
 }
 .result-cell {
   position: relative;

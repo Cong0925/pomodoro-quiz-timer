@@ -43,6 +43,7 @@ export function useTimer(options: UseTimerOptions) {
   const records = ref<TimerRecord[]>([])
   const archived = ref(false)
   const isTiming = ref(false)
+  const isPaused = ref(false)
   const timeText = ref('00:00.00')
   const showResultModal = ref(false)
   const showBatchPanel = ref(false)
@@ -82,6 +83,7 @@ export function useTimer(options: UseTimerOptions) {
     if (timerId) clearInterval(timerId)
     timerId = null
     isTiming.value = false
+    isPaused.value = false
     timeText.value = '00:00.00'
   }
 
@@ -90,9 +92,36 @@ export function useTimer(options: UseTimerOptions) {
   }
 
   function startTick(): void {
+    pendingMs = 0
+    isPaused.value = false
     isTiming.value = true
     startTime = Date.now()
     timerId = window.setInterval(tick, 20)
+  }
+
+  /** 整组计时暂停：保留已用时间，计时器停住但不结束本轮 */
+  function pauseBatch(): void {
+    if (mode.value !== 'batch' || !isTiming.value) return
+    if (timerId) clearInterval(timerId)
+    timerId = null
+    pendingMs = Date.now() - (startTime ?? Date.now())
+    timeText.value = formatTime(pendingMs)
+    isTiming.value = false
+    isPaused.value = true
+  }
+
+  /** 整组计时继续：从暂停处接着走，不把暂停时间计入本轮 */
+  function resumeBatch(): void {
+    if (mode.value !== 'batch' || !isPaused.value) return
+    startTime = Date.now() - pendingMs
+    isTiming.value = true
+    isPaused.value = false
+    timerId = window.setInterval(tick, 20)
+  }
+
+  function toggleBatchPause(): void {
+    if (isPaused.value) resumeBatch()
+    else pauseBatch()
   }
 
   /* ---- 归档 ---- */
@@ -183,6 +212,10 @@ export function useTimer(options: UseTimerOptions) {
   })
 
   function finishBatchRound(): void {
+    if (timerId) clearInterval(timerId)
+    timerId = null
+    isTiming.value = false
+    isPaused.value = false
     roundTotalMs.value = pendingMs
     records.value = batchResults.value.map((r, i) => ({
       no: i + 1,
@@ -255,19 +288,23 @@ export function useTimer(options: UseTimerOptions) {
   /* ---- 空格主控（由视图的 keydown 调用；输入框聚焦时由视图拦截不进入） ---- */
   function onSpace(): void {
     if (records.value.length >= maxRound.value) return
-    if (!isTiming.value) {
+    /* 未开始：空格开始；已暂停或计时中：空格结束并进入标记/判题 */
+    if (!isTiming.value && !isPaused.value) {
       startTick()
-    } else {
+      return
+    }
+    if (isTiming.value) {
       if (timerId) clearInterval(timerId)
       timerId = null
-      isTiming.value = false
       pendingMs = Date.now() - (startTime ?? Date.now())
-      if (mode.value === 'single') {
-        resetTimer()
-        showResultModal.value = true
-      } else {
-        openBatchPanel()
-      }
+    }
+    isTiming.value = false
+    isPaused.value = false
+    if (mode.value === 'single') {
+      resetTimer()
+      showResultModal.value = true
+    } else {
+      openBatchPanel()
     }
   }
 
@@ -285,6 +322,7 @@ export function useTimer(options: UseTimerOptions) {
     records,
     archived,
     isTiming,
+    isPaused,
     timeText,
     roundMeta,
     showResultModal,
@@ -298,6 +336,7 @@ export function useTimer(options: UseTimerOptions) {
     recordColumns,
     batchProgress,
     onSpace,
+    toggleBatchPause,
     confirmResult,
     toggleRecordResult,
     cycleCell,

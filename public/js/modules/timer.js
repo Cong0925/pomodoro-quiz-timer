@@ -13,6 +13,8 @@
     /* ---- 元素引用 ---- */
     const timeText = document.getElementById('timeText');
     const stopBtn = document.getElementById('stopBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const finishBatchBtn = document.getElementById('finishBatchBtn');
     const clearBtn = document.getElementById('clearBtn');
     const newRoundBtn = document.getElementById('newRoundBtn');
     const recordWrap = document.getElementById('recordWrap');
@@ -32,6 +34,7 @@
     const batchCorrect = document.getElementById('batchCorrect');
     const batchCancelBtn = document.getElementById('batchCancelBtn');
     const batchDoneBtn = document.getElementById('batchDoneBtn');
+    const batchLayoutSelect = document.getElementById('batchLayoutSelect');
     const batchCountSelect = document.getElementById('batchCountSelect');
     const customBatchInput = document.getElementById('customBatchInput');
     const modeTitle = document.getElementById('modeTitle');
@@ -50,22 +53,118 @@
     let roundTotalMs = 0;
     let MAX_ROUND = 20;
     let workMode = 'single';
+    let isPaused = false;
     const PER_COL = 5;
     let roundMeta = { title: '', desc: '' };
     let batchResults = [];
     let batchCurIdx = 0;
+    let batchLayout = 'default';
+
+    /* 130 题国考答题卡版式；其余题量仅保留默认 50 题断点排版 */
+    const BATCH_LAYOUT_PRESETS = {
+        'gk2025-before': [
+            { label: '常识判断', rows: [{ count: 20 }] },
+            { label: '言语理解与表达', rows: [{ count: 20 }, { count: 20 }] },
+            { label: '数量关系', rows: [{ count: 10 }] },
+            {
+                label: '判断推理',
+                rows: [
+                    { count: 20, subs: [{ label: '图形推理', count: 10 }, { label: '定义判断', count: 10 }] },
+                    { count: 20, subs: [{ label: '类比推理', count: 10 }, { label: '逻辑判断', count: 10 }] }
+                ]
+            },
+            { label: '资料分析', rows: [{ count: 20 }] }
+        ],
+        'gk2025-after': [
+            { label: '政治理论', rows: [{ count: 20 }] },
+            { label: '常识判断', rows: [{ count: 15 }] },
+            { label: '言语理解与表达', rows: [{ count: 20 }, { count: 10 }] },
+            { label: '数量关系', rows: [{ count: 10 }] },
+            {
+                label: '判断推理',
+                rows: [
+                    { count: 20, subs: [{ label: '图形推理', count: 10 }, { label: '定义判断', count: 10 }] },
+                    { count: 15, subs: [{ label: '类比推理', count: 5 }, { label: '逻辑判断', count: 10 }] }
+                ]
+            },
+            { label: '资料分析', rows: [{ count: 20 }] }
+        ]
+    };
 
     /* ---- 计时控制 ---- */
     function resetTimer() {
         clearInterval(timerId);
         timerId = null;
         isTiming = false;
+        isPaused = false;
         timeText.textContent = '00:00.00';
+        updateTimingControls();
     }
 
     function updateTimer() {
         const diff = Date.now() - startTime;
         timeText.textContent = U.formatTime(diff);
+    }
+
+    /* 整组模式：暂停 / 继续 / 结束按钮的显隐和文案 */
+    function updateTimingControls() {
+        if (!pauseBtn || !finishBatchBtn) return;
+        const active = workMode === 'batch' && (isTiming || isPaused);
+        pauseBtn.style.display = active ? 'inline-block' : 'none';
+        finishBatchBtn.style.display = active ? 'inline-block' : 'none';
+        pauseBtn.textContent = isPaused ? '继续计时' : '暂停计时';
+    }
+
+    function startTimer() {
+        pendingMs = 0;
+        isPaused = false;
+        isTiming = true;
+        startTime = Date.now();
+        timerId = setInterval(updateTimer, 20);
+        updateTimingControls();
+    }
+
+    /* 暂停不结束本轮：停掉计时器，保留已用时间 */
+    function pauseBatchTimer() {
+        if (workMode !== 'batch' || !isTiming) return;
+        clearInterval(timerId);
+        timerId = null;
+        pendingMs = Date.now() - startTime;
+        timeText.textContent = U.formatTime(pendingMs);
+        isTiming = false;
+        isPaused = true;
+        updateTimingControls();
+    }
+
+    /* 继续：从暂停点接着计时，暂停期间不计入本轮 */
+    function resumeBatchTimer() {
+        if (workMode !== 'batch' || !isPaused) return;
+        startTime = Date.now() - pendingMs;
+        isTiming = true;
+        isPaused = false;
+        timerId = setInterval(updateTimer, 20);
+        updateTimingControls();
+    }
+
+    function toggleBatchPause() {
+        if (isPaused) resumeBatchTimer();
+        else pauseBatchTimer();
+    }
+
+    /* 结束整组计时并进入错题标记面板 */
+    function endBatchTimer() {
+        if (workMode !== 'batch') return;
+        if (isTiming) {
+            clearInterval(timerId);
+            timerId = null;
+            pendingMs = Date.now() - startTime;
+            isTiming = false;
+        }
+        isPaused = false;
+        roundTotalMs = pendingMs;
+        timeText.textContent = U.formatTime(pendingMs);
+        updateTimingControls();
+        openBatchModal();
     }
 
     /* ---- 本轮统计 ---- */
@@ -240,22 +339,88 @@
         batchModalMask.style.display = 'none';
     }
 
-    function renderResultGrid() {
-        resultGrid.innerHTML = '';
-        /* ≤50 题 5 列，>50 题 10 列，避免长题量面板纵向过长 */
-        const wide = MAX_ROUND > 50;
-        resultGrid.classList.toggle('wide', wide);
-        const modalBox = resultGrid.closest('.batch-modal');
-        if (modalBox) modalBox.classList.toggle('wide', wide);
-        if (batchTotal) batchTotal.textContent = `共 ${MAX_ROUND} 题`;
-        for (let i = 0; i < MAX_ROUND; i++) {
-            const cell = document.createElement('button');
-            cell.className = 'result-cell';
-            cell.dataset.idx = i;
-            cell.innerHTML = `<span class="no">${i + 1}</span><span class="mark"></span>`;
-            cell.addEventListener('click', () => cycleCell(i));
-            resultGrid.appendChild(cell);
+    function renderLayoutSelect() {
+        if (!batchLayoutSelect) return;
+        const options = [{ value: 'default', label: '默认' }];
+        if (MAX_ROUND === 130) {
+            options.push({ value: 'gk2025-before', label: '国考2025前' });
+            options.push({ value: 'gk2025-after', label: '国考2025后' });
         }
+        if (!options.some(opt => opt.value === batchLayout)) batchLayout = 'default';
+        batchLayoutSelect.innerHTML = options
+            .map(opt => `<option value="${opt.value}"${opt.value === batchLayout ? ' selected' : ''}>${opt.label}</option>`)
+            .join('');
+        batchLayoutSelect.disabled = false;
+        batchLayoutSelect.title = options.length === 1 ? '当前题量仅提供默认排版' : '切换答题卡排版';
+    }
+
+    function layoutGroups() {
+        if (batchLayout === 'default' || MAX_ROUND !== 130) return null;
+        const defs = BATCH_LAYOUT_PRESETS[batchLayout];
+        if (!defs) return null;
+        let cursor = 0;
+        return defs.map(group => {
+            const rows = group.rows.map(row => {
+                const start = cursor;
+                cursor += row.count;
+                return {
+                    cells: Array.from({ length: row.count }, (_, i) => start + i),
+                    subs: row.subs || null
+                };
+            });
+            return {
+                label: group.label,
+                total: rows.reduce((sum, row) => sum + row.cells.length, 0),
+                rows
+            };
+        });
+    }
+
+    function layoutColumnCount() {
+        if (layoutGroups()) return 20;
+        return MAX_ROUND > 50 ? 10 : 5;
+    }
+
+    function resultCellHtml(i) {
+        return `<button class="result-cell" data-idx="${i}" type="button">`
+            + `<span class="no">${i + 1}</span><span class="mark"></span></button>`;
+    }
+
+    function renderResultGrid() {
+        renderLayoutSelect();
+        const groups = layoutGroups();
+        const modalBox = resultGrid.closest('.batch-modal');
+        if (groups) {
+            resultGrid.classList.add('sectioned');
+            if (modalBox) {
+                modalBox.classList.remove('wide');
+                modalBox.classList.add('sectioned');
+            }
+            resultGrid.innerHTML = groups.map(group => {
+                const rows = group.rows.map(row => {
+                    const subrow = row.subs
+                        ? `<div class="result-subrow">${row.subs.map(sub =>
+                            `<span style="grid-column: span ${sub.count}">${sub.label}<em>${sub.count}</em></span>`
+                        ).join('')}</div>`
+                        : '';
+                    return `<div class="result-row-block">${subrow}<div class="result-row">${row.cells.map(resultCellHtml).join('')}</div></div>`;
+                }).join('');
+                return `<section class="result-section">`
+                    + `<div class="result-section-head"><span class="result-section-title">${group.label}</span>`
+                    + `<span class="result-section-count">${group.total} 题</span></div>${rows}</section>`;
+            }).join('');
+        } else {
+            resultGrid.classList.remove('sectioned');
+            /* ≤50 题 5 列，>50 题 10 列，避免长题量面板纵向过长 */
+            const wide = MAX_ROUND > 50;
+            resultGrid.classList.toggle('wide', wide);
+            if (modalBox) {
+                modalBox.classList.remove('sectioned');
+                modalBox.classList.toggle('wide', wide);
+            }
+            resultGrid.innerHTML = Array.from({ length: MAX_ROUND }, (_, i) => resultCellHtml(i)).join('');
+        }
+        if (batchTotal) batchTotal.textContent = `共 ${MAX_ROUND} 题`;
         updateResultCells();
     }
 
@@ -281,15 +446,15 @@
     }
 
     function updateResultCells() {
-        const cells = resultGrid.children;
-        for (let i = 0; i < cells.length; i++) {
-            const c = cells[i];
+        const cells = resultGrid.querySelectorAll('.result-cell');
+        cells.forEach((c) => {
+            const i = Number(c.dataset.idx);
             const v = batchResults[i];
             c.classList.toggle('ng', v === 'ng');
             c.classList.toggle('skip', v === 'skip');
             c.classList.toggle('selected', i === batchCurIdx);
             c.querySelector('.mark').textContent = v === 'ng' ? '✗' : v === 'skip' ? '○' : '';
-        }
+        });
     }
 
     function updateResultProgress() {
@@ -302,6 +467,11 @@
     }
 
     function finishBatchRound() {
+        clearInterval(timerId);
+        timerId = null;
+        isTiming = false;
+        isPaused = false;
+        updateTimingControls();
         const totalMs = roundTotalMs;
         roundRecords = batchResults.map((r, i) => ({
             no: i + 1,
@@ -330,7 +500,22 @@
 
     batchDoneBtn.onclick = finishBatchRound;
 
+    resultGrid.addEventListener('click', (e) => {
+        const cell = e.target.closest('.result-cell');
+        if (!cell || !resultGrid.contains(cell)) return;
+        cycleCell(Number(cell.dataset.idx));
+    });
+
+    if (batchLayoutSelect) {
+        batchLayoutSelect.addEventListener('change', () => {
+            batchLayout = batchLayoutSelect.value;
+            renderResultGrid();
+        });
+    }
+
     /* ---- 按钮 ---- */
+    if (pauseBtn) pauseBtn.addEventListener('click', toggleBatchPause);
+    if (finishBatchBtn) finishBatchBtn.addEventListener('click', endBatchTimer);
     stopBtn.addEventListener('click', () => { resetTimer(); });
 
     clearBtn.addEventListener('click', () => {
@@ -374,13 +559,18 @@
         }
         customBatchInput.style.display = 'none';
         MAX_ROUND = clampCount(Number(this.value));
+        /* 130 题默认套用「国考2025后」版式；其他题量回到默认平铺 */
+        batchLayout = MAX_ROUND === 130 ? 'gk2025-after' : 'default';
         /* 只改题量上限，不清空本轮，保留已填写的标题与描述 */
         updateStat();
     };
 
     customBatchInput.addEventListener('input', () => {
         const val = Number(customBatchInput.value);
-        if (val > 0) MAX_ROUND = clampCount(val);
+        if (val > 0) {
+            MAX_ROUND = clampCount(val);
+            batchLayout = MAX_ROUND === 130 ? 'gk2025-after' : 'default';
+        }
         /* 只改题量上限，保留已填写的标题与描述 */
         updateStat();
     });
@@ -393,8 +583,9 @@
             modeDesc.textContent = '每题独立计时 · 空格开始 / 结束一题 · Y=对 N=错 P=没做跳过';
         } else {
             modeTitle.textContent = '整组模式';
-            modeDesc.textContent = '空格开始整组计时，做完后再次按空格停止并标记错题';
+            modeDesc.textContent = '空格开始整组计时，再次按空格结束并标记错题；中途可点「暂停计时」停表，再点「继续计时」接着计时';
         }
+        updateTimingControls();
     }
 
     /* ---- 全局键盘 ---- */
@@ -407,8 +598,8 @@
             if (key === 'p') { e.preventDefault(); setResult(batchCurIdx, 'skip'); moveSel(1); return; }
             if (e.key === 'ArrowLeft') { e.preventDefault(); moveSel(-1); return; }
             if (e.key === 'ArrowRight') { e.preventDefault(); moveSel(1); return; }
-            if (e.key === 'ArrowUp') { e.preventDefault(); moveSel(-10); return; }
-            if (e.key === 'ArrowDown') { e.preventDefault(); moveSel(10); return; }
+            if (e.key === 'ArrowUp') { e.preventDefault(); moveSel(-layoutColumnCount()); return; }
+            if (e.key === 'ArrowDown') { e.preventDefault(); moveSel(layoutColumnCount()); return; }
             if (e.key === 'Enter') { e.preventDefault(); finishBatchRound(); return; }
             if (e.code === 'Space') { e.preventDefault(); finishBatchRound(); return; }
             return;
@@ -446,26 +637,17 @@
         if (viewTimer.hidden) return;
         if (roundRecords.length >= MAX_ROUND) return;
 
-        if (!isTiming) {
-            isTiming = true;
-            startTime = Date.now();
-            timerId = setInterval(updateTimer, 20);
+        if (!isTiming && !isPaused) {
+            startTimer();
+        } else if (workMode === 'single') {
+            clearInterval(timerId);
+            timerId = null;
+            isTiming = false;
+            pendingMs = Date.now() - startTime;
+            resetTimer();
+            modalMask.style.display = 'flex';
         } else {
-            if (workMode === 'single') {
-                clearInterval(timerId);
-                timerId = null;
-                isTiming = false;
-                pendingMs = Date.now() - startTime;
-                resetTimer();
-                modalMask.style.display = 'flex';
-            } else {
-                clearInterval(timerId);
-                timerId = null;
-                isTiming = false;
-                pendingMs = Date.now() - startTime;
-                roundTotalMs = pendingMs;
-                openBatchModal();
-            }
+            endBatchTimer();
         }
     });
 

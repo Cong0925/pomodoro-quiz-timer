@@ -107,6 +107,8 @@
                             <option value="10">10题</option>
                             <option value="15">15题</option>
                             <option value="20" selected>20题</option>
+                            <option value="100">100题</option>
+                            <option value="130">130题</option>
                             <option value="custom">自定义</option>
                         </select>
                         <input type="number" id="customBatchInput" placeholder="输入题数" min="1" style="display:none;">
@@ -136,6 +138,8 @@
                     </div>
 
                     <div class="btn-group">
+                        <button id="pauseBtn" type="button" style="display: none;">暂停计时</button>
+                        <button id="finishBatchBtn" type="button" style="display: none;">结束（空格）</button>
                         <button id="stopBtn">停止</button>
                         <button id="clearBtn">清空本轮</button>
                         <button id="newRoundBtn">开启新一轮</button>
@@ -923,7 +927,11 @@
                     <span class="batch-eyebrow">✓ 整组完成</span>
                     <p class="batch-title">标记错题与跳过</p>
                 </div>
-                <span class="batch-total" id="batchTotal">共 0 题</span>
+                <div class="batch-head-side">
+                    <label class="batch-layout-label" for="batchLayoutSelect">排版</label>
+                    <select class="batch-layout-select" id="batchLayoutSelect" title="切换答题卡排版"></select>
+                    <span class="batch-total" id="batchTotal">共 0 题</span>
+                </div>
             </div>
             <div class="batch-subtitle">
                 默认全部正确，点击题号切换：
